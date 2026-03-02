@@ -59,7 +59,7 @@ export async function POST(request: Request) {
         tenant_id: tenantId,
         role: 'client',
       },
-      redirectTo: `${request.nextUrl.origin}/login`,
+      redirectTo: `${new URL(request.url).origin}/login`,
     })
     if (error) {
       const msg = error.message.toLowerCase()
