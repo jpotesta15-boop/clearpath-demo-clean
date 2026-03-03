@@ -113,9 +113,10 @@ export async function POST(request: Request) {
     client_reference_id: sessionRequestId,
   }
 
-  const session = await stripe.checkout.sessions.create(sessionParams, {
-    stripeAccount: coachAccountId,
-  })
+  const session = await stripe.checkout.sessions.create(
+    sessionParams as Stripe.Checkout.SessionCreateParams,
+    { stripeAccount: coachAccountId }
+  )
 
   await supabaseAdmin
     .from('session_requests')
