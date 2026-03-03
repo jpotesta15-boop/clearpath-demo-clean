@@ -46,7 +46,9 @@ function WeekMiniCalendar({ upcomingSessions }: { upcomingSessions: Session[] })
           <div
             key={day.toISOString()}
             className={`rounded-lg p-3 text-sm ${
-              hasSession ? 'bg-blue-100 font-medium text-blue-800' : 'bg-gray-100 text-gray-600'
+              hasSession
+                ? 'bg-[var(--cp-accent-primary-soft)] font-medium text-[var(--cp-accent-primary)]'
+                : 'bg-[var(--cp-bg-subtle)] text-[var(--cp-text-muted)]'
             }`}
           >
             <div>{format(day, 'EEE')}</div>
@@ -135,15 +137,15 @@ export function DashboardContent({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-slate-900">Welcome back</h1>
-        <p className="mt-1 text-sm text-slate-500">Your coaching at a glance — tap any tile for details.</p>
+        <h1 className="text-3xl font-bold text-[var(--cp-text-primary)]">Welcome back</h1>
+        <p className="mt-1 text-sm text-[var(--cp-text-muted)]">Your coaching at a glance — tap any tile for details.</p>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-slate-50 p-4 shadow-lg">
+      <div className="rounded-2xl border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-elevated)] text-[var(--cp-text-primary)] p-4 shadow-[var(--cp-shadow-card)]">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h3 className="font-medium text-slate-50">Accept session payments</h3>
-            <p className="text-sm text-slate-200/80">
+            <h3 className="font-medium text-[var(--cp-text-primary)]">Accept session payments</h3>
+            <p className="text-sm text-[var(--cp-text-muted)]">
               {stripeConnectAccountId
                 ? 'Your Stripe account is connected. Clients can pay for session offers.'
                 : 'Connect Stripe to accept payments when clients book sessions.'}
@@ -152,14 +154,14 @@ export function DashboardContent({
           <div>
             {stripeConnectAccountId ? (
               <div className="flex items-center gap-2">
-                <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-3 py-1 text-sm font-medium text-emerald-300">
+                <span className="inline-flex items-center rounded-full bg-[var(--cp-accent-success)]/20 px-3 py-1 text-sm font-medium text-[var(--cp-accent-success)]">
                   Stripe connected
                 </span>
                 <button
                   type="button"
                   onClick={handleConnectStripe}
                   disabled={connectLoading}
-                  className="text-sm font-medium text-sky-300 hover:text-sky-200 disabled:opacity-50"
+                  className="text-sm font-medium text-[var(--cp-accent-primary)] hover:text-[var(--cp-accent-primary-strong)] disabled:opacity-50"
                 >
                   {connectLoading ? 'Opening…' : 'Reconnect'}
                 </button>
@@ -169,7 +171,7 @@ export function DashboardContent({
                 type="button"
                 onClick={handleConnectStripe}
                 disabled={connectLoading}
-                className="inline-flex items-center rounded-lg bg-sky-500 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-sky-400 disabled:opacity-50"
+                className="inline-flex items-center rounded-lg bg-[var(--cp-accent-primary)] px-4 py-2 text-sm font-medium text-[var(--cp-text-on-accent)] hover:opacity-90 disabled:opacity-50"
               >
                 {connectLoading ? 'Opening…' : 'Connect Stripe'}
               </button>
@@ -184,12 +186,12 @@ export function DashboardContent({
             key={id}
             type="button"
             onClick={() => setExpandedPanel(id)}
-            className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:border-sky-400 hover:bg-sky-50/70 hover:shadow-md transition-all min-h-[120px]"
+            className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] p-5 shadow-[var(--cp-shadow-soft)] hover:border-[var(--cp-accent-primary)] hover:bg-[var(--cp-accent-primary-soft)] hover:shadow-[var(--cp-shadow-card)] transition-all min-h-[140px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cp-border-focus)]"
           >
-            <span className="text-slate-600">{iconSvg[id]}</span>
-            <span className="text-sm font-medium text-slate-800 text-center">{label}</span>
+            <span className="text-[var(--cp-text-muted)]">{iconSvg[id]}</span>
+            <span className="text-sm font-medium text-[var(--cp-text-primary)] text-center">{label}</span>
             {badge != null && badge > 0 && (
-              <span className="rounded-full bg-sky-100 px-2 py-0.5 text-xs font-medium text-sky-800">
+              <span className="rounded-full bg-[var(--cp-accent-primary-soft)] px-2 py-0.5 text-xs font-medium text-[var(--cp-accent-primary)]">
                 {badge}
               </span>
             )}

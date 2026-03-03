@@ -50,51 +50,51 @@ export default async function ClientDashboard() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-slate-900">Dashboard</h1>
-        <p className="mt-1 text-sm text-slate-500">Welcome back, {client.full_name}</p>
+        <h1 className="text-3xl font-bold text-[var(--cp-text-primary)]">Dashboard</h1>
+        <p className="mt-1 text-sm text-[var(--cp-text-muted)]">Welcome back, {client.full_name}</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="shadow-sm border-slate-200">
+        <Card className="shadow-[var(--cp-shadow-soft)] border-[var(--cp-border-subtle)]">
           <CardHeader>
-            <CardTitle className="text-slate-900">Upcoming Sessions</CardTitle>
+            <CardTitle>Upcoming Sessions</CardTitle>
           </CardHeader>
           <CardContent>
             {upcomingSessions && upcomingSessions.length > 0 ? (
               <div className="space-y-4 animate-[fadeInUp_0.35s_ease-out]">
                 {upcomingSessions.map((session) => (
-                  <div key={session.id} className="border-b border-slate-100 pb-4 last:border-0">
-                    <p className="font-medium text-slate-900">
+                  <div key={session.id} className="border-b border-[var(--cp-border-subtle)] pb-4 last:border-0">
+                    <p className="font-medium text-[var(--cp-text-primary)]">
                       {format(new Date(session.scheduled_time), 'MMM d, yyyy h:mm a')}
                     </p>
-                    <p className="text-sm text-slate-500">Status: {session.status}</p>
+                    <p className="text-sm text-[var(--cp-text-muted)]">Status: {session.status}</p>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-slate-500 text-sm">No upcoming sessions</p>
+              <p className="text-[var(--cp-text-muted)] text-sm">No upcoming sessions</p>
             )}
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm border-slate-200">
+        <Card className="shadow-[var(--cp-shadow-soft)] border-[var(--cp-border-subtle)]">
           <CardHeader>
-            <CardTitle className="text-slate-900">My Programs</CardTitle>
+            <CardTitle>My Programs</CardTitle>
           </CardHeader>
           <CardContent>
             {programs && programs.length > 0 ? (
               <div className="space-y-2 animate-[fadeInUp_0.35s_ease-out]">
                 {programs.map((assignment: any) => (
-                  <div key={assignment.id} className="border-b border-slate-100 pb-2 last:border-0">
-                    <p className="font-medium text-slate-900">{assignment.programs?.name}</p>
+                  <div key={assignment.id} className="border-b border-[var(--cp-border-subtle)] pb-2 last:border-0">
+                    <p className="font-medium text-[var(--cp-text-primary)]">{assignment.programs?.name}</p>
                     {assignment.programs?.description && (
-                      <p className="text-sm text-slate-500">{assignment.programs.description}</p>
+                      <p className="text-sm text-[var(--cp-text-muted)]">{assignment.programs.description}</p>
                     )}
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-slate-500 text-sm">No programs assigned</p>
+              <p className="text-[var(--cp-text-muted)] text-sm">No programs assigned</p>
             )}
           </CardContent>
         </Card>

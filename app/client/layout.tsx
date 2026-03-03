@@ -10,6 +10,7 @@ const clientNavItems = [
   { href: '/client/schedule', label: 'Schedule' },
   { href: '/client/videos', label: 'Videos' },
   { href: '/client/messages', label: 'Messages' },
+  { href: '/client/settings', label: 'Settings' },
 ]
 
 export default async function ClientLayout({
