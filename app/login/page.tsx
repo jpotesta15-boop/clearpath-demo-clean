@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { AppLayout } from '@/components/layout/AppLayout'
+import { FormField, FormLabel, FormError } from '@/components/ui/form'
 
 function LoginForm() {
   const [email, setEmail] = useState('')
@@ -69,98 +71,96 @@ function LoginForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-stretch bg-gradient-to-br from-slate-900 via-slate-950 to-slate-800 text-slate-50">
-      <div className="hidden lg:flex lg:w-1/2 items-center justify-center relative overflow-hidden">
-        <div className="absolute inset-0 opacity-60 bg-[radial-gradient(circle_at_top,_#38bdf8_0,_transparent_55%),_radial-gradient(circle_at_bottom,_#22c55e_0,_transparent_55%)]" />
-        <div className="relative max-w-md w-full px-8">
-          <h1 className="text-3xl font-semibold tracking-tight mb-4">ClearPath Coach OS</h1>
-          <p className="text-sm text-slate-200/80 mb-6">
-            Run your coaching business in one place: programs, videos, messaging, and payments.
-          </p>
-          <div className="rounded-2xl bg-slate-900/60 border border-slate-700/60 shadow-xl p-4 space-y-3">
-            <div className="flex items-center justify-between text-xs text-slate-300/80">
-              <span>Today&apos;s sessions</span>
-              <span className="text-emerald-400 font-medium">+3 scheduled</span>
-            </div>
-            <div className="h-1.5 w-full rounded-full bg-slate-800 overflow-hidden">
-              <div className="h-full w-2/3 rounded-full bg-gradient-to-r from-sky-400 to-emerald-400" />
-            </div>
-            <p className="text-[11px] text-slate-400">
-              Log in as a coach or client to see your personalized dashboard.
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-950 to-slate-800 text-slate-50 flex items-stretch">
+      <AppLayout className="flex items-stretch gap-0 lg:gap-12">
+        <div className="hidden lg:flex flex-1 items-center justify-center relative overflow-hidden">
+          <div className="absolute inset-0 opacity-60 bg-[radial-gradient(circle_at_top,_var(--cp-accent-primary)_0,_transparent_55%),_radial-gradient(circle_at_bottom,_var(--cp-accent-success)_0,_transparent_55%)]" />
+          <div className="relative max-w-md w-full">
+            <h1 className="text-3xl font-semibold tracking-tight mb-4">ClearPath Coach OS</h1>
+            <p className="text-sm text-slate-200/80 mb-6">
+              Run your coaching business in one place: programs, videos, messaging, and payments.
             </p>
-          </div>
-        </div>
-      </div>
-
-      <div className="w-full lg:w-1/2 flex items-center justify-center px-4 py-10 lg:px-12 bg-slate-950/80">
-        <div className="w-full max-w-md bg-slate-900/70 border border-slate-800/80 rounded-2xl shadow-xl p-6 sm:p-8 backdrop-blur">
-          <div className="mb-6">
-            <h2 className="text-2xl font-semibold tracking-tight text-slate-50 text-center">Welcome back</h2>
-            <p className="mt-1 text-sm text-slate-400 text-center">Sign in to your coach or client portal.</p>
-          </div>
-          <form className="space-y-5" onSubmit={handleLogin}>
-            <div className="space-y-4">
-              <div>
-                <label htmlFor="email" className="block text-xs font-medium text-slate-300 mb-1">
-                  Email
-                </label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="mt-0.5 bg-slate-900/60 border-slate-700 text-slate-50 placeholder:text-slate-500 focus:border-sky-400 focus:ring-sky-400"
-                  placeholder="you@example.com"
-                />
+            <div className="rounded-2xl bg-slate-900/60 border border-slate-700/60 shadow-xl p-4 space-y-3">
+              <div className="flex items-center justify-between text-xs text-slate-300/80">
+                <span>Today&apos;s sessions</span>
+                <span className="text-emerald-400 font-medium">+3 scheduled</span>
               </div>
-              <div>
-                <label htmlFor="password" className="block text-xs font-medium text-slate-300 mb-1">
-                  Password
-                </label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="mt-0.5 bg-slate-900/60 border-slate-700 text-slate-50 placeholder:text-slate-500 focus:border-sky-400 focus:ring-sky-400"
-                  placeholder="••••••••"
-                />
+              <div className="h-1.5 w-full rounded-full bg-slate-800 overflow-hidden">
+                <div className="h-full w-2/3 rounded-full bg-gradient-to-r from-sky-400 to-emerald-400" />
               </div>
-            </div>
-            {loginError && (
-              <p className="text-sm text-rose-400" role="alert">
-                {loginError}
+              <p className="text-[11px] text-slate-400">
+                Log in as a coach or client to see your personalized dashboard.
               </p>
-            )}
-            <Button
-              type="submit"
-              className="w-full bg-sky-500 hover:bg-sky-400 text-slate-950 font-semibold"
-              disabled={loading}
-            >
-              {loading ? 'Signing in…' : 'Sign in'}
-            </Button>
-            <div className="relative my-3">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-slate-700/70" />
-              </div>
-              <div className="relative flex justify-center text-[11px] uppercase">
-                <span className="bg-slate-900/70 px-2 text-slate-500">Or continue with</span>
-              </div>
             </div>
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full border-slate-700 bg-slate-900/60 text-slate-100 hover:bg-slate-800"
-              disabled={loading}
-              onClick={handleGoogleSignIn}
-            >
-              Sign in with Google
-            </Button>
-          </form>
+          </div>
         </div>
-      </div>
+
+        <div className="flex-1 flex items-center justify-center">
+          <div className="w-full max-w-md bg-slate-900/70 border border-slate-800/80 rounded-2xl shadow-xl p-6 sm:p-8 backdrop-blur">
+            <div className="mb-6">
+              <h2 className="text-2xl font-semibold tracking-tight text-slate-50 text-center">Welcome back</h2>
+              <p className="mt-1 text-sm text-slate-400 text-center">Sign in to your coach or client portal.</p>
+            </div>
+            <form className="space-y-5" onSubmit={handleLogin}>
+              <div className="space-y-4">
+                <FormField>
+                  <FormLabel htmlFor="email" className="text-xs text-slate-300">
+                    Email
+                  </FormLabel>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="mt-0.5 bg-slate-900/60 border-slate-700 text-slate-50 placeholder:text-slate-500 focus:border-sky-400 focus:ring-sky-400"
+                    placeholder="you@example.com"
+                  />
+                </FormField>
+                <FormField>
+                  <FormLabel htmlFor="password" className="text-xs text-slate-300">
+                    Password
+                  </FormLabel>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    className="mt-0.5 bg-slate-900/60 border-slate-700 text-slate-50 placeholder:text-slate-500 focus:border-sky-400 focus:ring-sky-400"
+                    placeholder="••••••••"
+                  />
+                </FormField>
+              </div>
+              {loginError && <FormError>{loginError}</FormError>}
+              <Button
+                type="submit"
+                className="w-full font-semibold"
+                disabled={loading}
+              >
+                {loading ? 'Signing in…' : 'Sign in'}
+              </Button>
+              <div className="relative my-3">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-slate-700/70" />
+                </div>
+                <div className="relative flex justify-center text-[11px] uppercase">
+                  <span className="bg-slate-900/70 px-2 text-slate-500">Or continue with</span>
+                </div>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full border-slate-700 bg-slate-900/60 text-slate-100 hover:bg-slate-800"
+                disabled={loading}
+                onClick={handleGoogleSignIn}
+              >
+                Sign in with Google
+              </Button>
+            </form>
+          </div>
+        </div>
+      </AppLayout>
     </div>
   )
 }

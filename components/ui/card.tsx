@@ -1,19 +1,58 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
+import { motion } from "framer-motion"
+import { cardHoverTransition } from "@/lib/theme/animation"
 
-const Card = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn(
-      "rounded-lg border border-gray-200 bg-white shadow-sm transition-shadow",
+export type CardVariant = "surface" | "raised" | "ghost"
+
+export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
+  variant?: CardVariant
+  /**
+   * Enable subtle lift-on-hover interaction for clickable cards.
+   */
+  interactive?: boolean
+}
+
+const MotionDiv = motion.div
+
+const Card = React.forwardRef<HTMLDivElement, CardProps>(
+  ({ className, variant = "surface", interactive = false, ...props }, ref) => {
+    const baseClasses = cn(
+      "rounded-lg border transition-shadow",
+      {
+        // Default content surface
+        "border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] shadow-[var(--cp-shadow-soft)]":
+          variant === "surface",
+        // Elevated / primary tiles
+        "border-[var(--cp-border-strong)] bg-[var(--cp-bg-elevated)] shadow-[var(--cp-shadow-card)]":
+          variant === "raised",
+        // Minimal / inline container
+        "border-transparent bg-transparent shadow-none": variant === "ghost",
+      },
       className
-    )}
-    {...props}
-  />
-))
+    )
+
+    if (interactive && variant !== "ghost") {
+      return (
+        <MotionDiv
+          ref={ref}
+          className={baseClasses}
+          whileHover={cardHoverTransition.hover}
+          transition={cardHoverTransition.transition}
+          {...props}
+        />
+      )
+    }
+
+    return (
+      <div
+        ref={ref}
+        className={baseClasses}
+        {...props}
+      />
+    )
+  }
+)
 Card.displayName = "Card"
 
 const CardHeader = React.forwardRef<
@@ -35,7 +74,7 @@ const CardTitle = React.forwardRef<
   <h3
     ref={ref}
     className={cn(
-      "text-2xl font-semibold leading-none tracking-tight",
+      "text-2xl font-semibold leading-none tracking-tight text-[var(--cp-text-primary)]",
       className
     )}
     {...props}

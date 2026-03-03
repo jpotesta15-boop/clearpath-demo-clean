@@ -71,7 +71,6 @@ export default function ProgramsPage() {
         </div>
         <Button
           onClick={() => setShowForm(!showForm)}
-          className="bg-blue-600 text-white hover:bg-blue-700"
         >
           {showForm ? 'Cancel' : 'Create Program'}
         </Button>
@@ -101,7 +100,7 @@ export default function ProgramsPage() {
                   rows={4}
                 />
               </div>
-              <Button type="submit" className="bg-blue-600 text-white hover:bg-blue-700">
+              <Button type="submit">
                 Create Program
               </Button>
             </form>

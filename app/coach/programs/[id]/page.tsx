@@ -399,7 +399,6 @@ export default function ProgramDetailPage() {
                 size="sm"
                 onClick={() => assignClientId && handleAssignClient(assignClientId)}
                 disabled={!assignClientId}
-                className="bg-blue-600 text-white hover:bg-blue-700"
               >
                 Assign
               </Button>

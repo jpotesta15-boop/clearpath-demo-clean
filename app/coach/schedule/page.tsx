@@ -598,7 +598,7 @@ export default function SchedulePage() {
                 </div>
                 <Button
                   type="submit"
-                  className="w-full bg-blue-600 text-white border-blue-700 hover:bg-blue-700 disabled:opacity-50"
+                  className="w-full"
                   disabled={submitting}
                 >
                   {submitting ? 'Adding…' : 'Submit'}
@@ -998,7 +998,7 @@ export default function SchedulePage() {
                   <div className="space-y-2 pt-2">
                     <Button
                       type="submit"
-                      className="w-full bg-blue-600 text-white border-blue-700 hover:bg-blue-700 disabled:opacity-50"
+                      className="w-full"
                       disabled={savingEdit}
                     >
                       {savingEdit ? 'Saving…' : 'Save changes'}

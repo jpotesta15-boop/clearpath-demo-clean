@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import SidebarNav from '@/components/SidebarNav'
+import { AppLayout } from '@/components/layout/AppLayout'
+import { AnimatedPage } from '@/components/layout/AnimatedPage'
 
 const clientNavItems = [
   { href: '/client/dashboard', label: 'Dashboard' },
@@ -25,9 +27,9 @@ export default async function ClientLayout({
   return (
     <div className="flex min-h-screen bg-gray-50">
       <SidebarNav navItems={clientNavItems} />
-      <main className="flex-1 min-w-0 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {children}
-      </main>
+      <AppLayout>
+        <AnimatedPage>{children}</AnimatedPage>
+      </AppLayout>
     </div>
   )
 }

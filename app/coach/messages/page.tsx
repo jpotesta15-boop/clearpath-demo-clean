@@ -218,9 +218,9 @@ export default function MessagesPage() {
                       value={newMessage}
                       onChange={(e) => setNewMessage(e.target.value)}
                       placeholder="Type a message..."
-                      className="flex-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                      className="flex-1"
                     />
-                    <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
+                    <Button type="submit">
                       Send
                     </Button>
                   </div>
