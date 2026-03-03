@@ -80,7 +80,22 @@ export default function SidebarNav({ navItems }: { navItems: NavItem[] }) {
   }, [])
 
   useEffect(() => {
-    getClientName().then(setBrandLabel).catch(() => {})
+    const load = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('display_name')
+          .eq('id', user.id)
+          .single()
+        if (profile?.display_name?.trim()) {
+          setBrandLabel(profile.display_name.trim())
+          return
+        }
+      }
+      getClientName().then(setBrandLabel).catch(() => {})
+    }
+    load()
   }, [])
 
   const toggleSidebar = () => {

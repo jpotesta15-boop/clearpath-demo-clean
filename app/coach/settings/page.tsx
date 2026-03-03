@@ -1,6 +1,10 @@
 'use client'
 
+import { useEffect, useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { useThemeVariant, type ThemeVariant } from '@/components/providers/ThemeVariantProvider'
 
 const VARIANT_LABELS: Record<ThemeVariant, string> = {
@@ -10,17 +14,87 @@ const VARIANT_LABELS: Record<ThemeVariant, string> = {
   purple: 'Purple',
 }
 
+const TIMEZONES = [
+  'America/New_York',
+  'America/Chicago',
+  'America/Denver',
+  'America/Los_Angeles',
+  'America/Phoenix',
+  'Europe/London',
+  'Europe/Paris',
+  'Europe/Berlin',
+  'Asia/Tokyo',
+  'Australia/Sydney',
+  'UTC',
+]
+
 export default function CoachSettingsPage() {
   const { variant, setVariant } = useThemeVariant()
-
+  const [displayName, setDisplayName] = useState('')
+  const [timezone, setTimezone] = useState('')
+  const [defaultSessionMinutes, setDefaultSessionMinutes] = useState(45)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [message, setMessage] = useState<string | null>(null)
+  const supabase = createClient()
   const variants: ThemeVariant[] = ['blue', 'green', 'red', 'purple']
+
+  useEffect(() => {
+    const load = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        setLoading(false)
+        return
+      }
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('display_name, timezone, preferences')
+        .eq('id', user.id)
+        .single()
+      if (profile) {
+        setDisplayName(profile.display_name ?? '')
+        setTimezone(profile.timezone ?? '')
+        const prefs = (profile.preferences as Record<string, unknown>) ?? {}
+        setDefaultSessionMinutes(
+          typeof prefs.default_session_duration_minutes === 'number'
+            ? prefs.default_session_duration_minutes
+            : 45
+        )
+      }
+      setLoading(false)
+    }
+    load()
+  }, [])
+
+  const handleSavePreferences = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    setSaving(true)
+    setMessage(null)
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        display_name: displayName.trim() || null,
+        timezone: timezone || null,
+        preferences: { default_session_duration_minutes: defaultSessionMinutes },
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', user.id)
+    setSaving(false)
+    if (error) {
+      setMessage(error.message)
+    } else {
+      setMessage('Saved.')
+    }
+  }
 
   return (
     <div className="max-w-3xl space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-[var(--cp-text-primary)]">Settings</h1>
         <p className="mt-1 text-sm text-[var(--cp-text-muted)]">
-          Personalize your dashboard theme. This only affects your view.
+          Personalize your dashboard theme and preferences. Changes only affect your view.
         </p>
       </div>
 
@@ -54,7 +128,73 @@ export default function CoachSettingsPage() {
           ))}
         </CardContent>
       </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Display name</CardTitle>
+          <p className="text-sm font-normal text-[var(--cp-text-muted)]">
+            Name shown in the sidebar. Leave blank to use your organization brand name.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSavePreferences} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-[var(--cp-text-primary)] mb-1">
+                Sidebar label
+              </label>
+              <Input
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder="e.g. My Coaching"
+                className="max-w-xs bg-[var(--cp-bg-surface)] border-[var(--cp-border-subtle)]"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[var(--cp-text-primary)] mb-1">
+                Time zone
+              </label>
+              <select
+                value={timezone}
+                onChange={(e) => setTimezone(e.target.value)}
+                className="w-full max-w-xs h-10 rounded-md border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] px-3 py-2 text-sm text-[var(--cp-text-primary)]"
+              >
+                <option value="">Use browser default</option>
+                {TIMEZONES.map((tz) => (
+                  <option key={tz} value={tz}>{tz}</option>
+                ))}
+              </select>
+              <p className="text-xs text-[var(--cp-text-muted)] mt-1">
+                Used when showing schedule times in your local time.
+              </p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[var(--cp-text-primary)] mb-1">
+                Default session duration (minutes)
+              </label>
+              <Input
+                type="number"
+                min={15}
+                max={180}
+                step={15}
+                value={defaultSessionMinutes}
+                onChange={(e) => setDefaultSessionMinutes(parseInt(e.target.value, 10) || 45)}
+                className="max-w-[8rem] bg-[var(--cp-bg-surface)] border-[var(--cp-border-subtle)]"
+              />
+              <p className="text-xs text-[var(--cp-text-muted)] mt-1">
+                Default when creating availability or session packages.
+              </p>
+            </div>
+            {message && (
+              <p className={`text-sm ${message === 'Saved.' ? 'text-[var(--cp-accent-success)]' : 'text-[var(--cp-accent-danger)]'}`}>
+                {message}
+              </p>
+            )}
+            <Button type="submit" disabled={saving}>
+              {saving ? 'Saving…' : 'Save preferences'}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   )
 }
-

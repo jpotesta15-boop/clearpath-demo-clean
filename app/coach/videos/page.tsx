@@ -282,8 +282,8 @@ export default function VideosPage() {
       )}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Video Library</h1>
-          <p className="mt-1 text-sm text-gray-500">Manage your training videos. Paste a link to add a video, then assign it to clients below or from the video modal.</p>
+          <h1 className="text-3xl font-bold text-[var(--cp-text-primary)]">Video Library</h1>
+          <p className="mt-1 text-sm text-[var(--cp-text-muted)]">Manage your training videos. Paste a link to add a video, then assign it to clients below or from the video modal.</p>
         </div>
         <Button onClick={() => setShowForm(!showForm)}>
           {showForm ? 'Cancel' : 'Add Video'}

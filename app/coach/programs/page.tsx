@@ -14,6 +14,9 @@ export default function ProgramsPage() {
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [newProgram, setNewProgram] = useState({ name: '', description: '' })
+  const [editingProgram, setEditingProgram] = useState<{ id: string; name: string; description: string } | null>(null)
+  const [savingEdit, setSavingEdit] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
   const supabase = createClient()
 
   useEffect(() => {
@@ -60,14 +63,41 @@ export default function ProgramsPage() {
     }
   }
 
-  if (loading) return <div>Loading...</div>
+  const handleUpdateProgram = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingProgram) return
+    setSavingEdit(true)
+    const { error } = await supabase
+      .from('programs')
+      .update({
+        name: editingProgram.name,
+        description: editingProgram.description || null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', editingProgram.id)
+    setSavingEdit(false)
+    if (!error) {
+      setEditingProgram(null)
+      loadPrograms()
+    }
+  }
+
+  const handleDeleteProgram = async (id: string) => {
+    if (!window.confirm('Delete this program? Assigned clients and lessons will be removed.')) return
+    setDeletingId(id)
+    const { error } = await supabase.from('programs').delete().eq('id', id)
+    setDeletingId(null)
+    if (!error) loadPrograms()
+  }
+
+  if (loading) return <div className="text-[var(--cp-text-muted)]">Loading...</div>
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Programs</h1>
-          <p className="mt-1 text-sm text-gray-500">Create and manage training programs</p>
+          <h1 className="text-3xl font-bold text-[var(--cp-text-primary)]">Programs</h1>
+          <p className="mt-1 text-sm text-[var(--cp-text-muted)]">Create and manage training programs</p>
         </div>
         <Button
           onClick={() => setShowForm(!showForm)}
@@ -84,19 +114,20 @@ export default function ProgramsPage() {
           <CardContent>
             <form onSubmit={handleCreateProgram} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Program Name</label>
+                <label className="block text-sm font-medium text-[var(--cp-text-primary)]">Program Name</label>
                 <Input
                   value={newProgram.name}
                   onChange={(e) => setNewProgram({ ...newProgram, name: e.target.value })}
                   required
+                  className="bg-[var(--cp-bg-surface)] border-[var(--cp-border-subtle)]"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Description</label>
+                <label className="block text-sm font-medium text-[var(--cp-text-primary)]">Description</label>
                 <textarea
                   value={newProgram.description}
                   onChange={(e) => setNewProgram({ ...newProgram, description: e.target.value })}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2"
+                  className="w-full rounded-md border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] px-3 py-2 text-[var(--cp-text-primary)]"
                   rows={4}
                 />
               </div>
@@ -110,21 +141,99 @@ export default function ProgramsPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {programs.map((program) => (
-          <Link key={program.id} href={`/coach/programs/${program.id}`}>
-            <Card className="hover:shadow-lg transition-shadow">
+          <Card key={program.id} className="hover:shadow-[var(--cp-shadow-card)] transition-shadow flex flex-col">
+            <Link href={`/coach/programs/${program.id}`} className="flex-1 min-w-0">
               <CardHeader>
                 <CardTitle>{program.name}</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-0">
                 {program.description && (
-                  <p className="text-sm text-gray-600 line-clamp-3">{program.description}</p>
+                  <p className="text-sm text-[var(--cp-text-muted)] line-clamp-3">{program.description}</p>
                 )}
               </CardContent>
-            </Card>
-          </Link>
+            </Link>
+            <div className="px-6 pb-4 flex flex-wrap gap-2" onClick={(e) => e.preventDefault()}>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  setEditingProgram({
+                    id: program.id,
+                    name: program.name,
+                    description: program.description ?? '',
+                  })
+                }}
+              >
+                Edit
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-[var(--cp-accent-danger)] hover:bg-[var(--cp-accent-danger)]/10"
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  handleDeleteProgram(program.id)
+                }}
+                disabled={deletingId === program.id}
+              >
+                {deletingId === program.id ? 'Deleting…' : 'Delete'}
+              </Button>
+            </div>
+          </Card>
         ))}
       </div>
+
+      {editingProgram && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--cp-bg-backdrop)] p-4"
+          onClick={() => !savingEdit && setEditingProgram(null)}
+        >
+          <Card
+            className="w-full max-w-md bg-[var(--cp-bg-elevated)] border-[var(--cp-border-subtle)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
+              <CardTitle>Edit program</CardTitle>
+              <Button variant="ghost" size="sm" onClick={() => setEditingProgram(null)} disabled={savingEdit}>
+                Close
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleUpdateProgram} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-[var(--cp-text-primary)]">Name</label>
+                  <Input
+                    value={editingProgram.name}
+                    onChange={(e) => setEditingProgram((p) => p ? { ...p, name: e.target.value } : null)}
+                    required
+                    className="bg-[var(--cp-bg-surface)] border-[var(--cp-border-subtle)]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[var(--cp-text-primary)]">Description</label>
+                  <textarea
+                    value={editingProgram.description}
+                    onChange={(e) => setEditingProgram((p) => p ? { ...p, description: e.target.value } : null)}
+                    className="w-full rounded-md border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] px-3 py-2 text-[var(--cp-text-primary)]"
+                    rows={4}
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button type="submit" disabled={savingEdit}>
+                    {savingEdit ? 'Saving…' : 'Save'}
+                  </Button>
+                  <Button type="button" variant="outline" onClick={() => setEditingProgram(null)} disabled={savingEdit}>
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   )
 }
-

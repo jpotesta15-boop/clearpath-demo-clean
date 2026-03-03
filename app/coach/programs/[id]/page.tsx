@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -35,6 +35,11 @@ export default function ProgramDetailPage() {
   const [linkForm, setLinkForm] = useState({ title: '', url: '' })
   const [noteContent, setNoteContent] = useState('')
   const [imageForm, setImageForm] = useState({ title: '', url: '' })
+  const [editingProgram, setEditingProgram] = useState(false)
+  const [editName, setEditName] = useState('')
+  const [editDescription, setEditDescription] = useState('')
+  const [savingProgram, setSavingProgram] = useState(false)
+  const [deletingProgram, setDeletingProgram] = useState(false)
   const supabase = createClient()
 
   useEffect(() => {
@@ -160,6 +165,39 @@ export default function ProgramDetailPage() {
     loadData()
   }
 
+  const startEditProgram = () => {
+    setEditName(program.name)
+    setEditDescription(program.description ?? '')
+    setEditingProgram(true)
+  }
+
+  const handleSaveProgram = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!program?.id) return
+    setSavingProgram(true)
+    const { error } = await supabase
+      .from('programs')
+      .update({
+        name: editName.trim(),
+        description: editDescription.trim() || null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', program.id)
+    setSavingProgram(false)
+    if (!error) {
+      setProgram((p: any) => (p ? { ...p, name: editName.trim(), description: editDescription.trim() || null } : null))
+      setEditingProgram(false)
+    }
+  }
+
+  const handleDeleteProgram = async () => {
+    if (!program?.id || !window.confirm('Delete this program? Assigned clients and all lessons will be removed.')) return
+    setDeletingProgram(true)
+    const { error } = await supabase.from('programs').delete().eq('id', program.id)
+    setDeletingProgram(false)
+    if (!error) router.push('/coach/programs')
+  }
+
   const handleAssignClient = async (clientId: string) => {
     const { error } = await supabase.from('program_assignments').insert({
       program_id: params.id,
@@ -203,13 +241,64 @@ export default function ProgramDetailPage() {
       <div>
         <Link
           href="/coach/programs"
-          className="inline-block text-sm font-medium text-blue-600 hover:text-blue-800 mb-2"
+          className="inline-block text-sm font-medium text-[var(--cp-accent-primary)] hover:underline mb-2"
         >
           ← Back to Programs
         </Link>
-        <h1 className="text-3xl font-bold text-gray-900">{program.name}</h1>
-        {program.description && (
-          <p className="mt-2 text-gray-600">{program.description}</p>
+        {!editingProgram ? (
+          <>
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <h1 className="text-3xl font-bold text-[var(--cp-text-primary)]">{program.name}</h1>
+                {program.description && (
+                  <p className="mt-2 text-[var(--cp-text-muted)]">{program.description}</p>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={startEditProgram}>
+                  Edit program
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-[var(--cp-accent-danger)] text-[var(--cp-accent-danger)] hover:bg-[var(--cp-accent-danger)]/10"
+                  onClick={handleDeleteProgram}
+                  disabled={deletingProgram}
+                >
+                  {deletingProgram ? 'Deleting…' : 'Delete program'}
+                </Button>
+              </div>
+            </div>
+          </>
+        ) : (
+          <form onSubmit={handleSaveProgram} className="space-y-3">
+            <div>
+              <label className="block text-sm font-medium text-[var(--cp-text-primary)]">Name</label>
+              <Input
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                required
+                className="mt-1 bg-[var(--cp-bg-surface)] border-[var(--cp-border-subtle)]"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[var(--cp-text-primary)]">Description</label>
+              <textarea
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                className="mt-1 w-full rounded-md border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] px-3 py-2 text-[var(--cp-text-primary)]"
+                rows={3}
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button type="submit" disabled={savingProgram}>
+                {savingProgram ? 'Saving…' : 'Save'}
+              </Button>
+              <Button type="button" variant="outline" onClick={() => setEditingProgram(false)} disabled={savingProgram}>
+                Cancel
+              </Button>
+            </div>
+          </form>
         )}
       </div>
 

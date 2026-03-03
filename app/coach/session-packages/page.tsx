@@ -171,14 +171,14 @@ export default function SessionPackagesPage() {
   return (
     <div className="space-y-6">
       {error && (
-        <div className="rounded-md bg-red-50 border border-red-200 px-4 py-2 text-sm text-red-800">
+        <div className="rounded-md bg-[var(--cp-accent-danger)]/10 border border-[var(--cp-accent-danger)] px-4 py-2 text-sm text-[var(--cp-accent-danger)]">
           {error}
         </div>
       )}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Session Packages</h1>
-          <p className="mt-1 text-sm text-gray-500">Create sellable sessions (e.g. single $30/45min, group $70). Send offers to clients from here.</p>
+          <h1 className="text-3xl font-bold text-[var(--cp-text-primary)]">Session Packages</h1>
+          <p className="mt-1 text-sm text-[var(--cp-text-muted)]">Create sellable sessions (e.g. single $30/45min, group $70). Send offers to clients from here.</p>
         </div>
         <Button onClick={() => setShowForm(!showForm)}>
           {showForm ? 'Cancel' : 'Create Package'}
@@ -327,19 +327,32 @@ export default function SessionPackagesPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {products.filter((p) => p.is_active !== false).map((product) => (
           <Card key={product.id}>
-            <CardHeader>
-              <CardTitle>{product.name}</CardTitle>
-              <p className="text-lg font-semibold text-primary-600 mt-1">
-                ${(product.price_cents / 100).toFixed(2)} · {product.duration_minutes} min
-                {product.max_participants > 1 ? ` · Up to ${product.max_participants} people` : ''}
-              </p>
+            <CardHeader className="flex flex-row items-start gap-3">
+              <span className="flex-shrink-0 rounded-lg bg-[var(--cp-accent-primary-soft)] p-2 text-[var(--cp-accent-primary)]" aria-hidden>
+                {product.max_participants > 1 ? (
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                  </svg>
+                ) : (
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                )}
+              </span>
+              <div className="min-w-0 flex-1">
+                <CardTitle>{product.name}</CardTitle>
+                <p className="text-lg font-semibold text-[var(--cp-accent-primary)] mt-1">
+                  ${(product.price_cents / 100).toFixed(2)} · {product.duration_minutes} min
+                  {product.max_participants > 1 ? ` · Up to ${product.max_participants} people` : ''}
+                </p>
+              </div>
             </CardHeader>
             <CardContent className="space-y-3">
-              {product.description && (
-                <p className="text-sm text-gray-600">{product.description}</p>
-              )}
+              <p className="text-sm text-[var(--cp-text-muted)]">
+                {product.description || 'Add a description in Edit to help clients understand this package.'}
+              </p>
               {product.goal && (
-                <p className="text-xs text-gray-500">Goal: {product.goal}</p>
+                <p className="text-xs text-[var(--cp-text-subtle)]">Goal: {product.goal}</p>
               )}
               <div className="flex flex-wrap gap-2 pt-2">
                 <Button size="sm" variant="outline" onClick={() => startEdit(product)}>
@@ -364,22 +377,22 @@ export default function SessionPackagesPage() {
       </div>
 
       {products.filter((p) => p.is_active !== false).length === 0 && (
-        <p className="text-gray-500">No session packages yet. Create one to start sending offers.</p>
+        <p className="text-[var(--cp-text-muted)]">No session packages yet. Create one to start sending offers.</p>
       )}
 
       {sendToClientProduct && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => !sending && setSendToClientProduct(null)}>
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-lg font-semibold text-gray-900">Send offer to client</h3>
-            <p className="text-sm text-gray-600 mt-1">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--cp-bg-backdrop)] p-4" onClick={() => !sending && setSendToClientProduct(null)}>
+          <div className="bg-[var(--cp-bg-elevated)] border border-[var(--cp-border-subtle)] rounded-lg shadow-[var(--cp-shadow-card)] max-w-md w-full p-6 text-[var(--cp-text-primary)]" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold">Send offer to client</h3>
+            <p className="text-sm text-[var(--cp-text-muted)] mt-1">
               {sendToClientProduct.name} – ${(sendToClientProduct.price_cents / 100).toFixed(2)}
             </p>
             <div className="mt-4">
-              <label className="block text-sm font-medium text-gray-700">Select client</label>
+              <label className="block text-sm font-medium text-[var(--cp-text-primary)]">Select client</label>
               <select
                 value={sendToClientId}
                 onChange={(e) => setSendToClientId(e.target.value)}
-                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2"
+                className="mt-1 w-full rounded-md border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] px-3 py-2 text-[var(--cp-text-primary)]"
               >
                 <option value="">Choose...</option>
                 {clients.map((c) => (
