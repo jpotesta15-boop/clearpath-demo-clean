@@ -91,7 +91,7 @@ export async function POST(request: Request) {
 
   const sessionParams = {
     mode: 'payment' as const,
-    payment_method_types: ['card'] as const,
+    payment_method_types: ['card'],
     line_items: [
       {
         price_data: {
