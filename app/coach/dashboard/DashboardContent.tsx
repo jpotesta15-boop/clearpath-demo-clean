@@ -135,15 +135,15 @@ export function DashboardContent({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Welcome back</h1>
-        <p className="mt-1 text-sm text-gray-500">Your coaching at a glance — tap any tile for details</p>
+        <h1 className="text-3xl font-bold text-slate-900">Welcome back</h1>
+        <p className="mt-1 text-sm text-slate-500">Your coaching at a glance — tap any tile for details.</p>
       </div>
 
-      <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+      <div className="rounded-2xl border border-slate-200 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-slate-50 p-4 shadow-lg">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h3 className="font-medium text-gray-900">Accept session payments</h3>
-            <p className="text-sm text-gray-500">
+            <h3 className="font-medium text-slate-50">Accept session payments</h3>
+            <p className="text-sm text-slate-200/80">
               {stripeConnectAccountId
                 ? 'Your Stripe account is connected. Clients can pay for session offers.'
                 : 'Connect Stripe to accept payments when clients book sessions.'}
@@ -152,14 +152,14 @@ export function DashboardContent({
           <div>
             {stripeConnectAccountId ? (
               <div className="flex items-center gap-2">
-                <span className="inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-sm font-medium text-green-800">
+                <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-3 py-1 text-sm font-medium text-emerald-300">
                   Stripe connected
                 </span>
                 <button
                   type="button"
                   onClick={handleConnectStripe}
                   disabled={connectLoading}
-                  className="text-sm font-medium text-blue-600 hover:text-blue-800 disabled:opacity-50"
+                  className="text-sm font-medium text-sky-300 hover:text-sky-200 disabled:opacity-50"
                 >
                   {connectLoading ? 'Opening…' : 'Reconnect'}
                 </button>
@@ -169,7 +169,7 @@ export function DashboardContent({
                 type="button"
                 onClick={handleConnectStripe}
                 disabled={connectLoading}
-                className="inline-flex items-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                className="inline-flex items-center rounded-lg bg-sky-500 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-sky-400 disabled:opacity-50"
               >
                 {connectLoading ? 'Opening…' : 'Connect Stripe'}
               </button>
@@ -184,12 +184,12 @@ export function DashboardContent({
             key={id}
             type="button"
             onClick={() => setExpandedPanel(id)}
-            className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-gray-200 bg-white p-6 shadow-sm hover:border-blue-400 hover:bg-blue-50/50 hover:shadow-md transition-all min-h-[120px]"
+            className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:border-sky-400 hover:bg-sky-50/70 hover:shadow-md transition-all min-h-[120px]"
           >
-            <span className="text-gray-600">{iconSvg[id]}</span>
-            <span className="text-sm font-medium text-gray-700 text-center">{label}</span>
+            <span className="text-slate-600">{iconSvg[id]}</span>
+            <span className="text-sm font-medium text-slate-800 text-center">{label}</span>
             {badge != null && badge > 0 && (
-              <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">
+              <span className="rounded-full bg-sky-100 px-2 py-0.5 text-xs font-medium text-sky-800">
                 {badge}
               </span>
             )}
@@ -199,39 +199,39 @@ export function DashboardContent({
 
       {expandedPanel && (
         <div
-          className="fixed inset-0 z-50 bg-white overflow-y-auto"
+          className="fixed inset-0 z-50 bg-slate-950/95 overflow-y-auto"
           aria-modal="true"
           role="dialog"
         >
-          <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3 shadow-sm">
-            <h2 className="text-lg font-semibold text-gray-900">
+          <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-800 bg-slate-950/95 px-4 py-3 shadow-sm">
+            <h2 className="text-lg font-semibold text-slate-50">
               {tiles.find((t) => t.id === expandedPanel)?.label ?? expandedPanel}
             </h2>
             <button
               type="button"
               onClick={() => setExpandedPanel(null)}
-              className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className="rounded-lg border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-medium text-slate-100 hover:bg-slate-800"
             >
               Close
             </button>
           </div>
-          <div className="p-6 max-w-2xl mx-auto">
+          <div className="p-6 max-w-2xl mx-auto text-slate-100">
             {expandedPanel === 'revenue' && (
               <div className="space-y-6">
                 <div>
-                  <p className="text-sm text-gray-500">Total revenue</p>
-                  <p className="text-3xl font-bold text-gray-900">${revenue.toLocaleString()}</p>
+                  <p className="text-sm text-slate-300">Total revenue</p>
+                  <p className="text-3xl font-bold text-slate-50">${revenue.toLocaleString()}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Revenue this week</p>
-                  <p className="text-2xl font-semibold text-gray-900">${revenueThisWeek.toLocaleString()}</p>
+                  <p className="text-sm text-slate-300">Revenue this week</p>
+                  <p className="text-2xl font-semibold text-slate-50">${revenueThisWeek.toLocaleString()}</p>
                 </div>
               </div>
             )}
 
             {expandedPanel === 'clients' && (
               <div className="space-y-4">
-                <p className="text-2xl font-bold text-gray-900">{totalClients} clients</p>
+                <p className="text-2xl font-bold text-slate-50">{totalClients} clients</p>
                 <Link
                   href="/coach/clients"
                   className="inline-flex font-medium text-blue-600 hover:text-blue-800"
@@ -243,20 +243,20 @@ export function DashboardContent({
 
             {expandedPanel === 'upcoming' && (
               <div className="space-y-4">
-                <p className="text-sm text-gray-500">{upcomingCount} upcoming sessions</p>
+                <p className="text-sm text-slate-300">{upcomingCount} upcoming sessions</p>
                 {upcomingSessions.length > 0 ? (
                   <ul className="space-y-3">
                     {upcomingSessions.map((session) => (
                       <li key={session.id} className="border-b border-gray-100 pb-3 last:border-0">
-                        <p className="font-medium text-gray-900">{session.clients?.full_name ?? 'Client'}</p>
-                        <p className="text-sm text-gray-500">
+                    <p className="font-medium text-slate-50">{session.clients?.full_name ?? 'Client'}</p>
+                    <p className="text-sm text-slate-300">
                           {format(new Date(session.scheduled_time), 'EEEE, MMM d, yyyy · h:mm a')}
                         </p>
                       </li>
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-gray-500">No upcoming sessions</p>
+                  <p className="text-slate-400">No upcoming sessions</p>
                 )}
                 <Link
                   href="/coach/schedule"

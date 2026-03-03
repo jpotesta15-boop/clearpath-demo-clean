@@ -36,6 +36,7 @@ function getThumbnailUrl(url: string | null, thumbnailUrl: string | null): strin
 export default function VideosPage() {
   const [videos, setVideos] = useState<any[]>([])
   const [clients, setClients] = useState<{ id: string; full_name: string }[]>([])
+  const [programs, setPrograms] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -43,8 +44,9 @@ export default function VideosPage() {
   const [editingVideo, setEditingVideo] = useState<{ title: string; description: string; thumbnail_url: string }>({ title: '', description: '', thumbnail_url: '' })
   const [savingEdit, setSavingEdit] = useState(false)
   const [assignedClientIds, setAssignedClientIds] = useState<string[]>([])
-  const [assignClientId, setAssignClientId] = useState('')
-  const [assigning, setAssigning] = useState(false)
+  const [selectedProgramIds, setSelectedProgramIds] = useState<string[]>([])
+  const [updatingClientId, setUpdatingClientId] = useState<string | null>(null)
+  const [deletingVideoId, setDeletingVideoId] = useState<string | null>(null)
   const [newVideo, setNewVideo] = useState({ title: '', description: '', url: '', category: '' })
   const supabase = createClient()
   const tenantId = process.env.NEXT_PUBLIC_CLIENT_ID ?? 'demo'
@@ -52,11 +54,13 @@ export default function VideosPage() {
   useEffect(() => {
     loadVideos()
     loadClients()
+    loadPrograms()
   }, [])
 
   useEffect(() => {
     if (selectedVideo?.id) {
       loadAssignments(selectedVideo.id)
+      loadVideoPrograms(selectedVideo.id)
       setEditingVideo({
         title: selectedVideo.title ?? '',
         description: selectedVideo.description ?? '',
@@ -64,7 +68,7 @@ export default function VideosPage() {
       })
     } else {
       setAssignedClientIds([])
-      setAssignClientId('')
+      setSelectedProgramIds([])
     }
   }, [selectedVideo?.id, selectedVideo?.title, selectedVideo?.description, selectedVideo?.thumbnail_url])
 
@@ -79,12 +83,34 @@ export default function VideosPage() {
     setClients(data || [])
   }
 
+  const loadPrograms = async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) return
+    const { data } = await supabase
+      .from('programs')
+      .select('id, name')
+      .eq('coach_id', user.id)
+      .order('created_at', { ascending: false })
+    setPrograms(data || [])
+  }
+
   const loadAssignments = async (videoId: string) => {
     const { data } = await supabase
       .from('video_assignments')
       .select('client_id')
       .eq('video_id', videoId)
     setAssignedClientIds((data || []).map((r: any) => r.client_id))
+  }
+
+  const loadVideoPrograms = async (videoId: string) => {
+    const { data } = await supabase
+      .from('program_lessons')
+      .select('program_id')
+      .eq('video_id', videoId)
+    const ids = Array.from(new Set((data || []).map((r: any) => r.program_id).filter(Boolean)))
+    setSelectedProgramIds(ids as string[])
   }
 
   const loadVideos = async () => {
@@ -102,21 +128,102 @@ export default function VideosPage() {
     setLoading(false)
   }
 
-  const handleAssignToClient = async () => {
-    if (!selectedVideo || !assignClientId) return
-    setAssigning(true)
+  const toggleClientAssignment = async (clientId: string) => {
+    if (!selectedVideo?.id) return
     setError(null)
-    const { error: err } = await supabase.from('video_assignments').insert({
-      video_id: selectedVideo.id,
-      client_id: assignClientId,
-    })
-    if (err) {
-      setError(err.message)
-    } else {
-      setAssignedClientIds((prev) => [...prev, assignClientId])
-      setAssignClientId('')
+    setUpdatingClientId(clientId)
+    const isAssigned = assignedClientIds.includes(clientId)
+    try {
+      if (isAssigned) {
+        const { error: err } = await supabase
+          .from('video_assignments')
+          .delete()
+          .eq('video_id', selectedVideo.id)
+          .eq('client_id', clientId)
+        if (err) {
+          setError(err.message)
+        } else {
+          setAssignedClientIds((prev) => prev.filter((id) => id !== clientId))
+        }
+      } else {
+        const { error: err } = await supabase.from('video_assignments').insert({
+          video_id: selectedVideo.id,
+          client_id: clientId,
+        })
+        if (err) {
+          setError(err.message)
+        } else {
+          setAssignedClientIds((prev) => (prev.includes(clientId) ? prev : [...prev, clientId]))
+        }
+      }
+    } finally {
+      setUpdatingClientId(null)
     }
-    setAssigning(false)
+  }
+
+  const toggleProgramMembership = async (programId: string) => {
+    if (!selectedVideo?.id) return
+    setError(null)
+    const isSelected = selectedProgramIds.includes(programId)
+    try {
+      if (isSelected) {
+        const { error: err } = await supabase
+          .from('program_lessons')
+          .delete()
+          .eq('program_id', programId)
+          .eq('video_id', selectedVideo.id)
+        if (err) {
+          setError(err.message)
+        } else {
+          setSelectedProgramIds((prev) => prev.filter((id) => id !== programId))
+        }
+      } else {
+        // Determine next sort order within the program
+        const { data: existing } = await supabase
+          .from('program_lessons')
+          .select('sort_order')
+          .eq('program_id', programId)
+        const nextSort =
+          existing && existing.length > 0
+            ? Math.max(...existing.map((r: any) => r.sort_order ?? 0)) + 1
+            : 0
+        const { error: err } = await supabase.from('program_lessons').insert({
+          program_id: programId,
+          lesson_type: 'video',
+          video_id: selectedVideo.id,
+          sort_order: nextSort,
+        })
+        if (err) {
+          setError(err.message)
+        } else {
+          setSelectedProgramIds((prev) => (prev.includes(programId) ? prev : [...prev, programId]))
+        }
+      }
+    } catch (e: any) {
+      setError(e?.message ?? 'Unable to update programs for this video')
+    }
+  }
+
+  const handleDeleteVideo = async (videoId: string) => {
+    if (!window.confirm('Delete this video? This will also remove it from any assigned clients.')) return
+    setError(null)
+    setDeletingVideoId(videoId)
+    try {
+      // Remove assignments first to avoid orphaned rows if FK is not cascading
+      await supabase.from('video_assignments').delete().eq('video_id', videoId)
+      const { error: err } = await supabase.from('videos').delete().eq('id', videoId)
+      if (err) {
+        setError(err.message)
+      } else {
+        setVideos((prev) => prev.filter((v) => v.id !== videoId))
+        if (selectedVideo?.id === videoId) {
+          setSelectedVideo(null)
+          setAssignedClientIds([])
+        }
+      }
+    } finally {
+      setDeletingVideoId(null)
+    }
   }
 
   const handleCreateVideo = async (e: React.FormEvent) => {
@@ -286,16 +393,26 @@ export default function VideosPage() {
           >
             <div className="flex items-center justify-between px-4 py-2 border-b border-gray-200">
               <h3 className="text-lg font-semibold text-gray-900 truncate pr-4">{selectedVideo.title}</h3>
-              <button
-                type="button"
-                onClick={() => setSelectedVideo(null)}
-                className="p-2 text-gray-500 hover:text-gray-700 rounded-md hover:bg-gray-100"
-                aria-label="Close"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleDeleteVideo(selectedVideo.id)}
+                  disabled={deletingVideoId === selectedVideo.id}
+                  className="inline-flex items-center rounded-md border border-red-200 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {deletingVideoId === selectedVideo.id ? 'Deleting…' : 'Delete'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedVideo(null)}
+                  className="p-2 text-gray-500 hover:text-gray-700 rounded-md hover:bg-gray-100"
+                  aria-label="Close"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
             </div>
             <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
               {getEmbedUrl(selectedVideo.url) ? (
@@ -341,55 +458,84 @@ export default function VideosPage() {
                       rows={2}
                     />
                   </div>
-                  <div>
-                    <label className="block text-xs text-gray-500">Thumbnail URL (optional)</label>
-                    <Input
-                      value={editingVideo.thumbnail_url}
-                      onChange={(e) => setEditingVideo((p) => ({ ...p, thumbnail_url: e.target.value }))}
-                      placeholder="https://..."
-                      className="mt-0.5"
-                    />
-                  </div>
                   <Button type="submit" size="sm" disabled={savingEdit}>
                     {savingEdit ? 'Saving...' : 'Save changes'}
                   </Button>
                 </form>
               </div>
             </div>
-            <div className="border-t border-gray-200 px-4 py-3 space-y-3">
-              <h4 className="text-sm font-medium text-gray-700">Assign to client</h4>
-              {assignedClientIds.length > 0 && (
-                <p className="text-xs text-gray-500">
-                  Assigned to: {assignedClientIds.map((id) => clients.find((c) => c.id === id)?.full_name).filter(Boolean).join(', ')}
-                </p>
-              )}
-              <div className="flex flex-wrap gap-2 items-center">
-                <select
-                  value={assignClientId}
-                  onChange={(e) => setAssignClientId(e.target.value)}
-                  className="rounded-md border border-gray-300 px-3 py-2 text-sm min-w-[180px]"
-                >
-                  <option value="">Select client...</option>
-                  {clients
-                    .filter((c) => !assignedClientIds.includes(c.id))
-                    .map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.full_name}
-                      </option>
-                    ))}
-                </select>
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={handleAssignToClient}
-                  disabled={!assignClientId || assigning}
-                >
-                  {assigning ? 'Adding...' : 'Assign'}
-                </Button>
+            <div className="border-t border-gray-200 px-4 py-3 space-y-4">
+              <div className="space-y-3">
+                <h4 className="text-sm font-medium text-gray-700">Assign to clients</h4>
+                {assignedClientIds.length > 0 && (
+                  <p className="text-xs text-gray-500">
+                    Assigned to:{' '}
+                    {assignedClientIds
+                      .map((id) => clients.find((c) => c.id === id)?.full_name)
+                      .filter(Boolean)
+                      .join(', ')}
+                  </p>
+                )}
+                <div className="flex flex-wrap gap-2">
+                  {clients.map((client) => {
+                    const isSelected = assignedClientIds.includes(client.id)
+                    const isLoading = updatingClientId === client.id
+                    return (
+                      <button
+                        key={client.id}
+                        type="button"
+                        onClick={() => toggleClientAssignment(client.id)}
+                        disabled={isLoading}
+                        className={`px-3 py-1 rounded-full border text-xs font-medium transition ${
+                          isSelected
+                            ? 'bg-primary-600 text-white border-primary-600'
+                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                        } ${isLoading ? 'opacity-60 cursor-wait' : ''}`}
+                      >
+                        {client.full_name}
+                      </button>
+                    )
+                  })}
+                  {clients.length === 0 && (
+                    <p className="text-xs text-gray-500">No clients found. Add clients to assign this video.</p>
+                  )}
+                </div>
               </div>
-              {clients.filter((c) => !assignedClientIds.includes(c.id)).length === 0 && clients.length > 0 && (
-                <p className="text-xs text-gray-500">All clients are already assigned this video.</p>
-              )}
+
+              <div className="space-y-3 border-t border-gray-100 pt-3">
+                <h4 className="text-sm font-medium text-gray-700">Add to programs</h4>
+                {selectedProgramIds.length > 0 && (
+                  <p className="text-xs text-gray-500">
+                    Used in:{' '}
+                    {selectedProgramIds
+                      .map((id) => programs.find((p) => p.id === id)?.name)
+                      .filter(Boolean)
+                      .join(', ')}
+                  </p>
+                )}
+                <div className="flex flex-wrap gap-2">
+                  {programs.map((program) => {
+                    const isSelected = selectedProgramIds.includes(program.id)
+                    return (
+                      <button
+                        key={program.id}
+                        type="button"
+                        onClick={() => toggleProgramMembership(program.id)}
+                        className={`px-3 py-1 rounded-full border text-xs font-medium transition ${
+                          isSelected
+                            ? 'bg-indigo-600 text-white border-indigo-600'
+                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                        }`}
+                      >
+                        {program.name}
+                      </button>
+                    )
+                  })}
+                  {programs.length === 0 && (
+                    <p className="text-xs text-gray-500">No programs yet. Create a program to attach this video.</p>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </div>

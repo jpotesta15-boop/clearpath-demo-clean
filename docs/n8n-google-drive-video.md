@@ -47,6 +47,26 @@ When a video file is uploaded to a Google Drive folder, n8n can call your app so
      }
      ```
 
+## Converting MOV to MP4 (CloudConvert)
+
+Google Drive often does not embed MOV files reliably in the client video player. You can convert MOV (or other formats) to MP4 in n8n using **CloudConvert**, then re-upload the MP4 to Drive and send that link to the app. The webhook and app are unchanged; you simply send the **MP4** Drive URL instead of the original file URL.
+
+**Flow:** Drive trigger → download file → CloudConvert job (MOV → MP4) → wait for result → download MP4 → upload MP4 to Drive → POST to ClearPath with the new Drive link.
+
+1. **CloudConvert setup:** Sign up at [cloudconvert.com](https://cloudconvert.com), go to **API**, create an API key. Store it in n8n credentials (e.g. Header Auth).
+2. **Workflow:** Use the CloudConvert workflow described below. Steps: Google Drive trigger → (optional) filter for video mime types → Google Drive Download → HTTP Create CloudConvert job → HTTP Upload file to CloudConvert → Wait + poll job until finished → HTTP Get output URL → HTTP Download MP4 binary → Google Drive Upload (new file) → POST to `/api/webhooks/n8n-video` with `url` = the **new** Drive link to the MP4 (e.g. `https://drive.google.com/file/d/{{ newFileId }}/view`).
+3. **Sharing:** After uploading the MP4 to Drive, ensure the new file is shared “Anyone with the link” so the embed works on the client Videos page.
+
+A ready-to-import workflow with placeholder nodes for CloudConvert and Drive upload is at `docs/n8n-google-drive-video-cloudconvert-workflow.json`. After importing:
+
+1. Set **CloudConvert API key** in the "CloudConvert Create Job" and "CloudConvert Wait" nodes (or use n8n credentials).
+2. In **CloudConvert Upload**, add multipart form parameters from the Create Job response: from the import task use `result.form.parameters` (e.g. `expires`, `signature`, `max_file_count`, `max_file_size`) as body parameters with values from `$('CloudConvert Create Job').item.json.data.tasks.find(t => t.operation === 'import/upload').result.form.parameters.<key>`. Set the file field to use binary property `data` (from Download).
+3. Set **webhook URL** and **webhook secret** in "POST to ClearPath".
+4. Set the **Drive folder** in the trigger and ensure the Merge node passes binary from the Download node.
+5. Run Tests 1–2 from the plan to verify.
+
+**Testing:** Use Test 1 (webhook with direct MP4 link) and Test 2 (full flow with a small MOV) from the CloudConvert plan. Confirm the new video appears in the coach library with the MP4 Drive link and embeds on the client Videos page.
+
 ## Importing the workflow
 
 A JSON workflow file is provided at `docs/n8n-google-drive-video-workflow.json`. In n8n: **Workflows → Import from File** (or paste JSON). Then:

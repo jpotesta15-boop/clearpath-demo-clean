@@ -12,6 +12,7 @@ export default function NewClientPage() {
   const router = useRouter()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [createdCredentials, setCreatedCredentials] = useState<{ id: string; email: string | null; password?: string } | null>(null)
   const [form, setForm] = useState({
     full_name: '',
     email: '',
@@ -54,6 +55,8 @@ export default function NewClientPage() {
       setSaving(false)
       return
     }
+    let generatedPassword: string | undefined
+
     if (sendInvite && emailTrimmed) {
       const res = await fetch('/api/invite-client', {
         method: 'POST',
@@ -66,10 +69,29 @@ export default function NewClientPage() {
         setSaving(false)
         return
       }
+    } else if (emailTrimmed) {
+      // Create a Supabase auth user immediately and surface a password for the coach to share
+      const res = await fetch('/api/create-client-account', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: emailTrimmed }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setError(data.error || 'Failed to create login for this client')
+        setSaving(false)
+        return
+      }
+      generatedPassword = data.password
     }
+
     setSaving(false)
     if (newClient?.id) {
-      router.push(`/coach/clients/${newClient.id}`)
+      setCreatedCredentials({
+        id: newClient.id,
+        email: emailTrimmed,
+        password: generatedPassword,
+      })
     } else {
       router.push('/coach/clients')
     }
@@ -146,7 +168,7 @@ export default function NewClientPage() {
                 </label>
               </div>
             )}
-            {error && (
+              {error && (
               <p className="text-sm text-red-600">{error}</p>
             )}
             <div className="flex gap-3">
@@ -162,6 +184,51 @@ export default function NewClientPage() {
           </form>
         </CardContent>
       </Card>
+      {createdCredentials && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Client login created</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-gray-600">
+              Share these credentials with your client via email or an in-app message. For security, this password is only shown once.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+              <div>
+                <p className="text-gray-500">Email</p>
+                <p className="font-medium text-gray-900 break-all">{createdCredentials.email ?? '—'}</p>
+              </div>
+              {createdCredentials.password && (
+                <div>
+                  <p className="text-gray-500">Temporary password</p>
+                  <p className="font-mono text-gray-900 break-all">{createdCredentials.password}</p>
+                </div>
+              )}
+            </div>
+            <div className="flex gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  if (createdCredentials.password) {
+                    navigator.clipboard.writeText(createdCredentials.password).catch(() => {})
+                  }
+                }}
+              >
+                Copy password
+              </Button>
+              {createdCredentials.id && (
+                <Button
+                  type="button"
+                  onClick={() => router.push(`/coach/clients/${createdCredentials.id}`)}
+                >
+                  Go to client profile
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }
