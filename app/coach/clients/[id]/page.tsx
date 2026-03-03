@@ -75,17 +75,17 @@ export default async function ClientDetailPage({
       <div className="flex flex-wrap items-center gap-3">
         <Link
           href="/coach/clients"
-          className="text-sm font-medium text-gray-600 hover:text-gray-900"
+          className="text-sm font-medium text-[var(--cp-text-muted)] hover:text-[var(--cp-text-primary)]"
         >
           ← Back to Clients
         </Link>
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-3xl font-bold text-gray-900">{client.full_name}</h1>
+        <h1 className="text-3xl font-bold text-[var(--cp-text-primary)]">{client.full_name}</h1>
         <Link
           href={`/coach/messages?client=${client.id}`}
-          className="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          className="inline-flex items-center rounded-md bg-[var(--cp-accent-primary)] px-4 py-2 text-sm font-medium text-[var(--cp-text-on-accent)] hover:bg-[var(--cp-accent-primary-strong)]"
         >
           Message
         </Link>
@@ -186,7 +186,7 @@ export default async function ClientDetailPage({
                     {needsPickTime && (
                       <Link
                         href="/coach/schedule"
-                        className="inline-flex items-center rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+                        className="inline-flex items-center rounded-md bg-[var(--cp-accent-primary)] px-3 py-1.5 text-sm font-medium text-[var(--cp-text-on-accent)] hover:bg-[var(--cp-accent-primary-strong)]"
                       >
                         Pick time
                       </Link>

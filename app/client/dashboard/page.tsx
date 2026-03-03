@@ -16,16 +16,16 @@ export default async function ClientDashboard() {
   if (!client) {
     return (
       <div className="space-y-4 max-w-md">
-        <h1 className="text-2xl font-bold text-gray-900">Client profile not found</h1>
-        <p className="text-gray-600">
+        <h1 className="text-2xl font-bold text-[var(--cp-text-primary)]">Client profile not found</h1>
+        <p className="text-[var(--cp-text-muted)]">
           There is no client record for this account. If your coach invited you, make sure you’re using the same email they have on file.
         </p>
-        <p className="text-gray-600">
+        <p className="text-[var(--cp-text-muted)]">
           <strong>What to do:</strong> Contact your coach and ask to be added as a client and to receive a portal invite. Once they add you and send the invite, you can set your password and sign in here.
         </p>
         <a
           href="/login"
-          className="inline-flex items-center justify-center rounded-md font-medium px-4 py-2 bg-blue-600 text-white hover:bg-blue-700"
+          className="inline-flex items-center justify-center rounded-md font-medium px-4 py-2 bg-[var(--cp-accent-primary)] text-[var(--cp-text-on-accent)] hover:bg-[var(--cp-accent-primary-strong)]"
         >
           Back to login
         </a>

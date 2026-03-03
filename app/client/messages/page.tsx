@@ -75,13 +75,13 @@ export default function ClientMessagesPage() {
   if (clientNotFound) {
     return (
       <div className="space-y-4 max-w-md">
-        <h1 className="text-2xl font-bold text-gray-900">Client not found</h1>
-        <p className="text-gray-600">
+        <h1 className="text-2xl font-bold text-[var(--cp-text-primary)]">Client not found</h1>
+        <p className="text-[var(--cp-text-muted)]">
           There is no client record for this account. Contact your coach to be added and to receive a portal invite.
         </p>
         <a
           href="/login"
-          className="inline-flex items-center justify-center rounded-md font-medium px-4 py-2 bg-blue-600 text-white hover:bg-blue-700"
+          className="inline-flex items-center justify-center rounded-md font-medium px-4 py-2 bg-[var(--cp-accent-primary)] text-[var(--cp-text-on-accent)] hover:bg-[var(--cp-accent-primary-strong)]"
         >
           Back to login
         </a>

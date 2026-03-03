@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { AppLayout } from '@/components/layout/AppLayout'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 
 export default async function Home() {
   const supabase = await createClient()
@@ -22,25 +23,27 @@ export default async function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center">
+    <div className="min-h-screen bg-[var(--cp-bg-page)] flex items-center">
       <AppLayout className="flex justify-center">
-        <div className="max-w-md w-full space-y-8">
-          <div className="text-center">
-            <h1 className="text-4xl font-bold text-gray-900">ClearPath</h1>
-            <p className="mt-2 text-gray-600">Coach OS Demo</p>
-          </div>
-          <div className="space-y-4">
+        <Card variant="raised" className="max-w-md w-full">
+          <CardHeader className="text-center">
+            <CardTitle className="text-3xl font-bold text-[var(--cp-text-primary)]">
+              ClearPath
+            </CardTitle>
+            <p className="mt-2 text-sm text-[var(--cp-text-muted)]">Coach OS Demo</p>
+          </CardHeader>
+          <CardContent className="space-y-4">
             <Link
               href="/login"
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+              className="w-full inline-flex justify-center rounded-md px-4 py-2 text-sm font-medium bg-[var(--cp-accent-primary)] text-[var(--cp-text-on-accent)] hover:bg-[var(--cp-accent-primary-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--cp-border-focus)]"
             >
               Login
             </Link>
-            <p className="text-center text-sm text-gray-600">
+            <p className="text-center text-sm text-[var(--cp-text-muted)]">
               Demo: coach@demo.com / demo123
             </p>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </AppLayout>
     </div>
   )

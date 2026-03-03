@@ -91,15 +91,22 @@ export default function SidebarNav({ navItems }: { navItems: NavItem[] }) {
   return (
     <>
       <aside
-        className={`fixed left-0 top-0 z-30 h-full bg-white border-r border-gray-200 shadow-sm flex flex-col transition-[width] duration-200 ${
+        className={`fixed left-0 top-0 z-30 h-full bg-[var(--cp-bg-surface)] border-r border-[var(--cp-border-subtle)] shadow-[var(--cp-shadow-soft)] flex flex-col transition-[width] duration-200 ${
           expanded ? 'w-60' : 'w-16'
         }`}
       >
-        <div className="flex h-16 items-center border-b border-gray-200 px-3">
+        <div className="flex h-16 items-center border-b border-[var(--cp-border-subtle)] px-3">
           {expanded ? (
-            <span className="text-lg font-bold text-blue-600 truncate">{brandLabel}</span>
+            <span className="text-lg font-bold text-[var(--cp-accent-primary)] truncate">
+              {brandLabel}
+            </span>
           ) : (
-            <span className="text-lg font-bold text-blue-600 truncate" title={brandLabel}>CP</span>
+            <span
+              className="text-lg font-bold text-[var(--cp-accent-primary)] truncate"
+              title={brandLabel}
+            >
+              CP
+            </span>
           )}
         </div>
         <nav className="flex-1 overflow-y-auto py-2">
@@ -112,8 +119,8 @@ export default function SidebarNav({ navItems }: { navItems: NavItem[] }) {
                 href={item.href}
                 className={`flex items-center gap-3 px-3 py-2.5 text-sm font-medium border-l-2 mx-2 my-0.5 rounded-r transition-colors ${
                   isActive
-                    ? 'bg-blue-50 border-blue-600 text-blue-800'
-                    : 'border-transparent text-gray-700 hover:bg-gray-100 hover:border-gray-300'
+                    ? 'bg-[var(--cp-accent-primary-soft)] border-[var(--cp-accent-primary)] text-[var(--cp-accent-primary)]'
+                    : 'border-transparent text-[var(--cp-text-muted)] hover:bg-[rgba(148,163,184,0.12)] hover:border-[var(--cp-border-subtle)]'
                 }`}
                 title={!expanded ? item.label : undefined}
               >

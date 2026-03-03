@@ -3,6 +3,7 @@ import { Inter } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/providers/ThemeProvider"
 import { getBrandColors } from "@/lib/branding"
+import { ThemeVariantProvider } from "@/components/providers/ThemeVariantProvider"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -25,7 +26,9 @@ export default async function RootLayout({
           brandPrimary={brandColors.primary}
           brandSecondary={brandColors.secondary}
         >
-          {children}
+          <ThemeVariantProvider>
+            {children}
+          </ThemeVariantProvider>
         </ThemeProvider>
       </body>
     </html>

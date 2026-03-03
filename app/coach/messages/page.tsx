@@ -116,15 +116,15 @@ export default function MessagesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Messages</h1>
-        <p className="mt-1 text-sm text-gray-500">Communicate with your clients</p>
+        <h1 className="text-3xl font-bold text-[var(--cp-text-primary)]">Messages</h1>
+        <p className="mt-1 text-sm text-[var(--cp-text-muted)]">Communicate with your clients</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <Card className="border border-gray-200 shadow-sm">
+        <Card className="border border-[var(--cp-border-subtle)] shadow-[var(--cp-shadow-soft)]">
           <CardContent className="p-0">
-            <div className="p-4 border-b border-gray-100 bg-gray-50/50">
-              <h3 className="font-semibold text-gray-900">Clients</h3>
+            <div className="p-4 border-b border-[var(--cp-border-subtle)] bg-[rgba(15,23,42,0.6)]">
+              <h3 className="font-semibold text-[var(--cp-text-primary)]">Clients</h3>
             </div>
             <div className="divide-y divide-gray-100 max-h-[420px] overflow-y-auto">
               {clients.map((client) => (
@@ -132,15 +132,15 @@ export default function MessagesPage() {
                   key={client.id}
                   type="button"
                   onClick={() => setSelectedClient(client.id)}
-                  className={`w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors ${
+                  className={`w-full text-left px-4 py-3 hover:bg-[rgba(148,163,184,0.12)] transition-colors ${
                     selectedClient === client.id
-                      ? 'bg-blue-50 border-l-2 border-l-blue-600'
+                      ? 'bg-[var(--cp-accent-primary-soft)] border-l-2 border-l-[var(--cp-accent-primary)]'
                       : ''
                   }`}
                 >
-                  <p className="font-medium text-gray-900">{client.full_name}</p>
+                  <p className="font-medium text-[var(--cp-text-primary)]">{client.full_name}</p>
                   {client.email && (
-                    <p className="text-xs text-gray-500 truncate">{client.email}</p>
+                    <p className="text-xs text-[var(--cp-text-muted)] truncate">{client.email}</p>
                   )}
                 </button>
               ))}
@@ -149,21 +149,21 @@ export default function MessagesPage() {
         </Card>
 
         <div className="lg:col-span-3 flex flex-col min-h-[480px]">
-          <Card className="border border-gray-200 shadow-sm flex-1 flex flex-col overflow-hidden">
+          <Card className="border border-[var(--cp-border-subtle)] shadow-[var(--cp-shadow-soft)] flex-1 flex flex-col overflow-hidden">
             {selectedClient ? (
               <>
-                <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50">
-                  <p className="font-semibold text-gray-900">
+                <div className="px-4 py-3 border-b border-[var(--cp-border-subtle)] bg-[rgba(15,23,42,0.6)]">
+                  <p className="font-semibold text-[var(--cp-text-primary)]">
                     {selectedClientData?.full_name ?? 'Client'}
                   </p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-[var(--cp-text-muted)]">
                     {selectedClientData?.email ?? 'No email'}
                   </p>
                 </div>
                 <div className="flex-1 overflow-y-auto p-4 min-h-0">
                   <div className="space-y-3">
-                    {messages.length === 0 && (
-                      <p className="text-center text-gray-500 text-sm py-8">
+                      {messages.length === 0 && (
+                        <p className="text-center text-[var(--cp-text-muted)] text-sm py-8">
                         No messages yet. Send one below.
                       </p>
                     )}
@@ -187,8 +187,8 @@ export default function MessagesPage() {
                             <div
                               className={`rounded-lg px-4 py-2.5 ${
                                 isOwn
-                                  ? 'bg-blue-600 text-white'
-                                  : 'bg-gray-100 text-gray-900 border border-gray-200'
+                                  ? 'bg-[var(--cp-accent-primary)] text-[var(--cp-text-on-accent)]'
+                                  : 'bg-[rgba(15,23,42,0.8)] text-[var(--cp-text-primary)] border border-[var(--cp-border-subtle)]'
                               }`}
                             >
                               <p className="text-sm whitespace-pre-wrap break-words">
@@ -196,7 +196,7 @@ export default function MessagesPage() {
                               </p>
                               <p
                                 className={`text-xs mt-1 ${
-                                  isOwn ? 'text-blue-100' : 'text-gray-500'
+                                  isOwn ? 'text-[rgba(226,232,240,0.8)]' : 'text-[var(--cp-text-subtle)]'
                                 }`}
                               >
                                 {format(new Date(message.created_at), 'MMM d, h:mm a')}
