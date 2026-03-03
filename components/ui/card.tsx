@@ -1,3 +1,5 @@
+'use client'
+
 import * as React from "react"
 import { cn } from "@/lib/utils"
 import { motion } from "framer-motion"
@@ -13,7 +15,9 @@ export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   interactive?: boolean
 }
 
-const MotionDiv = motion.div
+// Use a loosely-typed MotionDiv to avoid prop type conflicts between
+// React's HTML attributes and Framer Motion's drag handlers.
+const MotionDiv: any = motion.div
 
 const Card = React.forwardRef<HTMLDivElement, CardProps>(
   ({ className, variant = "surface", interactive = false, ...props }, ref) => {

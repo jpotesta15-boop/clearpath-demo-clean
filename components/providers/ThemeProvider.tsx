@@ -18,11 +18,11 @@ export function ThemeProvider({
   brandPrimary,
   brandSecondary,
 }: ThemeProviderProps) {
-  const style: React.CSSProperties = {
+  const style = {
     // Brand color inputs
     "--cp-brand-primary": brandPrimary,
     "--cp-brand-secondary": brandSecondary,
-  }
+  } as React.CSSProperties
 
   return (
     <div style={style}>
