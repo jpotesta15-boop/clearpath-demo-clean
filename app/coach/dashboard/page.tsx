@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
-import { startOfMonth, endOfMonth } from 'date-fns'
+import { startOfMonth, endOfMonth, startOfWeek } from 'date-fns'
 import { DashboardContent } from './DashboardContent'
+import { getClientId } from '@/lib/config'
 
 export default async function CoachDashboard() {
   const supabase = await createClient()
@@ -63,12 +64,30 @@ export default async function CoachDashboard() {
     .gte('scheduled_time', monthStart)
     .lte('scheduled_time', monthEnd)
 
-  const isDemo = process.env.NEXT_PUBLIC_CLIENT_ID === 'demo'
-  const revenue = isDemo ? 3000 : 0
-  const revenueThisWeek = isDemo ? 450 : 0
+  const tenantId = getClientId()
+  const weekStart = startOfWeek(now, { weekStartsOn: 1 }).toISOString()
+
+  const { data: coachProfile } = await supabase
+    .from('profiles')
+    .select('stripe_connect_account_id')
+    .eq('id', user!.id)
+    .single()
+
+  const { data: revenueRows } = await supabase
+    .from('payments')
+    .select('amount_cents, created_at')
+    .eq('coach_id', user!.id)
+    .eq('client_id', tenantId)
+    .in('status', ['succeeded', 'recorded_manual'])
+
+  const revenueCents = (revenueRows ?? []).reduce((sum, r) => sum + (r.amount_cents ?? 0), 0)
+  const revenueThisWeekCents = (revenueRows ?? []).filter((r) => r.created_at >= weekStart).reduce((sum, r) => sum + (r.amount_cents ?? 0), 0)
+  const revenue = revenueCents / 100
+  const revenueThisWeek = revenueThisWeekCents / 100
 
   return (
     <DashboardContent
+      stripeConnectAccountId={coachProfile?.stripe_connect_account_id ?? null}
       totalClients={clients?.length ?? 0}
       upcomingCount={upcomingSessions?.length ?? 0}
       pendingCount={pendingSessions?.length ?? 0}

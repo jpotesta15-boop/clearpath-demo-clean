@@ -112,7 +112,12 @@ export default function SchedulePage() {
   const [editForm, setEditForm] = useState({ date: '', startTime: '', endTime: '', notes: '' })
   const [savingEdit, setSavingEdit] = useState(false)
   const [selectedDay, setSelectedDay] = useState<Date | null>(null)
+  const [sessionRequests, setSessionRequests] = useState<any[]>([])
+  const [schedulingRequest, setSchedulingRequest] = useState<any>(null)
+  const [schedulingSlotId, setSchedulingSlotId] = useState<string | null>(null)
+  const [schedulingSubmitting, setSchedulingSubmitting] = useState(false)
   const supabase = createClient()
+  const tenantId = process.env.NEXT_PUBLIC_CLIENT_ID ?? 'demo'
 
   useEffect(() => {
     loadData()
@@ -142,9 +147,17 @@ export default function SchedulePage() {
       .eq('coach_id', user.id)
       .order('full_name', { ascending: true })
 
+    const { data: requestsData } = await supabase
+      .from('session_requests')
+      .select('*, clients(*), session_products(name)')
+      .eq('coach_id', user.id)
+      .eq('status', 'availability_submitted')
+      .order('created_at', { ascending: false })
+
     setSlots(slotsData || [])
     setSessions(sessionsData || [])
     setClients(clientsData || [])
+    setSessionRequests(requestsData || [])
     setLoading(false)
   }
 
@@ -157,6 +170,7 @@ export default function SchedulePage() {
 
     const { error } = await supabase.from('availability_slots').insert({
       coach_id: user.id,
+      client_id: tenantId,
       ...newSlot,
     })
 
@@ -178,6 +192,34 @@ export default function SchedulePage() {
       .update({ status: 'confirmed' })
       .eq('id', sessionId)
     if (!error) loadData()
+  }
+
+  const handleScheduleRequestToSlot = async () => {
+    if (!schedulingRequest || !schedulingSlotId) return
+    const slot = slots.find((s) => s.id === schedulingSlotId)
+    if (!slot) return
+    setSchedulingSubmitting(true)
+    const { error: sessionError } = await supabase.from('sessions').insert({
+      coach_id: schedulingRequest.coach_id,
+      client_id: schedulingRequest.client_id,
+      availability_slot_id: schedulingSlotId,
+      scheduled_time: slot.start_time,
+      status: 'confirmed',
+      tenant_id: schedulingRequest.tenant_id,
+      session_request_id: schedulingRequest.id,
+      session_product_id: schedulingRequest.session_product_id ?? null,
+      amount_cents: schedulingRequest.amount_cents ?? null,
+    })
+    if (!sessionError) {
+      await supabase
+        .from('session_requests')
+        .update({ status: 'scheduled', updated_at: new Date().toISOString() })
+        .eq('id', schedulingRequest.id)
+      setSchedulingRequest(null)
+      setSchedulingSlotId(null)
+      loadData()
+    }
+    setSchedulingSubmitting(false)
   }
 
   const handleMarkAsPaid = async (sessionId: string) => {
@@ -301,7 +343,6 @@ export default function SchedulePage() {
 
     const start_time = startDateTime.toISOString()
     const end_time = endDateTime.toISOString()
-    const tenantId = process.env.NEXT_PUBLIC_CLIENT_ID ?? 'demo'
 
     setSubmitting(true)
     const { data: slot, error: slotError } = await supabase
@@ -417,6 +458,67 @@ export default function SchedulePage() {
             </form>
           </CardContent>
         </Card>
+      )}
+
+      {sessionRequests.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Pending session requests</CardTitle>
+            <p className="text-sm font-normal text-gray-500">Client has paid and submitted availability. Pick a time slot to confirm.</p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {sessionRequests.map((req) => {
+              const client = req.clients as any
+              const product = req.session_products as any
+              return (
+                <div key={req.id} className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 pb-3 last:border-0 last:pb-0">
+                  <div>
+                    <p className="font-medium">{client?.full_name ?? 'Client'} – {product?.name ?? 'Session'}</p>
+                    {req.availability_preferences?.notes && (
+                      <p className="text-xs text-gray-500 mt-0.5">{req.availability_preferences.notes}</p>
+                    )}
+                  </div>
+                  <Button size="sm" onClick={() => { setSchedulingRequest(req); setSchedulingSlotId(null) }}>
+                    Schedule
+                  </Button>
+                </div>
+              )
+            })}
+          </CardContent>
+        </Card>
+      )}
+
+      {schedulingRequest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => !schedulingSubmitting && setSchedulingRequest(null)}>
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[80vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-gray-900">Pick a time slot</h3>
+            <p className="text-sm text-gray-500 mt-1">Choose an available slot to confirm this session.</p>
+            <div className="mt-4 space-y-2">
+              {slots
+                .filter((slot) => new Date(slot.start_time) > new Date() && !sessions.some((s) => s.availability_slot_id === slot.id))
+                .slice(0, 20)
+                .map((slot) => (
+                  <button
+                    key={slot.id}
+                    type="button"
+                    onClick={() => setSchedulingSlotId(slot.id)}
+                    className={`w-full text-left px-3 py-2 rounded-md border text-sm ${schedulingSlotId === slot.id ? 'border-primary-500 bg-primary-50' : 'border-gray-200 hover:bg-gray-50'}`}
+                  >
+                    {format(parseISO(slot.start_time), 'EEE, MMM d, yyyy h:mm a')} – {format(parseISO(slot.end_time), 'h:mm a')}
+                  </button>
+                ))}
+            </div>
+            {slots.filter((slot) => new Date(slot.start_time) > new Date() && !sessions.some((s) => s.availability_slot_id === slot.id)).length === 0 && (
+              <p className="text-sm text-gray-500 mt-2">No available slots. Add availability above first.</p>
+            )}
+            <div className="mt-4 flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setSchedulingRequest(null)} disabled={schedulingSubmitting}>Cancel</Button>
+              <Button onClick={handleScheduleRequestToSlot} disabled={!schedulingSlotId || schedulingSubmitting}>
+                {schedulingSubmitting ? 'Scheduling...' : 'Confirm'}
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">

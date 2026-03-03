@@ -11,6 +11,7 @@ type Session = {
 }
 
 type DashboardContentProps = {
+  stripeConnectAccountId: string | null
   totalClients: number
   upcomingCount: number
   pendingCount: number
@@ -91,6 +92,7 @@ const iconSvg = {
 }
 
 export function DashboardContent({
+  stripeConnectAccountId,
   totalClients,
   upcomingCount,
   pendingCount,
@@ -104,6 +106,22 @@ export function DashboardContent({
   canceledCount,
 }: DashboardContentProps) {
   const [expandedPanel, setExpandedPanel] = useState<PanelId | null>(null)
+  const [connectLoading, setConnectLoading] = useState(false)
+
+  async function handleConnectStripe() {
+    setConnectLoading(true)
+    try {
+      const res = await fetch('/api/stripe/connect/account-link', { method: 'POST' })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        alert(data.error ?? 'Failed to start Stripe Connect')
+        return
+      }
+      if (data.url) window.location.href = data.url
+    } finally {
+      setConnectLoading(false)
+    }
+  }
 
   const tiles: { id: PanelId; label: string; badge?: number }[] = [
     { id: 'revenue', label: 'Revenue' },
@@ -119,6 +137,45 @@ export function DashboardContent({
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Welcome back</h1>
         <p className="mt-1 text-sm text-gray-500">Your coaching at a glance — tap any tile for details</p>
+      </div>
+
+      <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 className="font-medium text-gray-900">Accept session payments</h3>
+            <p className="text-sm text-gray-500">
+              {stripeConnectAccountId
+                ? 'Your Stripe account is connected. Clients can pay for session offers.'
+                : 'Connect Stripe to accept payments when clients book sessions.'}
+            </p>
+          </div>
+          <div>
+            {stripeConnectAccountId ? (
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-sm font-medium text-green-800">
+                  Stripe connected
+                </span>
+                <button
+                  type="button"
+                  onClick={handleConnectStripe}
+                  disabled={connectLoading}
+                  className="text-sm font-medium text-blue-600 hover:text-blue-800 disabled:opacity-50"
+                >
+                  {connectLoading ? 'Opening…' : 'Reconnect'}
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={handleConnectStripe}
+                disabled={connectLoading}
+                className="inline-flex items-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                {connectLoading ? 'Opening…' : 'Connect Stripe'}
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">

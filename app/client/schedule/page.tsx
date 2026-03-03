@@ -1,21 +1,35 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { format } from 'date-fns'
 
-export default function ClientSchedulePage() {
+function ClientScheduleContent() {
   const [slots, setSlots] = useState<any[]>([])
   const [sessions, setSessions] = useState<any[]>([])
+  const [sessionRequests, setSessionRequests] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [client, setClient] = useState<any>(null)
+  const [submittingRequestId, setSubmittingRequestId] = useState<string | null>(null)
+  const [availabilityText, setAvailabilityText] = useState('')
+  const [submittingAvailability, setSubmittingAvailability] = useState(false)
+  const searchParams = useSearchParams()
   const supabase = createClient()
 
   useEffect(() => {
     loadData()
   }, [])
+
+  useEffect(() => {
+    const paidId = searchParams.get('paid') === '1' ? searchParams.get('session_request_id') : null
+    if (paidId && sessionRequests.length > 0) {
+      const req = sessionRequests.find((r) => r.id === paidId && r.status === 'paid')
+      if (req) setSubmittingRequestId(paidId)
+    }
+  }, [searchParams, sessionRequests])
 
   const loadData = async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -34,24 +48,69 @@ export default function ClientSchedulePage() {
     }
     setClient(clientData)
 
-    // Get coach's availability
-    const { data: slotsData } = await supabase
-      .from('availability_slots')
-      .select('*')
-      .eq('coach_id', clientData.coach_id)
-      .gte('start_time', new Date().toISOString())
-      .order('start_time', { ascending: true })
+    const [slotsRes, sessionsRes, requestsRes] = await Promise.all([
+      supabase
+        .from('availability_slots')
+        .select('*')
+        .eq('coach_id', clientData.coach_id)
+        .gte('start_time', new Date().toISOString())
+        .order('start_time', { ascending: true }),
+      supabase
+        .from('sessions')
+        .select('*')
+        .eq('client_id', clientData.id)
+        .order('scheduled_time', { ascending: true }),
+      supabase
+        .from('session_requests')
+        .select('*, session_products(name, duration_minutes)')
+        .eq('client_id', clientData.id)
+        .in('status', ['offered', 'accepted', 'payment_pending', 'paid', 'availability_submitted', 'scheduled'])
+        .order('created_at', { ascending: false }),
+    ])
 
-    // Get client's sessions
-    const { data: sessionsData } = await supabase
-      .from('sessions')
-      .select('*')
-      .eq('client_id', clientData.id)
-      .order('scheduled_time', { ascending: true })
-
-    setSlots(slotsData || [])
-    setSessions(sessionsData || [])
+    setSlots(slotsRes.data || [])
+    setSessions(sessionsRes.data || [])
+    setSessionRequests(requestsRes.data || [])
     setLoading(false)
+  }
+
+  const handleAcceptOffer = async (requestId: string) => {
+    setSubmittingRequestId(requestId)
+    try {
+      const res = await fetch('/api/stripe/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_request_id: requestId }),
+        credentials: 'include',
+      })
+      const data = await res.json().catch(() => ({}))
+      if (data.url) {
+        window.location.href = data.url
+        return
+      }
+      setSubmittingRequestId(null)
+    } catch {
+      setSubmittingRequestId(null)
+    }
+  }
+
+  const handleSubmitAvailability = async (requestId: string) => {
+    if (!availabilityText.trim()) return
+    setSubmittingAvailability(true)
+    const { error } = await supabase
+      .from('session_requests')
+      .update({
+        status: 'availability_submitted',
+        availability_preferences: { notes: availabilityText.trim() },
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', requestId)
+    if (!error) {
+      setAvailabilityText('')
+      setSubmittingRequestId(null)
+      loadData()
+    }
+    setSubmittingAvailability(false)
   }
 
   const handleRequestSession = async (slotId: string) => {
@@ -94,12 +153,82 @@ export default function ClientSchedulePage() {
     )
   }
 
+  const openAvailabilityFor = submittingRequestId
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Schedule</h1>
         <p className="mt-1 text-sm text-gray-500">View availability and request sessions</p>
       </div>
+
+      {sessionRequests.filter((r) => ['offered', 'accepted', 'payment_pending', 'paid', 'availability_submitted'].includes(r.status)).length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Session offers</CardTitle>
+            <p className="text-sm font-normal text-gray-500">Accept and pay for offers from your coach, then submit your availability.</p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {sessionRequests
+              .filter((r) => ['offered', 'accepted', 'payment_pending', 'paid', 'availability_submitted'].includes(r.status))
+              .map((req) => {
+                const product = req.session_products as any
+                const name = product?.name ?? 'Session'
+                const amount = ((req.amount_cents ?? 0) / 100).toFixed(2)
+                return (
+                  <div key={req.id} className="border-b border-gray-100 pb-4 last:border-0 last:pb-0">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <p className="font-medium">{name} – ${amount}</p>
+                        <p className="text-xs text-gray-500">
+                          {req.status === 'offered' || req.status === 'accepted' || req.status === 'payment_pending'
+                            ? 'Accept to pay with card'
+                            : req.status === 'paid'
+                              ? 'Paid – submit when you are available'
+                              : 'Waiting for coach to confirm time'}
+                        </p>
+                      </div>
+                      <div>
+                        {req.status === 'offered' && (
+                          <Button
+                            size="sm"
+                            onClick={() => handleAcceptOffer(req.id)}
+                            disabled={!!submittingRequestId}
+                          >
+                            {submittingRequestId === req.id ? 'Redirecting...' : 'Accept & pay'}
+                          </Button>
+                        )}
+                        {req.status === 'paid' && (
+                          <Button size="sm" variant="outline" onClick={() => setSubmittingRequestId(req.id)}>
+                            Submit availability
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                    {openAvailabilityFor === req.id && req.status === 'paid' && (
+                      <div className="mt-3 p-3 bg-gray-50 rounded-md">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">When are you available?</label>
+                        <textarea
+                          value={availabilityText}
+                          onChange={(e) => setAvailabilityText(e.target.value)}
+                          placeholder="e.g. Mornings next week, or Tue 2pm, Thu 10am"
+                          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm mb-2"
+                          rows={2}
+                        />
+                        <div className="flex gap-2">
+                          <Button size="sm" onClick={() => handleSubmitAvailability(req.id)} disabled={submittingAvailability}>
+                            {submittingAvailability ? 'Sending...' : 'Submit'}
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => setSubmittingRequestId(null)}>Cancel</Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
@@ -169,3 +298,10 @@ export default function ClientSchedulePage() {
   )
 }
 
+export default function ClientSchedulePage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ClientScheduleContent />
+    </Suspense>
+  )
+}

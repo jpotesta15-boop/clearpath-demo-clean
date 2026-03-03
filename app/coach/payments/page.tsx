@@ -1,0 +1,268 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { getClientId } from '@/lib/config'
+import { format } from 'date-fns'
+
+export default function CoachPaymentsPage() {
+  const [payments, setPayments] = useState<any[]>([])
+  const [clients, setClients] = useState<{ id: string; full_name: string }[]>([])
+  const [clientsById, setClientsById] = useState<Record<string, { full_name: string }>>({})
+  const [loading, setLoading] = useState(true)
+  const [filterStatus, setFilterStatus] = useState<string>('')
+  const [filterProvider, setFilterProvider] = useState<string>('')
+  const [showRecordModal, setShowRecordModal] = useState(false)
+  const [recordForm, setRecordForm] = useState({ clientId: '', amountDollars: '', provider: 'zelle' as string, description: '' })
+  const [recordSubmitting, setRecordSubmitting] = useState(false)
+  const [recordError, setRecordError] = useState<string | null>(null)
+  const supabase = createClient()
+  const tenantId = getClientId()
+
+  useEffect(() => {
+    loadPayments()
+    loadClients()
+  }, [])
+
+  const loadClients = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { data } = await supabase
+      .from('clients')
+      .select('id, full_name')
+      .eq('coach_id', user.id)
+      .order('full_name')
+    setClients(data ?? [])
+  }
+
+  const loadPayments = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    const { data: paymentsData } = await supabase
+      .from('payments')
+      .select('*')
+      .eq('coach_id', user.id)
+      .eq('client_id', tenantId)
+      .order('created_at', { ascending: false })
+
+    setPayments(paymentsData ?? [])
+
+    const clientIds = [...new Set((paymentsData ?? []).map((p: any) => p.payer_client_id).filter(Boolean))]
+    if (clientIds.length > 0) {
+      const { data: clientsData } = await supabase
+        .from('clients')
+        .select('id, full_name')
+        .in('id', clientIds)
+      const map: Record<string, { full_name: string }> = {}
+      ;(clientsData ?? []).forEach((c: any) => { map[c.id] = { full_name: c.full_name } })
+      setClientsById(map)
+    }
+    setLoading(false)
+  }
+
+  const handleRecordPayment = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const amountCents = Math.round(parseFloat(recordForm.amountDollars) * 100)
+    if (!recordForm.clientId || !Number.isFinite(amountCents) || amountCents <= 0) {
+      setRecordError('Select a client and enter a valid amount.')
+      return
+    }
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    setRecordSubmitting(true)
+    setRecordError(null)
+    const { error } = await supabase.from('payments').insert({
+      coach_id: user.id,
+      client_id: tenantId,
+      payer_client_id: recordForm.clientId,
+      amount_cents: amountCents,
+      currency: 'usd',
+      status: 'recorded_manual',
+      provider: recordForm.provider,
+      description: recordForm.description.trim() || null,
+    })
+    if (!error) {
+      setShowRecordModal(false)
+      setRecordForm({ clientId: '', amountDollars: '', provider: 'zelle', description: '' })
+      loadPayments()
+    } else {
+      setRecordError(error.message)
+    }
+    setRecordSubmitting(false)
+  }
+
+  const filtered = payments.filter((p) => {
+    if (filterStatus && p.status !== filterStatus) return false
+    if (filterProvider && p.provider !== filterProvider) return false
+    return true
+  })
+
+  const statusLabel: Record<string, string> = {
+    succeeded: 'Confirmed',
+    recorded_manual: 'Recorded',
+    refunded: 'Refunded',
+    cancelled: 'Cancelled',
+  }
+  const providerLabel: Record<string, string> = {
+    stripe: 'Stripe',
+    zelle: 'Zelle',
+    paypal: 'PayPal',
+    cashapp: 'Cash App',
+    other: 'Other',
+  }
+
+  if (loading) return <div>Loading...</div>
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-start flex-wrap gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Payments</h1>
+          <p className="mt-1 text-sm text-gray-500">All payments and revenue. Filter by status or provider.</p>
+        </div>
+        <Button onClick={() => setShowRecordModal(true)}>Record payment</Button>
+      </div>
+
+      {showRecordModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => !recordSubmitting && setShowRecordModal(false)}>
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-gray-900">Record manual payment</h3>
+            <p className="text-sm text-gray-500 mt-1">For payments received via Zelle, PayPal, Cash App, etc.</p>
+            <form onSubmit={handleRecordPayment} className="mt-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Client</label>
+                <select
+                  value={recordForm.clientId}
+                  onChange={(e) => setRecordForm((f) => ({ ...f, clientId: e.target.value }))}
+                  className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2"
+                  required
+                >
+                  <option value="">Select client...</option>
+                  {clients.map((c) => (
+                    <option key={c.id} value={c.id}>{c.full_name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Amount ($)</label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={recordForm.amountDollars}
+                  onChange={(e) => setRecordForm((f) => ({ ...f, amountDollars: e.target.value }))}
+                  placeholder="0.00"
+                  required
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Provider</label>
+                <select
+                  value={recordForm.provider}
+                  onChange={(e) => setRecordForm((f) => ({ ...f, provider: e.target.value }))}
+                  className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2"
+                >
+                  <option value="zelle">Zelle</option>
+                  <option value="paypal">PayPal</option>
+                  <option value="cashapp">Cash App</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Description (optional)</label>
+                <Input
+                  value={recordForm.description}
+                  onChange={(e) => setRecordForm((f) => ({ ...f, description: e.target.value }))}
+                  placeholder="e.g. Session 3/15"
+                  className="mt-1"
+                />
+              </div>
+              {recordError && (
+                <p className="text-sm text-red-600">{recordError}</p>
+              )}
+              <div className="flex gap-2 justify-end">
+                <Button type="button" variant="outline" onClick={() => setShowRecordModal(false)} disabled={recordSubmitting}>Cancel</Button>
+                <Button type="submit" disabled={recordSubmitting}>{recordSubmitting ? 'Saving...' : 'Record'}</Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      <div className="flex flex-wrap gap-4 items-center">
+        <div>
+          <label className="block text-xs text-gray-500">Status</label>
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="mt-0.5 rounded-md border border-gray-300 px-3 py-2 text-sm"
+          >
+            <option value="">All</option>
+            <option value="succeeded">Confirmed</option>
+            <option value="recorded_manual">Recorded</option>
+            <option value="refunded">Refunded</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs text-gray-500">Provider</label>
+          <select
+            value={filterProvider}
+            onChange={(e) => setFilterProvider(e.target.value)}
+            className="mt-0.5 rounded-md border border-gray-300 px-3 py-2 text-sm"
+          >
+            <option value="">All</option>
+            <option value="stripe">Stripe</option>
+            <option value="zelle">Zelle</option>
+            <option value="paypal">PayPal</option>
+            <option value="cashapp">Cash App</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Payment history</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {filtered.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-200 text-left text-gray-600">
+                    <th className="py-2 pr-4">Date</th>
+                    <th className="py-2 pr-4">Description</th>
+                    <th className="py-2 pr-4">Client</th>
+                    <th className="py-2 pr-4">Amount</th>
+                    <th className="py-2 pr-4">Status</th>
+                    <th className="py-2">Provider</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((p) => (
+                    <tr key={p.id} className="border-b border-gray-100">
+                      <td className="py-3 pr-4">{format(new Date(p.created_at), 'MMM d, yyyy')}</td>
+                      <td className="py-3 pr-4">{p.description ?? '—'}</td>
+                      <td className="py-3 pr-4">{p.payer_client_id ? (clientsById[p.payer_client_id]?.full_name ?? '—') : '—'}</td>
+                      <td className="py-3 pr-4 font-medium">${((p.amount_cents ?? 0) / 100).toFixed(2)}</td>
+                      <td className="py-3 pr-4">{statusLabel[p.status] ?? p.status}</td>
+                      <td className="py-3">{providerLabel[p.provider] ?? p.provider}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-gray-500">No payments match the filters.</p>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  )
+}

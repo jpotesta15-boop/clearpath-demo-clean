@@ -19,6 +19,31 @@ function getEmbedUrl(url: string): string | null {
       const id = u.pathname.replace(/^\/+/, '').split('/')[0]
       if (id) return `https://player.vimeo.com/video/${id}`
     }
+    // Google Drive: /file/d/ID/view or /open?id=ID → embed with /preview
+    if (u.hostname.includes('drive.google.com')) {
+      const pathMatch = u.pathname.match(/\/file\/d\/([^/]+)/)
+      const idFromPath = pathMatch?.[1]
+      const idFromQuery = u.searchParams.get('id')
+      const fileId = idFromPath || idFromQuery
+      if (fileId) return `https://drive.google.com/file/d/${fileId}/preview`
+    }
+  } catch {
+    // ignore
+  }
+  return null
+}
+
+function getThumbnailUrl(url: string | null, thumbnailUrl: string | null): string | null {
+  if (thumbnailUrl) return thumbnailUrl
+  if (!url) return null
+  try {
+    const u = new URL(url)
+    if (u.hostname.includes('youtube.com') && u.searchParams.get('v')) {
+      return `https://img.youtube.com/vi/${u.searchParams.get('v')}/mqdefault.jpg`
+    }
+    if (u.hostname === 'youtu.be' && u.pathname.slice(1)) {
+      return `https://img.youtube.com/vi/${u.pathname.slice(1)}/mqdefault.jpg`
+    }
   } catch {
     // ignore
   }
@@ -31,7 +56,9 @@ export default function VideosPage() {
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [selectedVideo, setSelectedVideo] = useState<{ id: string; title: string; url: string } | null>(null)
+  const [selectedVideo, setSelectedVideo] = useState<any>(null)
+  const [editingVideo, setEditingVideo] = useState<{ title: string; description: string; thumbnail_url: string }>({ title: '', description: '', thumbnail_url: '' })
+  const [savingEdit, setSavingEdit] = useState(false)
   const [assignedClientIds, setAssignedClientIds] = useState<string[]>([])
   const [assignClientId, setAssignClientId] = useState('')
   const [assigning, setAssigning] = useState(false)
@@ -47,11 +74,16 @@ export default function VideosPage() {
   useEffect(() => {
     if (selectedVideo?.id) {
       loadAssignments(selectedVideo.id)
+      setEditingVideo({
+        title: selectedVideo.title ?? '',
+        description: selectedVideo.description ?? '',
+        thumbnail_url: selectedVideo.thumbnail_url ?? '',
+      })
     } else {
       setAssignedClientIds([])
       setAssignClientId('')
     }
-  }, [selectedVideo?.id])
+  }, [selectedVideo?.id, selectedVideo?.title, selectedVideo?.description, selectedVideo?.thumbnail_url])
 
   const loadClients = async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -127,6 +159,28 @@ export default function VideosPage() {
     }
   }
 
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedVideo?.id) return
+    setSavingEdit(true)
+    setError(null)
+    const { error: err } = await supabase
+      .from('videos')
+      .update({
+        title: editingVideo.title.trim() || selectedVideo.title,
+        description: editingVideo.description.trim() || null,
+        thumbnail_url: editingVideo.thumbnail_url.trim() || null,
+      })
+      .eq('id', selectedVideo.id)
+    if (!err) {
+      setSelectedVideo((prev: any) => prev ? { ...prev, ...editingVideo } : null)
+      loadVideos()
+    } else {
+      setError(err.message)
+    }
+    setSavingEdit(false)
+  }
+
   if (loading) return <div>Loading...</div>
 
   return (
@@ -196,28 +250,46 @@ export default function VideosPage() {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {videos.map((video) => (
-          <Card
-            key={video.id}
-            className="cursor-pointer hover:shadow-md transition-shadow"
-            onClick={() => setSelectedVideo({ id: video.id, title: video.title, url: video.url })}
-          >
-            <CardHeader>
-              <CardTitle>{video.title}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {video.category && (
-                <p className="text-sm text-primary-600 mb-2">{video.category}</p>
-              )}
-              {video.description && (
-                <p className="text-sm text-gray-600 mb-4 line-clamp-2">{video.description}</p>
-              )}
-              <span className="text-primary-600 hover:underline text-sm font-medium">
-                Watch Video →
-              </span>
-            </CardContent>
-          </Card>
-        ))}
+        {videos.map((video) => {
+          const thumb = getThumbnailUrl(video.url, video.thumbnail_url)
+          return (
+            <Card
+              key={video.id}
+              className="cursor-pointer hover:shadow-md transition-shadow overflow-hidden"
+              onClick={() => setSelectedVideo(video)}
+            >
+              <div className="aspect-video bg-gray-100 relative">
+                {thumb ? (
+                  <img
+                    src={thumb}
+                    alt=""
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-gray-400">
+                    <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                )}
+              </div>
+              <CardHeader>
+                <CardTitle>{video.title}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {video.category && (
+                  <p className="text-sm text-primary-600 mb-2">{video.category}</p>
+                )}
+                {video.description && (
+                  <p className="text-sm text-gray-600 mb-4 line-clamp-2">{video.description}</p>
+                )}
+                <span className="text-primary-600 hover:underline text-sm font-medium">
+                  Watch Video →
+                </span>
+              </CardContent>
+            </Card>
+          )
+        })}
       </div>
 
       {selectedVideo && (
@@ -226,7 +298,7 @@ export default function VideosPage() {
           onClick={() => setSelectedVideo(null)}
         >
           <div
-            className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col"
+            className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between px-4 py-2 border-b border-gray-200">
@@ -242,7 +314,7 @@ export default function VideosPage() {
                 </svg>
               </button>
             </div>
-            <div className="flex-1 min-h-0 p-4">
+            <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
               {getEmbedUrl(selectedVideo.url) ? (
                 <div className="relative w-full aspect-video bg-gray-900 rounded overflow-hidden">
                   <iframe
@@ -266,6 +338,40 @@ export default function VideosPage() {
                   </a>
                 </div>
               )}
+              <div className="border-t border-gray-200 pt-4">
+                <h4 className="text-sm font-medium text-gray-700 mb-2">Edit title & description</h4>
+                <form onSubmit={handleSaveEdit} className="space-y-2">
+                  <div>
+                    <label className="block text-xs text-gray-500">Title</label>
+                    <Input
+                      value={editingVideo.title}
+                      onChange={(e) => setEditingVideo((p) => ({ ...p, title: e.target.value }))}
+                      className="mt-0.5"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500">Description</label>
+                    <textarea
+                      value={editingVideo.description}
+                      onChange={(e) => setEditingVideo((p) => ({ ...p, description: e.target.value }))}
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm mt-0.5"
+                      rows={2}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500">Thumbnail URL (optional)</label>
+                    <Input
+                      value={editingVideo.thumbnail_url}
+                      onChange={(e) => setEditingVideo((p) => ({ ...p, thumbnail_url: e.target.value }))}
+                      placeholder="https://..."
+                      className="mt-0.5"
+                    />
+                  </div>
+                  <Button type="submit" size="sm" disabled={savingEdit}>
+                    {savingEdit ? 'Saving...' : 'Save changes'}
+                  </Button>
+                </form>
+              </div>
             </div>
             <div className="border-t border-gray-200 px-4 py-3 space-y-3">
               <h4 className="text-sm font-medium text-gray-700">Assign to client</h4>
