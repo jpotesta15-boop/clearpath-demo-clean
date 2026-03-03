@@ -71,12 +71,10 @@ const TIME_OPTIONS = (() => {
 })()
 
 const FIGHTER_COLORS = [
-  'bg-blue-100 text-blue-900 border-blue-300',
-  'bg-emerald-100 text-emerald-900 border-emerald-300',
-  'bg-amber-100 text-amber-900 border-amber-300',
-  'bg-violet-100 text-violet-900 border-violet-300',
-  'bg-rose-100 text-rose-900 border-rose-300',
-  'bg-cyan-100 text-cyan-900 border-cyan-300',
+  'bg-[var(--cp-accent-primary-soft)] text-[var(--cp-accent-primary)] border-[var(--cp-accent-primary)]',
+  'bg-[var(--cp-accent-success)]/20 text-[var(--cp-accent-success)] border-[var(--cp-accent-success)]',
+  'bg-[var(--cp-accent-warning)]/20 text-[var(--cp-accent-warning)] border-[var(--cp-accent-warning)]',
+  'bg-[var(--cp-accent-danger)]/20 text-[var(--cp-accent-danger)] border-[var(--cp-accent-danger)]',
 ]
 
 function getFighterColor(clientId: string, clients: Client[]): string {
@@ -379,7 +377,7 @@ export default function SchedulePage() {
     }
   }
 
-  if (loading) return <div className="p-4">Loading...</div>
+  if (loading) return <div className="p-4 text-[var(--cp-text-muted)]">Loading...</div>
 
   const monthStart = startOfMonth(month)
   const monthEnd = endOfMonth(month)
@@ -393,9 +391,9 @@ export default function SchedulePage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Schedule</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Click a client to choose date and time; the session is added to your calendar.
+          <h1 className="text-3xl font-bold text-[var(--cp-text-primary)]">Schedule</h1>
+          <p className="mt-1 text-sm text-[var(--cp-text-muted)]">
+            Click a client to choose date and time; confirmed sessions appear on your calendar.
           </p>
         </div>
         <Button onClick={() => setShowForm(!showForm)}>
@@ -406,12 +404,14 @@ export default function SchedulePage() {
       {showForm && (
         <Card>
           <CardHeader>
-            <CardTitle>Create Availability Slot</CardTitle>
+            <CardTitle>Create availability slot</CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleCreateSlot} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Start Time</label>
+                <label className="block text-sm font-medium text-[var(--cp-text-primary)]">
+                  Start time
+                </label>
                 <Input
                   type="datetime-local"
                   value={newSlot.start_time}
@@ -420,7 +420,9 @@ export default function SchedulePage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">End Time</label>
+                <label className="block text-sm font-medium text-[var(--cp-text-primary)]">
+                  End time
+                </label>
                 <Input
                   type="datetime-local"
                   value={newSlot.end_time}
@@ -437,7 +439,9 @@ export default function SchedulePage() {
                   }
                   className="mr-2"
                 />
-                <label className="text-sm font-medium text-gray-700">Group Session</label>
+                <label className="text-sm font-medium text-[var(--cp-text-primary)]">
+                  Group session
+                </label>
               </div>
               {newSlot.is_group_session && (
                 <div>
@@ -454,7 +458,7 @@ export default function SchedulePage() {
                   />
                 </div>
               )}
-              <Button type="submit">Create Slot</Button>
+              <Button type="submit">Create slot</Button>
             </form>
           </CardContent>
         </Card>
@@ -464,18 +468,25 @@ export default function SchedulePage() {
         <Card>
           <CardHeader>
             <CardTitle>Pending session requests</CardTitle>
-            <p className="text-sm font-normal text-gray-500">Client has paid and submitted availability. Pick a time slot to confirm.</p>
+            <p className="text-sm font-normal text-[var(--cp-text-muted)]">
+              Client has paid and submitted availability. Pick a time slot to confirm.
+            </p>
           </CardHeader>
           <CardContent className="space-y-3">
             {sessionRequests.map((req) => {
               const client = req.clients as any
               const product = req.session_products as any
               return (
-                <div key={req.id} className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 pb-3 last:border-0 last:pb-0">
+                <div
+                  key={req.id}
+                  className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--cp-border-subtle)] pb-3 last:border-0 last:pb-0"
+                >
                   <div>
                     <p className="font-medium">{client?.full_name ?? 'Client'} – {product?.name ?? 'Session'}</p>
                     {req.availability_preferences?.notes && (
-                      <p className="text-xs text-gray-500 mt-0.5">{req.availability_preferences.notes}</p>
+                      <p className="text-xs text-[var(--cp-text-muted)] mt-0.5">
+                        {req.availability_preferences.notes}
+                      </p>
                     )}
                   </div>
                   <Button size="sm" onClick={() => { setSchedulingRequest(req); setSchedulingSlotId(null) }}>
@@ -489,10 +500,18 @@ export default function SchedulePage() {
       )}
 
       {schedulingRequest && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => !schedulingSubmitting && setSchedulingRequest(null)}>
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[80vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-lg font-semibold text-gray-900">Pick a time slot</h3>
-            <p className="text-sm text-gray-500 mt-1">Choose an available slot to confirm this session.</p>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--cp-bg-backdrop)] p-4"
+          onClick={() => !schedulingSubmitting && setSchedulingRequest(null)}
+        >
+          <div
+            className="bg-[var(--cp-bg-elevated)] text-[var(--cp-text-primary)] border border-[var(--cp-border-subtle)] rounded-lg shadow-[var(--cp-shadow-card)] max-w-md w-full max-h-[80vh] overflow-y-auto p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-semibold">Pick a time slot</h3>
+            <p className="text-sm text-[var(--cp-text-muted)] mt-1">
+              Choose an available slot to confirm this session.
+            </p>
             <div className="mt-4 space-y-2">
               {slots
                 .filter((slot) => new Date(slot.start_time) > new Date() && !sessions.some((s) => s.availability_slot_id === slot.id))
@@ -502,14 +521,20 @@ export default function SchedulePage() {
                     key={slot.id}
                     type="button"
                     onClick={() => setSchedulingSlotId(slot.id)}
-                    className={`w-full text-left px-3 py-2 rounded-md border text-sm ${schedulingSlotId === slot.id ? 'border-primary-500 bg-primary-50' : 'border-gray-200 hover:bg-gray-50'}`}
+                    className={`w-full text-left px-3 py-2 rounded-md border text-sm transition-colors ${
+                      schedulingSlotId === slot.id
+                        ? 'border-[var(--cp-accent-primary)] bg-[var(--cp-accent-primary-soft)]'
+                        : 'border-[var(--cp-border-subtle)] hover:bg-[rgba(148,163,184,0.16)]'
+                    }`}
                   >
                     {format(parseISO(slot.start_time), 'EEE, MMM d, yyyy h:mm a')} – {format(parseISO(slot.end_time), 'h:mm a')}
                   </button>
                 ))}
             </div>
             {slots.filter((slot) => new Date(slot.start_time) > new Date() && !sessions.some((s) => s.availability_slot_id === slot.id)).length === 0 && (
-              <p className="text-sm text-gray-500 mt-2">No available slots. Add availability above first.</p>
+              <p className="text-sm text-[var(--cp-text-muted)] mt-2">
+                No available slots. Add availability above first.
+              </p>
             )}
             <div className="mt-4 flex gap-2 justify-end">
               <Button variant="outline" onClick={() => setSchedulingRequest(null)} disabled={schedulingSubmitting}>Cancel</Button>
@@ -525,22 +550,26 @@ export default function SchedulePage() {
         <Card className="lg:col-span-1">
           <CardHeader>
             <CardTitle>Available fighters</CardTitle>
-            <p className="text-xs text-gray-500 font-normal mt-1">Click a client to book a session</p>
+            <p className="text-xs text-[var(--cp-text-muted)] font-normal mt-1">
+              Click a client to book a session
+            </p>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="divide-y max-h-[400px] overflow-y-auto">
+            <div className="divide-y divide-[var(--cp-border-subtle)] max-h-[400px] overflow-y-auto">
               {clients.map((client) => (
                 <button
                   key={client.id}
                   type="button"
                   onClick={() => setBookClient(client)}
-                  className="w-full text-left px-4 py-3 hover:bg-gray-50 border-b border-gray-100 last:border-0"
+                  className="w-full text-left px-4 py-3 hover:bg-[rgba(148,163,184,0.12)] border-b border-[var(--cp-border-subtle)] last:border-0"
                 >
-                  <p className="font-medium text-gray-900">{client.full_name}</p>
+                  <p className="font-medium text-[var(--cp-text-primary)]">
+                    {client.full_name}
+                  </p>
                 </button>
               ))}
               {clients.length === 0 && (
-                <p className="px-4 py-6 text-gray-500 text-sm">No clients</p>
+                <p className="px-4 py-6 text-[var(--cp-text-muted)] text-sm">No clients</p>
               )}
             </div>
           </CardContent>
@@ -553,10 +582,14 @@ export default function SchedulePage() {
               <Button variant="ghost" size="sm" onClick={() => { setBookClient(null); setBookForm({ date: '', startTime: '', endTime: '' }) }}>Close</Button>
             </CardHeader>
             <CardContent>
-              <p className="text-sm font-medium text-gray-700 mb-3">{bookClient.full_name}</p>
+              <p className="text-sm font-medium text-[var(--cp-text-primary)] mb-3">
+                {bookClient.full_name}
+              </p>
               <form onSubmit={handleBookSessionSubmit} className="space-y-3">
                 <div>
-                  <label className="block text-xs font-medium text-gray-600">Date</label>
+                  <label className="block text-xs font-medium text-[var(--cp-text-muted)]">
+                    Date
+                  </label>
                   <Input
                     type="date"
                     value={bookForm.date}
@@ -565,12 +598,14 @@ export default function SchedulePage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600">Start time</label>
+                  <label className="block text-xs font-medium text-[var(--cp-text-muted)]">
+                    Start time
+                  </label>
                   <select
                     value={bookForm.startTime}
                     onChange={(e) => setBookForm((f) => ({ ...f, startTime: e.target.value }))}
                     required
-                    className="w-full h-10 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                    className="w-full h-10 rounded-md border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cp-border-focus)]"
                   >
                     <option value="">Select start</option>
                     {TIME_OPTIONS.map((t) => (
@@ -581,12 +616,14 @@ export default function SchedulePage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600">End time</label>
+                  <label className="block text-xs font-medium text-[var(--cp-text-muted)]">
+                    End time
+                  </label>
                   <select
                     value={bookForm.endTime}
                     onChange={(e) => setBookForm((f) => ({ ...f, endTime: e.target.value }))}
                     required
-                    className="w-full h-10 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                    className="w-full h-10 rounded-md border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cp-border-focus)]"
                   >
                     <option value="">Select end</option>
                     {TIME_OPTIONS.map((t) => (
@@ -630,7 +667,7 @@ export default function SchedulePage() {
                 >
                   Previous
                 </Button>
-                <h2 className="text-lg font-semibold text-gray-900">
+                <h2 className="text-lg font-semibold text-[var(--cp-text-primary)]">
                   {format(month, 'MMMM yyyy')}
                 </h2>
                 <Button
@@ -642,17 +679,17 @@ export default function SchedulePage() {
                 </Button>
               </div>
 
-              <div className="grid grid-cols-7 gap-px bg-gray-200 rounded overflow-hidden">
+              <div className="grid grid-cols-7 gap-px bg-[var(--cp-bg-subtle)] rounded overflow-hidden">
                 {weekDays.map((d) => (
                   <div
                     key={d}
-                    className="bg-gray-50 p-2 text-center text-xs font-medium text-gray-600"
+                    className="bg-[var(--cp-bg-surface)] p-2 text-center text-xs font-medium text-[var(--cp-text-muted)]"
                   >
                     {d}
                   </div>
                 ))}
                 {padDays.map((_, i) => (
-                  <div key={`pad-${i}`} className="bg-gray-50 min-h-[80px]" />
+                  <div key={`pad-${i}`} className="bg-[var(--cp-bg-surface)] min-h-[80px]" />
                 ))}
                 {days.map((day) => {
                   const daySessions = getSessionsForDay(sessions, day)
@@ -663,13 +700,15 @@ export default function SchedulePage() {
                       tabIndex={0}
                       onClick={() => setSelectedDay(day)}
                       onKeyDown={(e) => e.key === 'Enter' && setSelectedDay(day)}
-                      className={`bg-white min-h-[100px] p-1 cursor-pointer hover:bg-gray-50 ${
+                      className={`bg-[var(--cp-bg-surface)] min-h-[100px] p-1 cursor-pointer hover:bg-[rgba(148,163,184,0.12)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cp-border-focus)] ${
                         !isSameMonth(day, month) ? 'opacity-50' : ''
                       }`}
                     >
                       <div
                         className={`text-sm font-medium ${
-                          isToday(day) ? 'text-blue-600' : 'text-gray-700'
+                          isToday(day)
+                            ? 'text-[var(--cp-accent-primary)]'
+                            : 'text-[var(--cp-text-primary)]'
                         }`}
                       >
                         {format(day, 'd')}
@@ -703,7 +742,7 @@ export default function SchedulePage() {
                             )
                           })
                         ) : (
-                          <p className="text-xs text-gray-400">—</p>
+                          <p className="text-xs text-[var(--cp-text-muted)]">—</p>
                         )}
                       </div>
                     </div>
@@ -744,10 +783,10 @@ export default function SchedulePage() {
                         <span
                           className={`px-2 py-1 text-xs rounded ${
                             session.status === 'confirmed'
-                              ? 'bg-green-100 text-green-800'
+                              ? 'bg-[var(--cp-accent-success)]/20 text-[var(--cp-accent-success)]'
                               : session.status === 'pending'
-                                ? 'bg-yellow-100 text-yellow-800'
-                                : 'bg-gray-100 text-gray-800'
+                                ? 'bg-[var(--cp-accent-warning)]/20 text-[var(--cp-accent-warning)]'
+                                : 'bg-[var(--cp-accent-primary-soft)] text-[var(--cp-text-primary)]'
                           }`}
                         >
                           {session.status}
@@ -782,7 +821,9 @@ export default function SchedulePage() {
                 {sessions.filter((s) =>
                   isSameMonth(parseISO(s.scheduled_time), month)
                 ).length === 0 && (
-                  <p className="text-gray-500 text-sm">No sessions this month</p>
+                  <p className="text-[var(--cp-text-muted)] text-sm">
+                    No sessions this month
+                  </p>
                 )}
               </div>
             </CardContent>
@@ -791,7 +832,7 @@ export default function SchedulePage() {
       </div>
 
       {selectedDay && (
-        <div className="fixed inset-0 z-50 bg-black/40 p-4 flex items-center justify-center">
+        <div className="fixed inset-0 z-50 bg-[var(--cp-bg-backdrop)] p-4 flex items-center justify-center">
           <div className="w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
             <Card className="flex flex-col max-h-[90vh]">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 shrink-0">
@@ -822,7 +863,7 @@ export default function SchedulePage() {
                   return (
                     <div className="flex gap-4">
                       <div
-                        className="shrink-0 flex flex-col text-sm text-gray-500"
+                        className="shrink-0 flex flex-col text-sm text-[var(--cp-text-muted)]"
                         style={{ width: '4rem' }}
                       >
                         {Array.from({ length: TIMELINE_END - TIMELINE_START + 1 }, (_, i) => (
@@ -839,11 +880,13 @@ export default function SchedulePage() {
                         ))}
                       </div>
                       <div
-                        className="flex-1 relative border-l border-gray-200"
+                        className="flex-1 relative border-l border-[var(--cp-border-subtle)]"
                         style={{ height: timelineHeight, minHeight: timelineHeight }}
                       >
                         {daySessionsList.length === 0 ? (
-                          <p className="text-sm text-gray-500 pt-4">No sessions this day</p>
+                          <p className="text-sm text-[var(--cp-text-muted)] pt-4">
+                            No sessions this day
+                          </p>
                         ) : (
                           daySessionsList.map((session) => {
                             const start = parseISO(session.scheduled_time)
@@ -897,7 +940,7 @@ export default function SchedulePage() {
       )}
 
       {editingSession && (
-        <div className="fixed inset-0 z-50 bg-black/40 p-4 flex items-center justify-center">
+        <div className="fixed inset-0 z-50 bg-[var(--cp-bg-backdrop)] p-4 flex items-center justify-center">
           <div className="w-full max-w-md">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0">
@@ -912,12 +955,14 @@ export default function SchedulePage() {
                 </Button>
               </CardHeader>
               <CardContent className="space-y-3">
-                <p className="text-sm font-medium text-gray-800">
+                <p className="text-sm font-medium text-[var(--cp-text-primary)]">
                   {editingSession.clients?.full_name ?? 'Client'}
                 </p>
                 <form onSubmit={handleSaveEdit} className="space-y-3">
                   <div>
-                    <label className="block text-xs font-medium text-gray-600">Date</label>
+                    <label className="block text-xs font-medium text-[var(--cp-text-muted)]">
+                      Date
+                    </label>
                     <Input
                       type="date"
                       value={editForm.date}
@@ -926,7 +971,7 @@ export default function SchedulePage() {
                     />
                   </div>
                     <div>
-                      <label className="block text-xs font-medium text-gray-600">
+                      <label className="block text-xs font-medium text-[var(--cp-text-muted)]">
                         Notes or plan for this session
                       </label>
                       <textarea
@@ -935,20 +980,22 @@ export default function SchedulePage() {
                           setEditForm((f) => ({ ...f, notes: e.target.value }))
                         }
                         rows={3}
-                        className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                        className="w-full rounded-md border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cp-border-focus)]"
                         placeholder="Warm-up, drills, focus areas..."
                       />
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="block text-xs font-medium text-gray-600">Start</label>
+                      <label className="block text-xs font-medium text-[var(--cp-text-muted)]">
+                        Start
+                      </label>
                       <select
                         value={editForm.startTime}
                         onChange={(e) =>
                           setEditForm((f) => ({ ...f, startTime: e.target.value }))
                         }
                         required
-                        className="w-full h-10 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                        className="w-full h-10 rounded-md border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cp-border-focus)]"
                       >
                         {TIME_OPTIONS.map((t) => (
                           <option key={t} value={t}>
@@ -958,12 +1005,14 @@ export default function SchedulePage() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-gray-600">End</label>
+                      <label className="block text-xs font-medium text-[var(--cp-text-muted)]">
+                        End
+                      </label>
                       <select
                         value={editForm.endTime}
                         onChange={(e) => setEditForm((f) => ({ ...f, endTime: e.target.value }))}
                         required
-                        className="w-full h-10 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                        className="w-full h-10 rounded-md border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cp-border-focus)]"
                       >
                         {TIME_OPTIONS.map((t) => (
                           <option key={t} value={t}>

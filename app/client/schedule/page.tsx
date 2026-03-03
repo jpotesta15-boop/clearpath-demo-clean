@@ -169,15 +169,19 @@ function ClientScheduleContent() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Schedule</h1>
-        <p className="mt-1 text-sm text-gray-500">View availability and request sessions</p>
+        <h1 className="text-3xl font-bold text-[var(--cp-text-primary)]">Schedule</h1>
+        <p className="mt-1 text-sm text-[var(--cp-text-muted)]">
+          View your coach&apos;s availability and request sessions.
+        </p>
       </div>
 
       {sessionRequests.filter((r) => ['offered', 'accepted', 'payment_pending', 'paid', 'availability_submitted'].includes(r.status)).length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>Session offers</CardTitle>
-            <p className="text-sm font-normal text-gray-500">Accept and pay for offers from your coach, then submit your availability.</p>
+            <p className="text-sm font-normal text-[var(--cp-text-muted)]">
+              Accept and pay for offers from your coach, then submit your availability.
+            </p>
           </CardHeader>
           <CardContent className="space-y-4">
             {sessionRequests
@@ -187,11 +191,14 @@ function ClientScheduleContent() {
                 const name = product?.name ?? 'Session'
                 const amount = ((req.amount_cents ?? 0) / 100).toFixed(2)
                 return (
-                  <div key={req.id} className="border-b border-gray-100 pb-4 last:border-0 last:pb-0">
+                  <div
+                    key={req.id}
+                    className="border-b border-[var(--cp-border-subtle)] pb-4 last:border-0 last:pb-0"
+                  >
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div>
                         <p className="font-medium">{name} – ${amount}</p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-[var(--cp-text-muted)]">
                           {req.status === 'offered' || req.status === 'accepted' || req.status === 'payment_pending'
                             ? 'Accept to pay with card'
                             : req.status === 'paid'
@@ -227,13 +234,15 @@ function ClientScheduleContent() {
                       </div>
                     </div>
                     {openAvailabilityFor === req.id && req.status === 'paid' && (
-                      <div className="mt-3 p-3 bg-gray-50 rounded-md">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">When are you available?</label>
+                      <div className="mt-3 p-3 bg-[var(--cp-bg-surface)] rounded-md border border-[var(--cp-border-subtle)]">
+                        <label className="block text-sm font-medium text-[var(--cp-text-primary)] mb-1">
+                          When are you available?
+                        </label>
                         <textarea
                           value={availabilityText}
                           onChange={(e) => setAvailabilityText(e.target.value)}
                           placeholder="e.g. Mornings next week, or Tue 2pm, Thu 10am"
-                          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm mb-2"
+                          className="w-full rounded-md border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] px-3 py-2 text-sm mb-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cp-border-focus)]"
                           rows={2}
                         />
                         <div className="flex gap-2">
@@ -260,28 +269,34 @@ function ClientScheduleContent() {
             <div className="space-y-4">
               {slots.length > 0 ? (
                 slots.map((slot) => {
-                  const isBooked = sessions.some(s => s.availability_slot_id === slot.id)
+                  const isBooked = sessions.some((s) => s.availability_slot_id === slot.id)
                   return (
-                    <div key={slot.id} className="border-b pb-4 last:border-0">
-                      <p className="font-medium">
-                        {format(new Date(slot.start_time), 'MMM d, yyyy h:mm a')} - {format(new Date(slot.end_time), 'h:mm a')}
+                    <div
+                      key={slot.id}
+                      className="border-b border-[var(--cp-border-subtle)] pb-4 last:border-0"
+                    >
+                      <p className="font-medium text-[var(--cp-text-primary)]">
+                        {format(new Date(slot.start_time), 'MMM d, yyyy h:mm a')} -{' '}
+                        {format(new Date(slot.end_time), 'h:mm a')}
                       </p>
-                      <p className="text-sm text-gray-500 mb-2">
-                        {slot.is_group_session ? 'Group Session' : 'Private Session'}
+                      <p className="text-sm text-[var(--cp-text-muted)] mb-2">
+                        {slot.is_group_session ? 'Group session' : 'Private session'}
                       </p>
                       {!isBooked && (
                         <Button size="sm" onClick={() => handleRequestSession(slot.id)}>
-                          Request Session
+                          Request session
                         </Button>
                       )}
                       {isBooked && (
-                        <span className="text-sm text-gray-500">Already requested</span>
+                        <span className="text-sm text-[var(--cp-text-muted)]">
+                          Already requested
+                        </span>
                       )}
                     </div>
                   )
                 })
               ) : (
-                <p className="text-gray-500">No available slots</p>
+                <p className="text-[var(--cp-text-muted)]">No available slots</p>
               )}
             </div>
           </CardContent>
@@ -296,20 +311,24 @@ function ClientScheduleContent() {
               {sessions.length > 0 ? (
                 sessions.map((session) => (
                   <div key={session.id} className="border-b pb-4 last:border-0">
-                    <p className="font-medium">
+                    <p className="font-medium text-[var(--cp-text-primary)]">
                       {format(new Date(session.scheduled_time), 'MMM d, yyyy h:mm a')}
                     </p>
-                    <span className={`inline-block mt-2 px-2 py-1 text-xs rounded ${
-                      session.status === 'confirmed' ? 'bg-green-100 text-green-800' :
-                      session.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`}>
+                    <span
+                      className={`inline-block mt-2 px-2 py-1 text-xs rounded ${
+                        session.status === 'confirmed'
+                          ? 'bg-[var(--cp-accent-success)]/20 text-[var(--cp-accent-success)]'
+                          : session.status === 'pending'
+                            ? 'bg-[var(--cp-accent-warning)]/20 text-[var(--cp-accent-warning)]'
+                            : 'bg-[var(--cp-accent-primary-soft)] text-[var(--cp-text-primary)]'
+                      }`}
+                    >
                       {session.status}
                     </span>
                   </div>
                 ))
               ) : (
-                <p className="text-gray-500">No sessions scheduled</p>
+                <p className="text-[var(--cp-text-muted)]">No sessions scheduled</p>
               )}
             </div>
           </CardContent>

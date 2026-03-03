@@ -13,6 +13,7 @@ const coachNavItems = [
   { href: '/coach/videos', label: 'Videos' },
   { href: '/coach/payments', label: 'Payments' },
   { href: '/coach/messages', label: 'Messages' },
+  { href: '/coach/settings', label: 'Settings' },
 ]
 
 export default async function CoachLayout({
