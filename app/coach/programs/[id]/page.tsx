@@ -21,6 +21,7 @@ type Lesson = {
 
 export default function ProgramDetailPage() {
   const params = useParams()
+  const router = useRouter()
   const [program, setProgram] = useState<any>(null)
   const [lessons, setLessons] = useState<Lesson[]>([])
   const [libraryVideos, setLibraryVideos] = useState<any[]>([])
