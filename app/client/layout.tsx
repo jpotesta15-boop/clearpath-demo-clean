@@ -25,7 +25,7 @@ export default async function ClientLayout({
   }
 
   return (
-    <div className="flex min-h-screen bg-[var(--cp-bg-page)]">
+    <div className="flex min-h-screen bg-[var(--cp-bg-page)] text-[var(--cp-text-primary)]">
       <SidebarNav navItems={clientNavItems} />
       <AppLayout>
         <AnimatedPage>{children}</AnimatedPage>

@@ -38,7 +38,7 @@ export default async function CoachLayout({
   }
 
   return (
-    <div className="flex min-h-screen bg-[var(--cp-bg-page)]">
+    <div className="flex min-h-screen bg-[var(--cp-bg-page)] text-[var(--cp-text-primary)]">
       <SidebarNav navItems={coachNavItems} />
       <AppLayout>
         <AnimatedPage>{children}</AnimatedPage>

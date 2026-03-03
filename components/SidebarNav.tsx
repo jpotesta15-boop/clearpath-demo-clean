@@ -94,6 +94,7 @@ export default function SidebarNav({ navItems }: { navItems: NavItem[] }) {
         className={`fixed left-0 top-0 z-30 h-full bg-[var(--cp-bg-surface)] border-r border-[var(--cp-border-subtle)] shadow-[var(--cp-shadow-soft)] flex flex-col transition-[width] duration-200 ${
           expanded ? 'w-60' : 'w-16'
         }`}
+        aria-label="Primary navigation"
       >
         <div className="flex h-16 items-center border-b border-[var(--cp-border-subtle)] px-3">
           {expanded ? (
@@ -109,7 +110,7 @@ export default function SidebarNav({ navItems }: { navItems: NavItem[] }) {
             </span>
           )}
         </div>
-        <nav className="flex-1 overflow-y-auto py-2">
+        <nav className="flex-1 overflow-y-auto py-3" aria-label="Primary">
           {navItems.map((item) => {
             const isActive = pathname === item.href
             const icon = iconMap[item.label] ?? defaultIcon
@@ -117,10 +118,11 @@ export default function SidebarNav({ navItems }: { navItems: NavItem[] }) {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-3 px-3 py-2.5 text-sm font-medium border-l-2 mx-2 my-0.5 rounded-r transition-colors ${
+                aria-current={isActive ? 'page' : undefined}
+                className={`flex items-center gap-3 px-3 py-2.5 text-sm font-medium border-l-2 mx-2 my-0.5 rounded-r transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cp-border-focus)] ${
                   isActive
                     ? 'bg-[var(--cp-accent-primary-soft)] border-[var(--cp-accent-primary)] text-[var(--cp-accent-primary)]'
-                    : 'border-transparent text-[var(--cp-text-muted)] hover:bg-[rgba(148,163,184,0.12)] hover:border-[var(--cp-border-subtle)]'
+                    : 'border-transparent text-[var(--cp-text-muted)] hover:bg-[rgba(148,163,184,0.12)] hover:border-[var(--cp-border-subtle)] hover:text-[var(--cp-text-primary)]'
                 }`}
                 title={!expanded ? item.label : undefined}
               >
@@ -130,11 +132,13 @@ export default function SidebarNav({ navItems }: { navItems: NavItem[] }) {
             )
           })}
         </nav>
-        <div className="border-t border-gray-200 p-2">
+        <div className="border-t border-[var(--cp-border-subtle)] p-2">
           <button
             onClick={toggleSidebar}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100"
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-[var(--cp-text-muted)] hover:bg-[rgba(148,163,184,0.12)] hover:text-[var(--cp-text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cp-border-focus)]"
             title={expanded ? 'Collapse sidebar' : 'Expand sidebar'}
+            aria-label={expanded ? 'Collapse sidebar' : 'Expand sidebar'}
+            aria-pressed={expanded}
           >
             {expanded ? (
               <>
@@ -151,8 +155,9 @@ export default function SidebarNav({ navItems }: { navItems: NavItem[] }) {
           </button>
           <button
             onClick={handleLogout}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100"
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-[var(--cp-text-muted)] hover:bg-[rgba(148,163,184,0.12)] hover:text-[var(--cp-text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cp-border-focus)]"
             title={!expanded ? 'Logout' : undefined}
+            aria-label="Logout"
           >
             <svg className="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />

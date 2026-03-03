@@ -23,7 +23,7 @@ export function AppLayout({ children, className }: AppLayoutProps) {
   return (
     <main
       className={cn(
-        "flex-1 min-w-0 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8",
+        "flex-1 min-w-0 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-10 space-y-6",
         className
       )}
     >

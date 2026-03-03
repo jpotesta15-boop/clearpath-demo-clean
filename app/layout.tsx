@@ -21,7 +21,7 @@ export default async function RootLayout({
 
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body className={`${inter.className} min-h-screen bg-[var(--cp-bg-page)] text-[var(--cp-text-primary)] antialiased`}>
         <ThemeProvider
           brandPrimary={brandColors.primary}
           brandSecondary={brandColors.secondary}
