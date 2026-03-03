@@ -229,14 +229,14 @@ export default function SessionPackagesPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Price (cents)</label>
+                  <label className="block text-sm font-medium text-gray-700">Price ($)</label>
                   <Input
                     type="number"
                     min={0}
-                    value={form.price_cents}
-                    onChange={(e) => setForm((f) => ({ ...f, price_cents: parseInt(e.target.value, 10) || 0 }))}
+                    step={0.01}
+                    value={form.price_cents / 100}
+                    onChange={(e) => setForm((f) => ({ ...f, price_cents: Math.round((parseFloat(e.target.value) || 0) * 100) }))}
                   />
-                  <p className="text-xs text-gray-500 mt-0.5">e.g. 3000 = $30.00</p>
                 </div>
               </div>
               <div>
@@ -296,12 +296,13 @@ export default function SessionPackagesPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Price (cents)</label>
+                  <label className="block text-sm font-medium text-gray-700">Price ($)</label>
                   <Input
                     type="number"
                     min={0}
-                    value={form.price_cents}
-                    onChange={(e) => setForm((f) => ({ ...f, price_cents: parseInt(e.target.value, 10) || 0 }))}
+                    step={0.01}
+                    value={form.price_cents / 100}
+                    onChange={(e) => setForm((f) => ({ ...f, price_cents: Math.round((parseFloat(e.target.value) || 0) * 100) }))}
                   />
                 </div>
               </div>

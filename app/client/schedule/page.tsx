@@ -14,6 +14,7 @@ function ClientScheduleContent() {
   const [loading, setLoading] = useState(true)
   const [client, setClient] = useState<any>(null)
   const [submittingRequestId, setSubmittingRequestId] = useState<string | null>(null)
+  const [decliningRequestId, setDecliningRequestId] = useState<string | null>(null)
   const [availabilityText, setAvailabilityText] = useState('')
   const [submittingAvailability, setSubmittingAvailability] = useState(false)
   const searchParams = useSearchParams()
@@ -92,6 +93,16 @@ function ClientScheduleContent() {
     } catch {
       setSubmittingRequestId(null)
     }
+  }
+
+  const handleDeclineOffer = async (requestId: string) => {
+    setDecliningRequestId(requestId)
+    const { error } = await supabase
+      .from('session_requests')
+      .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+      .eq('id', requestId)
+    if (!error) loadData()
+    setDecliningRequestId(null)
   }
 
   const handleSubmitAvailability = async (requestId: string) => {
@@ -188,15 +199,25 @@ function ClientScheduleContent() {
                               : 'Waiting for coach to confirm time'}
                         </p>
                       </div>
-                      <div>
+                      <div className="flex flex-wrap items-center gap-2">
                         {req.status === 'offered' && (
-                          <Button
-                            size="sm"
-                            onClick={() => handleAcceptOffer(req.id)}
-                            disabled={!!submittingRequestId}
-                          >
-                            {submittingRequestId === req.id ? 'Redirecting...' : 'Accept & pay'}
-                          </Button>
+                          <>
+                            <Button
+                              size="sm"
+                              onClick={() => handleAcceptOffer(req.id)}
+                              disabled={!!submittingRequestId || !!decliningRequestId}
+                            >
+                              {submittingRequestId === req.id ? 'Redirecting...' : 'Accept & pay'}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleDeclineOffer(req.id)}
+                              disabled={!!submittingRequestId || decliningRequestId === req.id}
+                            >
+                              {decliningRequestId === req.id ? 'Declining...' : 'Decline'}
+                            </Button>
+                          </>
                         )}
                         {req.status === 'paid' && (
                           <Button size="sm" variant="outline" onClick={() => setSubmittingRequestId(req.id)}>

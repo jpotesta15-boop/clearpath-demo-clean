@@ -38,6 +38,12 @@ export default async function ClientDetailPage({
     .select('*, programs(*)')
     .eq('client_id', id)
 
+  const { data: sessionRequests } = await supabase
+    .from('session_requests')
+    .select('id, status, amount_cents, created_at, session_products(name, duration_minutes)')
+    .eq('client_id', id)
+    .order('created_at', { ascending: false })
+
   const { count: completedCount } = await supabase
     .from('sessions')
     .select('*', { count: 'exact', head: true })
@@ -144,6 +150,53 @@ export default async function ClientDetailPage({
             </div>
           ) : (
             <p className="text-gray-500">No programs assigned</p>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Session offers</CardTitle>
+          <p className="text-sm font-normal text-gray-500 mt-1">Session packages sent to this client and their response.</p>
+        </CardHeader>
+        <CardContent>
+          {sessionRequests && sessionRequests.length > 0 ? (
+            <div className="space-y-3">
+              {sessionRequests.map((req: any) => {
+                const product = req.session_products
+                const name = product?.name ?? 'Session'
+                const amountDollars = ((req.amount_cents ?? 0) / 100).toFixed(2)
+                const statusLabels: Record<string, string> = {
+                  offered: 'Waiting for client',
+                  accepted: 'Payment in progress',
+                  payment_pending: 'Payment in progress',
+                  paid: 'Paid – pick time on Schedule',
+                  availability_submitted: 'Waiting for you to pick time',
+                  scheduled: 'Scheduled',
+                  cancelled: 'Declined',
+                }
+                const label = statusLabels[req.status] ?? req.status
+                const needsPickTime = req.status === 'availability_submitted'
+                return (
+                  <div key={req.id} className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 pb-3 last:border-0 last:pb-0">
+                    <div>
+                      <p className="font-medium">{name} – ${amountDollars}</p>
+                      <p className="text-sm text-gray-500">{label}</p>
+                    </div>
+                    {needsPickTime && (
+                      <Link
+                        href="/coach/schedule"
+                        className="inline-flex items-center rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+                      >
+                        Pick time
+                      </Link>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <p className="text-gray-500">No session offers yet. Send one from Session Packages.</p>
           )}
         </CardContent>
       </Card>
