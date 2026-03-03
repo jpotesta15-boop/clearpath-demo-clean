@@ -16,27 +16,6 @@ function isValidUrl(s: string): boolean {
 }
 
 export async function POST(request: Request) {
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/539e41ec-3bc7-4a58-91ce-0213dde97783', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Debug-Session-Id': '2b6891',
-    },
-    body: JSON.stringify({
-      sessionId: '2b6891',
-      runId: 'initial',
-      hypothesisId: 'H1',
-      location: 'app/api/webhooks/n8n-video/route.ts:POST',
-      message: 'n8n-video POST received',
-      data: {
-        hasAuthorization: !!request.headers.get('authorization'),
-      },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {})
-  // #endregion agent log
-
   const authHeader = request.headers.get('authorization')
   const headerSecret = authHeader?.startsWith('Bearer ')
     ? authHeader.slice(7)
