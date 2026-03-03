@@ -16,7 +16,7 @@ type Lesson = {
   url?: string | null
   content?: string | null
   video_id?: string | null
-  videos: { id: string; title: string; url?: string } | null
+  videos: { id: string; title: string; url?: string }[] | null
 }
 
 export default function ProgramDetailPage() {
@@ -191,10 +191,11 @@ export default function ProgramDetailPage() {
   const availableVideos = libraryVideos.filter((v) => !videoIdsInProgram.has(v.id))
 
   const lessonLabel = (lesson: Lesson) => {
-    if (lesson.lesson_type === 'video') return lesson.videos?.title ?? 'Video'
+    const video = Array.isArray(lesson.videos) ? lesson.videos[0] : lesson.videos
+    if (lesson.lesson_type === 'video') return video?.title ?? 'Video'
     if (lesson.lesson_type === 'link' || lesson.lesson_type === 'image') return lesson.title || lesson.url || lesson.lesson_type
     if (lesson.lesson_type === 'note') return (lesson.content ?? '').slice(0, 40) + ((lesson.content?.length ?? 0) > 40 ? '…' : '')
-    return lesson.videos?.title ?? 'Lesson'
+    return video?.title ?? 'Lesson'
   }
 
   return (
