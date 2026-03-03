@@ -18,6 +18,15 @@ function getThumbnailUrl(url: string | null, thumbnailUrl: string | null): strin
     if (u.hostname === 'youtu.be' && u.pathname.slice(1)) {
       return `https://img.youtube.com/vi/${u.pathname.slice(1)}/mqdefault.jpg`
     }
+    if (u.hostname.includes('drive.google.com')) {
+      const pathMatch = u.pathname.match(/\/file\/d\/([^/]+)/)
+      const idFromPath = pathMatch?.[1]
+      const idFromQuery = u.searchParams.get('id')
+      const fileId = idFromPath || idFromQuery
+      if (fileId) {
+        return `https://drive.google.com/thumbnail?id=${fileId}&sz=w640-h360`
+      }
+    }
   } catch {
     // ignore
   }
