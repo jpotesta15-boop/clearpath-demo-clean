@@ -6,8 +6,10 @@ const coachNavItems = [
   { href: '/coach/dashboard', label: 'Dashboard' },
   { href: '/coach/clients', label: 'Clients' },
   { href: '/coach/schedule', label: 'Schedule' },
+  { href: '/coach/session-packages', label: 'Session Packages' },
   { href: '/coach/programs', label: 'Programs' },
   { href: '/coach/videos', label: 'Videos' },
+  { href: '/coach/payments', label: 'Payments' },
   { href: '/coach/messages', label: 'Messages' },
 ]
 
