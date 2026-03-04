@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import SidebarNav from '@/components/SidebarNav'
+import { CoachHeader } from '@/components/layout/CoachHeader'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { AnimatedPage } from '@/components/layout/AnimatedPage'
 
@@ -41,9 +42,12 @@ export default async function CoachLayout({
   return (
     <div className="flex min-h-screen bg-[var(--cp-bg-page)] text-[var(--cp-text-primary)]">
       <SidebarNav navItems={coachNavItems} />
-      <AppLayout>
-        <AnimatedPage>{children}</AnimatedPage>
-      </AppLayout>
+      <div className="flex-1 flex flex-col min-w-0">
+        <CoachHeader />
+        <AppLayout>
+          <AnimatedPage>{children}</AnimatedPage>
+        </AppLayout>
+      </div>
     </div>
   )
 }

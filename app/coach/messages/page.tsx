@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -120,6 +121,17 @@ export default function MessagesPage() {
         <p className="mt-1 text-sm text-[var(--cp-text-muted)]">Communicate with your clients</p>
       </div>
 
+      {clients.length === 0 ? (
+        <div className="rounded-2xl border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-elevated)] p-8 text-center shadow-[var(--cp-shadow-soft)]">
+          <p className="text-[var(--cp-text-muted)]">Add clients to start messaging. Once you have clients, you can send and receive messages here.</p>
+          <Link
+            href="/coach/clients/new"
+            className="mt-4 inline-flex items-center justify-center rounded-lg bg-[var(--cp-accent-primary)] px-4 py-2 text-sm font-medium text-[var(--cp-text-on-accent)] hover:opacity-90"
+          >
+            Add your first client
+          </Link>
+        </div>
+      ) : (
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <Card className="border border-[var(--cp-border-subtle)] shadow-[var(--cp-shadow-soft)]">
           <CardContent className="p-0">
@@ -236,6 +248,7 @@ export default function MessagesPage() {
           </Card>
         </div>
       </div>
+      )}
     </div>
   )
 }

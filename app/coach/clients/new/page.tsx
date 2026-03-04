@@ -155,17 +155,23 @@ export default function NewClientPage() {
               />
             </div>
             {form.email.trim() && (
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="sendInvite"
-                  checked={sendInvite}
-                  onChange={(e) => setSendInvite(e.target.checked)}
-                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-                <label htmlFor="sendInvite" className="text-sm text-gray-700">
-                  Send portal invite (client can set password and log in)
-                </label>
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-gray-700">Portal access</p>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="sendInvite"
+                    checked={sendInvite}
+                    onChange={(e) => setSendInvite(e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <label htmlFor="sendInvite" className="text-sm text-gray-700">
+                    Send invite email (client gets a link to set password and log in)
+                  </label>
+                </div>
+                <p className="text-xs text-gray-500">
+                  Leave unchecked to create login now and get a one-time password to share with the client.
+                </p>
               </div>
             )}
               {error && (

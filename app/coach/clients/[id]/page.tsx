@@ -5,6 +5,7 @@ import { format } from 'date-fns'
 import Link from 'next/link'
 import { ClientNotesEditor } from './ClientNotesEditor'
 import { SessionHistoryWithPay } from './SessionHistoryWithPay'
+import { ClientPortalAccess } from './ClientPortalAccess'
 
 export default async function ClientDetailPage({
   params,
@@ -130,6 +131,7 @@ export default async function ClientDetailPage({
             <p><span className="font-medium">Phone:</span> {client.phone || 'N/A'}</p>
           </CardContent>
         </Card>
+        <ClientPortalAccess clientEmail={client.email ?? null} />
       </div>
 
       <Card>

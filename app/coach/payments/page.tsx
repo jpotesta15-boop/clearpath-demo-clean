@@ -258,8 +258,13 @@ export default function CoachPaymentsPage() {
                 </tbody>
               </table>
             </div>
+          ) : payments.length === 0 ? (
+            <div className="py-8 text-center">
+              <p className="text-[var(--cp-text-muted)]">No payments yet. Record one when you receive payment from a client.</p>
+              <Button onClick={() => setShowRecordModal(true)} className="mt-4">Record payment</Button>
+            </div>
           ) : (
-            <p className="text-gray-500">No payments match the filters.</p>
+            <p className="text-[var(--cp-text-muted)] py-4">No payments match the filters.</p>
           )}
         </CardContent>
       </Card>

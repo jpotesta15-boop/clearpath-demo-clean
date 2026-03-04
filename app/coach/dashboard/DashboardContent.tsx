@@ -1,14 +1,28 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { format, addDays, startOfDay, isSameDay } from 'date-fns'
+import { motion } from 'framer-motion'
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  CartesianGrid,
+} from 'recharts'
 
 type Session = {
   id: string
   scheduled_time: string
   clients?: { full_name?: string } | null
 }
+
+type WeekDatum = { weekLabel: string; revenue?: number; count?: number }
 
 type DashboardContentProps = {
   stripeConnectAccountId: string | null
@@ -23,6 +37,9 @@ type DashboardContentProps = {
   pendingSessions: Session[]
   completedCount: number
   canceledCount: number
+  currentTime: string
+  revenueByWeek: WeekDatum[]
+  sessionsByWeek: WeekDatum[]
 }
 
 type PanelId =
@@ -106,9 +123,19 @@ export function DashboardContent({
   pendingSessions,
   completedCount,
   canceledCount,
+  currentTime: initialCurrentTime,
+  revenueByWeek,
+  sessionsByWeek,
 }: DashboardContentProps) {
   const [expandedPanel, setExpandedPanel] = useState<PanelId | null>(null)
   const [connectLoading, setConnectLoading] = useState(false)
+  const [currentTime, setCurrentTime] = useState(initialCurrentTime)
+
+  useEffect(() => {
+    const tick = () => setCurrentTime(format(new Date(), 'h:mm a · EEEE, MMMM d'))
+    const id = setInterval(tick, 60 * 1000)
+    return () => clearInterval(id)
+  }, [])
 
   async function handleConnectStripe() {
     setConnectLoading(true)
@@ -134,14 +161,29 @@ export function DashboardContent({
     { id: 'week', label: 'This Week' },
   ]
 
+  const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.06 } } }
+  const item = { hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0 } }
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-[var(--cp-text-primary)]">Welcome back</h1>
-        <p className="mt-1 text-sm text-[var(--cp-text-muted)]">Your coaching at a glance — tap any tile for details.</p>
-      </div>
+      <motion.div initial="hidden" animate="show" variants={container}>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <h1 className="text-3xl font-bold text-[var(--cp-text-primary)]">Welcome back</h1>
+            <p className="mt-0.5 text-sm text-[var(--cp-text-muted)]">Your coaching at a glance — tap any tile for details.</p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 sm:justify-end">
+            <span
+              className="h-2 w-2 rounded-full bg-[var(--cp-accent-success)] animate-pulse"
+              aria-hidden
+            />
+            <p className="text-sm font-medium text-[var(--cp-text-primary)] text-right">
+              {currentTime}
+            </p>
+          </div>
+        </div>
 
-      <div className="rounded-2xl border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-elevated)] text-[var(--cp-text-primary)] p-4 shadow-[var(--cp-shadow-card)]">
+      <motion.div variants={item} className="rounded-2xl border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-elevated)] text-[var(--cp-text-primary)] p-4 shadow-[var(--cp-shadow-card)]">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h3 className="font-medium text-[var(--cp-text-primary)]">Accept session payments</h3>
@@ -178,12 +220,48 @@ export function DashboardContent({
             )}
           </div>
         </div>
-      </div>
+      </motion.div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+      <motion.div variants={item} className="rounded-2xl border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-elevated)] p-4 shadow-[var(--cp-shadow-soft)]">
+        <h3 className="text-sm font-medium text-[var(--cp-text-muted)] mb-3">Next up</h3>
+        {upcomingSessions.length > 0 ? (
+          <ul className="space-y-2">
+            {upcomingSessions.slice(0, 2).map((session) => (
+              <li key={session.id} className="flex flex-wrap items-center justify-between gap-2 py-2 border-b border-[var(--cp-border-subtle)] last:border-0 last:pb-0">
+                <div>
+                  <p className="font-medium text-[var(--cp-text-primary)]">{session.clients?.full_name ?? 'Client'}</p>
+                  <p className="text-sm text-[var(--cp-text-muted)]">
+                    {format(new Date(session.scheduled_time), 'EEE, MMM d · h:mm a')}
+                  </p>
+                </div>
+                <Link
+                  href="/coach/schedule"
+                  className="text-sm font-medium text-[var(--cp-accent-primary)] hover:text-[var(--cp-accent-primary-strong)]"
+                >
+                  View schedule →
+                </Link>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div className="py-2">
+            <p className="text-[var(--cp-text-muted)]">Nothing scheduled next — your week is open.</p>
+            <Link
+              href="/coach/schedule"
+              className="mt-2 inline-flex font-medium text-[var(--cp-accent-primary)] hover:text-[var(--cp-accent-primary-strong)]"
+            >
+              Schedule a session →
+            </Link>
+          </div>
+        )}
+      </motion.div>
+      </motion.div>
+
+      <motion.div initial="hidden" animate="show" variants={container} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
         {tiles.map(({ id, label, badge }) => (
-          <button
+          <motion.button
             key={id}
+            variants={item}
             type="button"
             onClick={() => setExpandedPanel(id)}
             className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] p-5 shadow-[var(--cp-shadow-soft)] hover:border-[var(--cp-accent-primary)] hover:bg-[var(--cp-accent-primary-soft)] hover:shadow-[var(--cp-shadow-card)] transition-all min-h-[140px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cp-border-focus)]"
@@ -195,9 +273,90 @@ export function DashboardContent({
                 {badge}
               </span>
             )}
-          </button>
+          </motion.button>
         ))}
-      </div>
+      </motion.div>
+
+      <motion.div
+        initial="hidden"
+        animate="show"
+        variants={container}
+        className="grid grid-cols-1 lg:grid-cols-2 gap-6"
+      >
+        <motion.div
+          variants={item}
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: 'easeOut' }}
+          className="rounded-2xl border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-elevated)] p-4 shadow-[var(--cp-shadow-soft)]"
+        >
+          <h3 className="text-sm font-medium text-[var(--cp-text-muted)] mb-3">Revenue (last 8 weeks)</h3>
+          <div className="h-[200px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={revenueByWeek}
+                margin={{ top: 4, right: 4, left: 0, bottom: 0 }}
+                barCategoryGap="20%"
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--cp-border-subtle)" />
+                <XAxis dataKey="weekLabel" tick={{ fill: 'var(--cp-text-muted)', fontSize: 11 }} />
+                <YAxis tick={{ fill: 'var(--cp-text-muted)', fontSize: 11 }} tickFormatter={(v) => `$${v}`} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: 'var(--cp-bg-elevated)', border: '1px solid var(--cp-border-subtle)', borderRadius: 8 }}
+                  labelStyle={{ color: 'var(--cp-text-primary)' }}
+                  formatter={(value: number) => [`$${value.toFixed(2)}`, 'Revenue']}
+                  labelFormatter={(label) => label}
+                />
+                <Bar
+                  dataKey="revenue"
+                  fill="var(--cp-accent-primary)"
+                  radius={[4, 4, 0, 0]}
+                  isAnimationActive
+                  animationDuration={800}
+                  animationEasing="ease-out"
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </motion.div>
+        <motion.div
+          variants={item}
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.08, ease: 'easeOut' }}
+          className="rounded-2xl border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-elevated)] p-4 shadow-[var(--cp-shadow-soft)]"
+        >
+          <h3 className="text-sm font-medium text-[var(--cp-text-muted)] mb-3">Sessions (last 8 weeks)</h3>
+          <div className="h-[200px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart
+                data={sessionsByWeek}
+                margin={{ top: 4, right: 4, left: 0, bottom: 0 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--cp-border-subtle)" />
+                <XAxis dataKey="weekLabel" tick={{ fill: 'var(--cp-text-muted)', fontSize: 11 }} />
+                <YAxis tick={{ fill: 'var(--cp-text-muted)', fontSize: 11 }} allowDecimals={false} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: 'var(--cp-bg-elevated)', border: '1px solid var(--cp-border-subtle)', borderRadius: 8 }}
+                  labelStyle={{ color: 'var(--cp-text-primary)' }}
+                  formatter={(value: number) => [value, 'Sessions']}
+                  labelFormatter={(label) => label}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="count"
+                  stroke="var(--cp-accent-success)"
+                  strokeWidth={2}
+                  dot={{ fill: 'var(--cp-accent-success)' }}
+                  isAnimationActive
+                  animationDuration={800}
+                  animationEasing="ease-out"
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </motion.div>
+      </motion.div>
 
       {expandedPanel && (
         <div
@@ -233,13 +392,27 @@ export function DashboardContent({
 
             {expandedPanel === 'clients' && (
               <div className="space-y-4">
-                <p className="text-2xl font-bold text-slate-50">{totalClients} clients</p>
-                <Link
-                  href="/coach/clients"
-                  className="inline-flex font-medium text-blue-600 hover:text-blue-800"
-                >
-                  View all clients →
-                </Link>
+                {totalClients > 0 ? (
+                  <>
+                    <p className="text-2xl font-bold text-slate-50">{totalClients} clients</p>
+                    <Link
+                      href="/coach/clients"
+                      className="inline-flex font-medium text-blue-400 hover:text-blue-300"
+                    >
+                      View all clients →
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-slate-300">You don't have any clients yet. Add your first client to start booking sessions.</p>
+                    <Link
+                      href="/coach/clients/new"
+                      className="inline-flex font-medium text-blue-400 hover:text-blue-300"
+                    >
+                      Add your first client →
+                    </Link>
+                  </>
+                )}
               </div>
             )}
 
@@ -284,28 +457,52 @@ export function DashboardContent({
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-gray-500">No pending requests</p>
+                  <>
+                    <p className="text-slate-400">No session requests waiting. New requests from clients will show up here.</p>
+                    <Link
+                      href="/coach/schedule"
+                      className="inline-flex font-medium text-blue-400 hover:text-blue-300"
+                    >
+                      Open schedule →
+                    </Link>
+                  </>
                 )}
-                <Link
-                  href="/coach/schedule"
-                  className="inline-flex font-medium text-blue-600 hover:text-blue-800"
-                >
-                  Open schedule →
-                </Link>
+                {pendingSessions.length > 0 && (
+                  <Link
+                    href="/coach/schedule"
+                    className="inline-flex font-medium text-blue-400 hover:text-blue-300"
+                  >
+                    Open schedule →
+                  </Link>
+                )}
               </div>
             )}
 
             {expandedPanel === 'messages' && (
               <div className="space-y-4">
-                <p className="text-2xl font-bold text-gray-900">
-                  {unseenMessagesCount} unread message{unseenMessagesCount === 1 ? '' : 's'}
-                </p>
-                <Link
-                  href="/coach/messages"
-                  className="inline-flex font-medium text-blue-600 hover:text-blue-800"
-                >
-                  Go to Messages →
-                </Link>
+                {unseenMessagesCount > 0 ? (
+                  <>
+                    <p className="text-2xl font-bold text-slate-50">
+                      {unseenMessagesCount} unread message{unseenMessagesCount === 1 ? '' : 's'}
+                    </p>
+                    <Link
+                      href="/coach/messages"
+                      className="inline-flex font-medium text-blue-400 hover:text-blue-300"
+                    >
+                      Go to Messages →
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-slate-300">You're all caught up — no new messages.</p>
+                    <Link
+                      href="/coach/messages"
+                      className="inline-flex font-medium text-blue-400 hover:text-blue-300"
+                    >
+                      Open Messages →
+                    </Link>
+                  </>
+                )}
               </div>
             )}
 
@@ -326,15 +523,15 @@ export function DashboardContent({
                     </p>
                   </div>
                 ) : (
-                  <p className="text-gray-500">No upcoming sessions</p>
+                  <p className="text-slate-400">No upcoming sessions this week. Schedule one when you're ready.</p>
                 )}
                 <div>
-                  <p className="text-sm font-medium text-gray-700 mb-3">This week</p>
+                  <p className="text-sm font-medium text-slate-400 mb-3">This week</p>
                   <WeekMiniCalendar upcomingSessions={upcomingSessions} />
                 </div>
                 <Link
                   href="/coach/schedule"
-                  className="inline-flex font-medium text-blue-600 hover:text-blue-800"
+                  className="inline-flex font-medium text-blue-400 hover:text-blue-300"
                 >
                   Open schedule →
                 </Link>

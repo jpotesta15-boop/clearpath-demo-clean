@@ -35,42 +35,54 @@ export default async function ClientsPage() {
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {(clients ?? []).map((client) => (
-          <Link key={client.id} href={`/coach/clients/${client.id}`}>
-            <Card variant="raised" interactive className="h-full">
-              <CardHeader className="flex flex-row items-center space-y-0 gap-3 pb-4">
-                <div className="h-10 w-10 rounded-full bg-[var(--cp-accent-primary-soft)] flex items-center justify-center text-xs font-semibold text-[var(--cp-accent-primary)]">
-                  {getInitials(client.full_name)}
-                </div>
-                <div className="min-w-0">
-                  <CardTitle className="text-base truncate">
-                    {client.full_name || 'Unnamed client'}
-                  </CardTitle>
-                  {client.email && (
-                    <p className="text-xs text-[var(--cp-text-subtle)] truncate">
-                      {client.email}
+      {(clients ?? []).length === 0 ? (
+        <div className="rounded-2xl border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-elevated)] p-8 text-center shadow-[var(--cp-shadow-soft)]">
+          <p className="text-[var(--cp-text-muted)]">You don't have any clients yet. Add your first client to start booking sessions and tracking progress.</p>
+          <Link
+            href="/coach/clients/new"
+            className="mt-4 inline-flex items-center justify-center rounded-lg bg-[var(--cp-accent-primary)] px-4 py-2 text-sm font-medium text-[var(--cp-text-on-accent)] hover:opacity-90"
+          >
+            Add your first client
+          </Link>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {(clients ?? []).map((client) => (
+            <Link key={client.id} href={`/coach/clients/${client.id}`}>
+              <Card variant="raised" interactive className="h-full">
+                <CardHeader className="flex flex-row items-center space-y-0 gap-3 pb-4">
+                  <div className="h-10 w-10 rounded-full bg-[var(--cp-accent-primary-soft)] flex items-center justify-center text-xs font-semibold text-[var(--cp-accent-primary)]">
+                    {getInitials(client.full_name)}
+                  </div>
+                  <div className="min-w-0">
+                    <CardTitle className="text-base truncate">
+                      {client.full_name || 'Unnamed client'}
+                    </CardTitle>
+                    {client.email && (
+                      <p className="text-xs text-[var(--cp-text-subtle)] truncate">
+                        {client.email}
+                      </p>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {client.phone && (
+                    <p className="text-xs text-[var(--cp-text-muted)]">
+                      <span className="font-medium text-[var(--cp-text-primary)]">Phone:</span>{' '}
+                      {client.phone}
                     </p>
                   )}
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {client.phone && (
-                  <p className="text-xs text-[var(--cp-text-muted)]">
-                    <span className="font-medium text-[var(--cp-text-primary)]">Phone:</span>{' '}
-                    {client.phone}
-                  </p>
-                )}
-                {client.notes && (
-                  <p className="mt-1 text-xs text-[var(--cp-text-muted)] line-clamp-3">
-                    {client.notes}
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          </Link>
-        ))}
-      </div>
+                  {client.notes && (
+                    <p className="mt-1 text-xs text-[var(--cp-text-muted)] line-clamp-3">
+                      {client.notes}
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            </Link>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
