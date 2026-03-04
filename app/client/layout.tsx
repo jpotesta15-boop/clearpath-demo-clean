@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { getClientId } from '@/lib/config'
 import SidebarNav from '@/components/SidebarNav'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { AnimatedPage } from '@/components/layout/AnimatedPage'
@@ -23,6 +24,23 @@ export default async function ClientLayout({
 
   if (!user) {
     redirect('/login')
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('tenant_id, role')
+    .eq('id', user.id)
+    .single()
+
+  if (profile?.tenant_id == null) {
+    await supabase
+      .from('profiles')
+      .update({ tenant_id: getClientId() })
+      .eq('id', user.id)
+  }
+
+  if (profile?.role === 'coach') {
+    redirect('/coach/dashboard')
   }
 
   return (

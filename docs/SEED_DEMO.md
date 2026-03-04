@@ -26,6 +26,19 @@ This document describes how to run and customize the ClearPath demo seed (`supab
 
 Run the entire `supabase/seed_demo.sql` file in the **Supabase SQL Editor** (Dashboard → SQL Editor → New query → paste → Run).
 
+## Test as client
+
+To test the app from the client’s point of view (no manual SQL):
+
+1. Log in as coach.
+2. Go to **Clients** → open a client that has an email (or add one).
+3. Open **Client portal access** → **Create login** / **Generate password** → copy the password.
+4. Log out, then log in with that client’s email and the generated password.
+
+You should see the client dashboard. The app sets the user’s `profiles.tenant_id` on first load if it was missing, so RLS works without any manual SQL.
+
+If you create a user manually in Supabase Auth, use an email that already exists in **Clients** for your coach (same tenant), or add that client in the app first. The first time that user logs in, the app will set their `tenant_id` so RLS works.
+
 ## Messages
 
 The seed inserts 3 messages with `sender_id` and `recipient_id` both set to the coach (so they appear as unread for the coach). To seed **coach–client** messages you need Auth users (and profiles) for clients. Options:

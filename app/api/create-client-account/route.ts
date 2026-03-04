@@ -87,6 +87,17 @@ export async function POST(request: Request) {
     if (!data?.user) {
       return NextResponse.json({ error: 'User could not be created' }, { status: 500 })
     }
+    const { error: updateError } = await admin
+      .from('profiles')
+      .update({ tenant_id: tenantId })
+      .eq('id', data.user.id)
+    if (updateError) {
+      console.error('Failed to set profile tenant_id:', updateError)
+      return NextResponse.json(
+        { error: 'Account created but tenant could not be set. Contact support.' },
+        { status: 500 }
+      )
+    }
     return NextResponse.json({ ok: true, password })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Account creation failed'
