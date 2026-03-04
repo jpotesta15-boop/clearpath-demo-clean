@@ -8,6 +8,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { format } from 'date-fns'
+import { getClientId } from '@/lib/config'
 
 export default function MessagesPage() {
   const [messages, setMessages] = useState<any[]>([])
@@ -15,9 +16,15 @@ export default function MessagesPage() {
   const [selectedClient, setSelectedClient] = useState<string | null>(null)
   const [newMessage, setNewMessage] = useState('')
   const [currentUser, setCurrentUser] = useState<any>(null)
+  const [sessionProducts, setSessionProducts] = useState<any[]>([])
+  const [showRequestModal, setShowRequestModal] = useState(false)
+  const [selectedProductId, setSelectedProductId] = useState('')
+  const [requestLoading, setRequestLoading] = useState(false)
+  const [requestError, setRequestError] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const searchParams = useSearchParams()
   const supabase = createClient()
+  const tenantId = getClientId()
 
   useEffect(() => {
     loadClients()
@@ -102,6 +109,7 @@ export default function MessagesPage() {
         .insert({
           sender_id: currentUser.id,
           recipient_id: clientProfile.id,
+          client_id: tenantId,
           content: newMessage,
         })
 
@@ -109,6 +117,91 @@ export default function MessagesPage() {
         setNewMessage('')
         loadMessages()
       }
+    }
+  }
+
+  const ensureSessionProductsLoaded = async () => {
+    if (sessionProducts.length > 0) return
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { data, error } = await supabase
+      .from('session_products')
+      .select('*')
+      .eq('coach_id', user.id)
+      .eq('client_id', tenantId)
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+    if (!error && data) {
+      setSessionProducts(data)
+      if (data.length > 0 && !selectedProductId) {
+        setSelectedProductId(data[0].id)
+      }
+    }
+  }
+
+  const openRequestSession = async () => {
+    if (!selectedClient) return
+    setRequestError(null)
+    setShowRequestModal(true)
+    await ensureSessionProductsLoaded()
+  }
+
+  const handleSendSessionRequest = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedClient || !currentUser || !selectedProductId) return
+
+    const client = clients.find((c) => c.id === selectedClient)
+    if (!client) return
+    const product = sessionProducts.find((p) => p.id === selectedProductId)
+    if (!product) return
+
+    setRequestLoading(true)
+    setRequestError(null)
+
+    try {
+      const { data: sessionRequest, error: reqError } = await supabase
+        .from('session_requests')
+        .insert({
+          coach_id: currentUser.id,
+          client_id: client.id,
+          session_product_id: product.id,
+          tenant_id: tenantId,
+          status: 'offered',
+          amount_cents: product.price_cents ?? 0,
+        })
+        .select('id')
+        .maybeSingle()
+
+      if (reqError) {
+        setRequestError(reqError.message)
+        setRequestLoading(false)
+        return
+      }
+
+      if (client.email) {
+        const { data: clientProfile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('email', client.email)
+          .maybeSingle()
+
+        if (clientProfile?.id) {
+          const amount = ((product.price_cents ?? 0) / 100).toFixed(2)
+          await supabase.from('messages').insert({
+            sender_id: currentUser.id,
+            recipient_id: clientProfile.id,
+            client_id: tenantId,
+            content: `You have a new session offer: ${product.name} – $${amount}. Open your Schedule to review, pay, and share when you're available.`,
+          })
+        }
+      }
+
+      setShowRequestModal(false)
+      setSelectedProductId('')
+      setRequestLoading(false)
+    } catch (e: any) {
+      setRequestError(e?.message ?? 'Unable to send session request')
+      setRequestLoading(false)
     }
   }
 
@@ -164,13 +257,26 @@ export default function MessagesPage() {
           <Card className="border border-[var(--cp-border-subtle)] shadow-[var(--cp-shadow-soft)] flex-1 flex flex-col overflow-hidden">
             {selectedClient ? (
               <>
-                <div className="px-4 py-3 border-b border-[var(--cp-border-subtle)] bg-[rgba(15,23,42,0.6)]">
-                  <p className="font-semibold text-[var(--cp-text-primary)]">
-                    {selectedClientData?.full_name ?? 'Client'}
-                  </p>
-                  <p className="text-xs text-[var(--cp-text-muted)]">
-                    {selectedClientData?.email ?? 'No email'}
-                  </p>
+                <div className="px-4 py-3 border-b border-[var(--cp-border-subtle)] bg-[rgba(15,23,42,0.6)] flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="font-semibold text-[var(--cp-text-primary)]">
+                      {selectedClientData?.full_name ?? 'Client'}
+                    </p>
+                    <p className="text-xs text-[var(--cp-text-muted)]">
+                      {selectedClientData?.email ?? 'No email'}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={!selectedClientData}
+                      onClick={() => openRequestSession()}
+                    >
+                      Request session
+                    </Button>
+                  </div>
                 </div>
                 <div className="flex-1 overflow-y-auto p-4 min-h-0">
                   <div className="space-y-3">
@@ -248,6 +354,83 @@ export default function MessagesPage() {
           </Card>
         </div>
       </div>
+      )}
+
+      {showRequestModal && selectedClient && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          onClick={() => !requestLoading && setShowRequestModal(false)}
+        >
+          <div
+            className="bg-[var(--cp-bg-elevated)] border border-[var(--cp-border-subtle)] rounded-xl shadow-xl max-w-md w-full p-4 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-base font-semibold text-[var(--cp-text-primary)]">Request session</h2>
+              <button
+                type="button"
+                onClick={() => !requestLoading && setShowRequestModal(false)}
+                className="text-sm text-[var(--cp-text-muted)] hover:text-[var(--cp-text-primary)]"
+              >
+                Close
+              </button>
+            </div>
+            <p className="text-xs text-[var(--cp-text-muted)]">
+              Choose a session type to offer to {selectedClientData?.full_name ?? 'this client'}. They&apos;ll see it on their
+              Schedule page and can accept, pay, and share when they&apos;re available.
+            </p>
+            {sessionProducts.length === 0 ? (
+              <div className="space-y-2">
+                <p className="text-sm text-[var(--cp-text-muted)]">
+                  You don&apos;t have any session types yet. Create one from Session Packages, then come back to send an offer.
+                </p>
+                <Link
+                  href="/coach/session-packages"
+                  className="text-sm font-medium text-[var(--cp-accent-primary)] hover:text-[var(--cp-accent-primary-strong)]"
+                  onClick={() => setShowRequestModal(false)}
+                >
+                  Open Session Packages →
+                </Link>
+              </div>
+            ) : (
+              <form onSubmit={handleSendSessionRequest} className="space-y-4">
+                <div>
+                  <label className="block text-xs text-[var(--cp-text-muted)] mb-1">Session type</label>
+                  <select
+                    value={selectedProductId}
+                    onChange={(e) => setSelectedProductId(e.target.value)}
+                    className="w-full rounded-md border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] px-3 py-2 text-sm"
+                    required
+                  >
+                    <option value="">Select a session type…</option>
+                    {sessionProducts.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} – ${((p.price_cents ?? 0) / 100).toFixed(2)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {requestError && (
+                  <p className="text-xs text-[var(--cp-accent-danger)]">{requestError}</p>
+                )}
+                <div className="flex justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => !requestLoading && setShowRequestModal(false)}
+                    disabled={requestLoading}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" size="sm" disabled={requestLoading || !selectedProductId}>
+                    {requestLoading ? 'Sending…' : 'Send request'}
+                  </Button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
       )}
     </div>
   )

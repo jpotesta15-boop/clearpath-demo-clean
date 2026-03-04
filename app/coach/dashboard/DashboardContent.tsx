@@ -24,6 +24,12 @@ type Session = {
 
 type WeekDatum = { weekLabel: string; revenue?: number; count?: number }
 
+type AvailabilityRequest = {
+  id: string
+  clients?: { full_name?: string } | null
+  session_products?: { name?: string } | null
+}
+
 type DashboardContentProps = {
   stripeConnectAccountId: string | null
   totalClients: number
@@ -40,6 +46,7 @@ type DashboardContentProps = {
   currentTime: string
   revenueByWeek: WeekDatum[]
   sessionsByWeek: WeekDatum[]
+  availabilityRequests: AvailabilityRequest[]
 }
 
 type PanelId =
@@ -126,6 +133,7 @@ export function DashboardContent({
   currentTime: initialCurrentTime,
   revenueByWeek,
   sessionsByWeek,
+  availabilityRequests,
 }: DashboardContentProps) {
   const [expandedPanel, setExpandedPanel] = useState<PanelId | null>(null)
   const [connectLoading, setConnectLoading] = useState(false)
@@ -165,22 +173,13 @@ export function DashboardContent({
   const item = { hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0 } }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <motion.div initial="hidden" animate="show" variants={container}>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div>
-            <h1 className="text-3xl font-bold text-[var(--cp-text-primary)]">Welcome back</h1>
-            <p className="mt-0.5 text-sm text-[var(--cp-text-muted)]">Your coaching at a glance — tap any tile for details.</p>
-          </div>
-          <div className="flex items-center gap-2 shrink-0 sm:justify-end">
-            <span
-              className="h-2 w-2 rounded-full bg-[var(--cp-accent-success)] animate-pulse"
-              aria-hidden
-            />
-            <p className="text-sm font-medium text-[var(--cp-text-primary)] text-right">
-              {currentTime}
-            </p>
-          </div>
+        <div className="flex flex-col gap-3">
+          <h1 className="text-3xl font-bold text-[var(--cp-text-primary)]">Welcome back</h1>
+          <p className="text-sm text-[var(--cp-text-muted)]">
+            Your coaching at a glance — tap any tile for details.
+          </p>
         </div>
 
       <motion.div variants={item} className="rounded-2xl border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-elevated)] text-[var(--cp-text-primary)] p-4 shadow-[var(--cp-shadow-card)]">
@@ -254,6 +253,39 @@ export function DashboardContent({
             </Link>
           </div>
         )}
+      </motion.div>
+
+      <motion.div variants={item} className="rounded-2xl border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-elevated)] p-4 shadow-[var(--cp-shadow-soft)]">
+        <h3 className="text-sm font-medium text-[var(--cp-text-muted)] mb-3">Ready to schedule</h3>
+        <p className="text-xs text-[var(--cp-text-muted)] mb-2">Clients have submitted their availability. Confirm a time on Schedule to book.</p>
+        {availabilityRequests.length > 0 ? (
+          <ul className="space-y-2">
+            {availabilityRequests.map((req) => (
+              <li key={req.id} className="flex flex-wrap items-center justify-between gap-2 py-2 border-b border-[var(--cp-border-subtle)] last:border-0 last:pb-0">
+                <div>
+                  <p className="font-medium text-[var(--cp-text-primary)]">{req.clients?.full_name ?? 'Client'}</p>
+                  <p className="text-sm text-[var(--cp-text-muted)]">
+                    {(req.session_products as { name?: string } | null)?.name ?? 'Session'} — waiting for you to pick a time
+                  </p>
+                </div>
+                <Link
+                  href="/coach/schedule"
+                  className="text-sm font-medium text-[var(--cp-accent-primary)] hover:text-[var(--cp-accent-primary-strong)] shrink-0"
+                >
+                  Confirm & book →
+                </Link>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-[var(--cp-text-muted)] py-1">No availability requests right now.</p>
+        )}
+        <Link
+          href="/coach/schedule"
+          className="mt-2 inline-block text-sm font-medium text-[var(--cp-accent-primary)] hover:text-[var(--cp-accent-primary-strong)]"
+        >
+          Open Schedule →
+        </Link>
       </motion.div>
       </motion.div>
 

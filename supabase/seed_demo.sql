@@ -60,6 +60,14 @@ VALUES
   ('c3000000-0000-4000-8000-000000000003', 'a1000000-0000-4000-8000-000000000005')
 ON CONFLICT (program_id, client_id) DO NOTHING;
 
+-- ========== VIDEO_ASSIGNMENTS (sample) ==========
+INSERT INTO public.video_assignments (video_id, client_id)
+VALUES
+  ('b2000000-0000-4000-8000-000000000001', 'a1000000-0000-4000-8000-000000000001'),
+  ('b2000000-0000-4000-8000-000000000002', 'a1000000-0000-4000-8000-000000000002'),
+  ('b2000000-0000-4000-8000-000000000003', 'a1000000-0000-4000-8000-000000000003')
+ON CONFLICT (video_id, client_id) DO NOTHING;
+
 -- ========== SESSION_PRODUCTS (3) ==========
 INSERT INTO public.session_products (id, coach_id, client_id, name, description, duration_minutes, price_cents, max_participants)
 VALUES

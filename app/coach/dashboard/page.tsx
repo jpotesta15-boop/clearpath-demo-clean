@@ -118,6 +118,14 @@ export default async function CoachDashboard() {
   }, {} as Record<number, number>)
   sessionsByWeek.forEach((w, i) => { w.count = sessionCountByWeek[i] ?? 0 })
 
+  const { data: availabilityRequests } = await supabase
+    .from('session_requests')
+    .select('id, clients(full_name), session_products(name)')
+    .eq('coach_id', user!.id)
+    .eq('status', 'availability_submitted')
+    .order('created_at', { ascending: false })
+    .limit(5)
+
   const currentTime = format(now, 'h:mm a · EEEE, MMMM d')
 
   return (
@@ -137,6 +145,7 @@ export default async function CoachDashboard() {
       currentTime={currentTime}
       revenueByWeek={revenueByWeek}
       sessionsByWeek={sessionsByWeek}
+      availabilityRequests={availabilityRequests ?? []}
     />
   )
 }

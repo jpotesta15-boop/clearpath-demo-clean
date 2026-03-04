@@ -44,6 +44,9 @@ export default function VideosPage() {
   const [editingVideo, setEditingVideo] = useState<{ title: string; description: string; thumbnail_url: string }>({ title: '', description: '', thumbnail_url: '' })
   const [savingEdit, setSavingEdit] = useState(false)
   const [assignedClientIds, setAssignedClientIds] = useState<string[]>([])
+  const [initialAssignedClientIds, setInitialAssignedClientIds] = useState<string[]>([])
+  const [pendingAssignedClientIds, setPendingAssignedClientIds] = useState<string[]>([])
+  const [savingAssignments, setSavingAssignments] = useState(false)
   const [selectedProgramIds, setSelectedProgramIds] = useState<string[]>([])
   const [updatingClientId, setUpdatingClientId] = useState<string | null>(null)
   const [deletingVideoId, setDeletingVideoId] = useState<string | null>(null)
@@ -68,6 +71,8 @@ export default function VideosPage() {
       })
     } else {
       setAssignedClientIds([])
+      setInitialAssignedClientIds([])
+      setPendingAssignedClientIds([])
       setSelectedProgramIds([])
     }
   }, [selectedVideo?.id, selectedVideo?.title, selectedVideo?.description, selectedVideo?.thumbnail_url])
@@ -101,7 +106,10 @@ export default function VideosPage() {
       .from('video_assignments')
       .select('client_id')
       .eq('video_id', videoId)
-    setAssignedClientIds((data || []).map((r: any) => r.client_id))
+    const ids = (data || []).map((r: any) => r.client_id as string)
+    setAssignedClientIds(ids)
+    setInitialAssignedClientIds(ids)
+    setPendingAssignedClientIds(ids)
   }
 
   const loadVideoPrograms = async (videoId: string) => {
@@ -128,36 +136,47 @@ export default function VideosPage() {
     setLoading(false)
   }
 
-  const toggleClientAssignment = async (clientId: string) => {
+  const toggleClientSelection = (clientId: string) => {
+    setPendingAssignedClientIds((prev) =>
+      prev.includes(clientId) ? prev.filter((id) => id !== clientId) : [...prev, clientId]
+    )
+  }
+
+  const saveClientAssignments = async () => {
     if (!selectedVideo?.id) return
     setError(null)
-    setUpdatingClientId(clientId)
-    const isAssigned = assignedClientIds.includes(clientId)
+    setSavingAssignments(true)
     try {
-      if (isAssigned) {
-        const { error: err } = await supabase
+      const toAdd = pendingAssignedClientIds.filter((id) => !initialAssignedClientIds.includes(id))
+      const toRemove = initialAssignedClientIds.filter((id) => !pendingAssignedClientIds.includes(id))
+
+      if (toRemove.length > 0) {
+        const { error: delError } = await supabase
           .from('video_assignments')
           .delete()
           .eq('video_id', selectedVideo.id)
-          .eq('client_id', clientId)
-        if (err) {
-          setError(err.message)
-        } else {
-          setAssignedClientIds((prev) => prev.filter((id) => id !== clientId))
-        }
-      } else {
-        const { error: err } = await supabase.from('video_assignments').insert({
-          video_id: selectedVideo.id,
-          client_id: clientId,
-        })
-        if (err) {
-          setError(err.message)
-        } else {
-          setAssignedClientIds((prev) => (prev.includes(clientId) ? prev : [...prev, clientId]))
+          .in('client_id', toRemove)
+        if (delError) {
+          setError(delError.message)
+          setSavingAssignments(false)
+          return
         }
       }
+
+      if (toAdd.length > 0) {
+        const rows = toAdd.map((clientId) => ({ video_id: selectedVideo.id, client_id: clientId }))
+        const { error: insError } = await supabase.from('video_assignments').insert(rows)
+        if (insError) {
+          setError(insError.message)
+          setSavingAssignments(false)
+          return
+        }
+      }
+
+      setAssignedClientIds(pendingAssignedClientIds)
+      setInitialAssignedClientIds(pendingAssignedClientIds)
     } finally {
-      setUpdatingClientId(null)
+      setSavingAssignments(false)
     }
   }
 
@@ -476,29 +495,46 @@ export default function VideosPage() {
                       .join(', ')}
                   </p>
                 )}
-                <div className="flex flex-wrap gap-2">
-                  {clients.map((client) => {
-                    const isSelected = assignedClientIds.includes(client.id)
-                    const isLoading = updatingClientId === client.id
-                    return (
-                      <button
-                        key={client.id}
-                        type="button"
-                        onClick={() => toggleClientAssignment(client.id)}
-                        disabled={isLoading}
-                        className={`px-3 py-1 rounded-full border text-xs font-medium transition ${
-                          isSelected
-                            ? 'bg-primary-600 text-white border-primary-600'
-                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                        } ${isLoading ? 'opacity-60 cursor-wait' : ''}`}
-                      >
-                        {client.full_name}
-                      </button>
-                    )
-                  })}
-                  {clients.length === 0 && (
-                    <p className="text-xs text-gray-500">No clients found. Add clients to assign this video.</p>
-                  )}
+                <div className="space-y-2">
+                  <div className="flex flex-wrap gap-2">
+                    {clients.map((client) => {
+                      const isSelected = pendingAssignedClientIds.includes(client.id)
+                      return (
+                        <label
+                          key={client.id}
+                          className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium transition ${
+                            isSelected
+                              ? 'bg-primary-600 text-white border-primary-600'
+                              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleClientSelection(client.id)}
+                            className="h-3 w-3 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                          />
+                          <span>{client.full_name}</span>
+                        </label>
+                      )
+                    })}
+                    {clients.length === 0 && (
+                      <p className="text-xs text-gray-500">No clients found. Add clients to assign this video.</p>
+                    )}
+                  </div>
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={saveClientAssignments}
+                      disabled={
+                        savingAssignments ||
+                        JSON.stringify(pendingAssignedClientIds) === JSON.stringify(initialAssignedClientIds)
+                      }
+                      className="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {savingAssignments ? 'Saving…' : 'Save assignments'}
+                    </button>
+                  </div>
                 </div>
               </div>
 
