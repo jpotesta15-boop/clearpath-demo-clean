@@ -11,8 +11,6 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
-  LineChart,
-  Line,
   CartesianGrid,
 } from 'recharts'
 
@@ -30,6 +28,18 @@ type AvailabilityRequest = {
   session_products?: { name?: string }[] | null
 }
 
+type ClientRow = { id: string; full_name?: string | null; email?: string | null }
+
+type RecentMessageRow = {
+  id: string
+  sender_id: string
+  recipient_id: string
+  content: string
+  created_at: string
+  sender_name?: string | null
+  recipient_name?: string | null
+}
+
 type DashboardContentProps = {
   stripeConnectAccountId: string | null
   totalClients: number
@@ -45,8 +55,10 @@ type DashboardContentProps = {
   canceledCount: number
   currentTime: string
   revenueByWeek: WeekDatum[]
-  sessionsByWeek: WeekDatum[]
   availabilityRequests: AvailabilityRequest[]
+  clients: ClientRow[]
+  recentMessages: RecentMessageRow[]
+  currentUserId: string
 }
 
 type PanelId =
@@ -132,8 +144,10 @@ export function DashboardContent({
   canceledCount,
   currentTime: initialCurrentTime,
   revenueByWeek,
-  sessionsByWeek,
   availabilityRequests,
+  clients,
+  recentMessages,
+  currentUserId,
 }: DashboardContentProps) {
   const [expandedPanel, setExpandedPanel] = useState<PanelId | null>(null)
   const [connectLoading, setConnectLoading] = useState(false)
@@ -315,16 +329,11 @@ export function DashboardContent({
         initial="hidden"
         animate="show"
         variants={container}
-        className="grid grid-cols-1 lg:grid-cols-2 gap-6"
+        className="rounded-2xl border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-elevated)] p-4 shadow-[var(--cp-shadow-soft)]"
       >
-        <motion.div
-          variants={item}
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: 'easeOut' }}
-          className="rounded-2xl border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-elevated)] p-4 shadow-[var(--cp-shadow-soft)]"
-        >
-          <h3 className="text-sm font-medium text-[var(--cp-text-muted)] mb-3">Revenue (last 8 weeks)</h3>
+        <motion.div variants={item}>
+          <h3 className="text-sm font-medium text-[var(--cp-text-muted)] mb-1">Revenue by week</h3>
+          <p className="text-xs text-[var(--cp-text-muted)] mb-3">Total: ${revenue.toLocaleString()} · This week: ${revenueThisWeek.toLocaleString()}</p>
           <div className="h-[200px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
@@ -353,95 +362,102 @@ export function DashboardContent({
             </ResponsiveContainer>
           </div>
         </motion.div>
-        <motion.div
-          variants={item}
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.08, ease: 'easeOut' }}
-          className="rounded-2xl border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-elevated)] p-4 shadow-[var(--cp-shadow-soft)]"
-        >
-          <h3 className="text-sm font-medium text-[var(--cp-text-muted)] mb-3">Sessions (last 8 weeks)</h3>
-          <div className="h-[200px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart
-                data={sessionsByWeek}
-                margin={{ top: 4, right: 4, left: 0, bottom: 0 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--cp-border-subtle)" />
-                <XAxis dataKey="weekLabel" tick={{ fill: 'var(--cp-text-muted)', fontSize: 11 }} />
-                <YAxis tick={{ fill: 'var(--cp-text-muted)', fontSize: 11 }} allowDecimals={false} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: 'var(--cp-bg-elevated)', border: '1px solid var(--cp-border-subtle)', borderRadius: 8 }}
-                  labelStyle={{ color: 'var(--cp-text-primary)' }}
-                  formatter={(value: number | undefined) => [value ?? 0, 'Sessions']}
-                  labelFormatter={(label) => label}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="count"
-                  stroke="var(--cp-accent-success)"
-                  strokeWidth={2}
-                  dot={{ fill: 'var(--cp-accent-success)' }}
-                  isAnimationActive
-                  animationDuration={800}
-                  animationEasing="ease-out"
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </motion.div>
       </motion.div>
 
       {expandedPanel && (
         <div
-          className="fixed inset-0 z-50 bg-slate-950/95 overflow-y-auto"
+          className="fixed inset-0 z-50 bg-[var(--cp-bg-backdrop)] overflow-y-auto"
           aria-modal="true"
           role="dialog"
         >
-          <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-800 bg-slate-950/95 px-4 py-3 shadow-sm">
-            <h2 className="text-lg font-semibold text-slate-50">
+          <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[var(--cp-border-subtle)] bg-[var(--cp-bg-elevated)] px-4 py-3 shadow-sm">
+            <h2 className="text-lg font-semibold text-[var(--cp-text-primary)]">
               {tiles.find((t) => t.id === expandedPanel)?.label ?? expandedPanel}
             </h2>
             <button
               type="button"
               onClick={() => setExpandedPanel(null)}
-              className="rounded-lg border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-medium text-slate-100 hover:bg-slate-800"
+              className="rounded-lg border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] px-4 py-2 text-sm font-medium text-[var(--cp-text-primary)] hover:bg-[var(--cp-bg-subtle)]"
             >
               Close
             </button>
           </div>
-          <div className="p-6 max-w-2xl mx-auto text-slate-100">
+          <div className="p-6 max-w-2xl mx-auto text-[var(--cp-text-primary)]">
             {expandedPanel === 'revenue' && (
               <div className="space-y-6">
-                <div>
-                  <p className="text-sm text-slate-300">Total revenue</p>
-                  <p className="text-3xl font-bold text-slate-50">${revenue.toLocaleString()}</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-[var(--cp-text-muted)]">Total revenue</p>
+                    <p className="text-3xl font-bold text-[var(--cp-text-primary)]">${revenue.toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-[var(--cp-text-muted)]">Revenue this week</p>
+                    <p className="text-2xl font-semibold text-[var(--cp-text-primary)]">${revenueThisWeek.toLocaleString()}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm text-slate-300">Revenue this week</p>
-                  <p className="text-2xl font-semibold text-slate-50">${revenueThisWeek.toLocaleString()}</p>
+                <div className="h-[280px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={revenueByWeek}
+                      margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
+                      barCategoryGap="20%"
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--cp-border-subtle)" />
+                      <XAxis dataKey="weekLabel" tick={{ fill: 'var(--cp-text-muted)', fontSize: 11 }} />
+                      <YAxis tick={{ fill: 'var(--cp-text-muted)', fontSize: 11 }} tickFormatter={(v) => `$${v}`} />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: 'var(--cp-bg-elevated)', border: '1px solid var(--cp-border-subtle)', borderRadius: 8 }}
+                        labelStyle={{ color: 'var(--cp-text-primary)' }}
+                        formatter={(value: number | undefined) => [`$${(value ?? 0).toFixed(2)}`, 'Revenue']}
+                        labelFormatter={(label) => label}
+                      />
+                      <Bar
+                        dataKey="revenue"
+                        fill="var(--cp-accent-primary)"
+                        radius={[4, 4, 0, 0]}
+                        isAnimationActive
+                        animationDuration={800}
+                        animationEasing="ease-out"
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
               </div>
             )}
 
             {expandedPanel === 'clients' && (
               <div className="space-y-4">
-                {totalClients > 0 ? (
+                {clients.length > 0 ? (
                   <>
-                    <p className="text-2xl font-bold text-slate-50">{totalClients} clients</p>
+                    <p className="text-lg font-semibold text-[var(--cp-text-primary)]">{clients.length} clients</p>
+                    <ul className="space-y-2 max-h-[50vh] overflow-y-auto">
+                      {clients.map((c) => (
+                        <li key={c.id} className="border-b border-[var(--cp-border-subtle)] pb-2 last:border-0">
+                          <Link
+                            href={`/coach/clients/${c.id}`}
+                            className="font-medium text-[var(--cp-text-primary)] hover:text-[var(--cp-accent-primary)]"
+                          >
+                            {c.full_name ?? 'Unnamed client'}
+                          </Link>
+                          {c.email && (
+                            <p className="text-sm text-[var(--cp-text-muted)] truncate">{c.email}</p>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
                     <Link
                       href="/coach/clients"
-                      className="inline-flex font-medium text-blue-400 hover:text-blue-300"
+                      className="inline-flex font-medium text-[var(--cp-accent-primary)] hover:text-[var(--cp-accent-primary-strong)]"
                     >
                       View all clients →
                     </Link>
                   </>
                 ) : (
                   <>
-                    <p className="text-slate-300">You don't have any clients yet. Add your first client to start booking sessions.</p>
+                    <p className="text-[var(--cp-text-muted)]">You don't have any clients yet. Add your first client to start booking sessions.</p>
                     <Link
                       href="/coach/clients/new"
-                      className="inline-flex font-medium text-blue-400 hover:text-blue-300"
+                      className="inline-flex font-medium text-[var(--cp-accent-primary)] hover:text-[var(--cp-accent-primary-strong)]"
                     >
                       Add your first client →
                     </Link>
@@ -452,24 +468,24 @@ export function DashboardContent({
 
             {expandedPanel === 'upcoming' && (
               <div className="space-y-4">
-                <p className="text-sm text-slate-300">{upcomingCount} upcoming sessions</p>
+                <p className="text-sm text-[var(--cp-text-muted)]">{upcomingCount} upcoming sessions</p>
                 {upcomingSessions.length > 0 ? (
                   <ul className="space-y-3">
                     {upcomingSessions.map((session) => (
-                      <li key={session.id} className="border-b border-gray-100 pb-3 last:border-0">
-                    <p className="font-medium text-slate-50">{session.clients?.full_name ?? 'Client'}</p>
-                    <p className="text-sm text-slate-300">
+                      <li key={session.id} className="border-b border-[var(--cp-border-subtle)] pb-3 last:border-0">
+                    <p className="font-medium text-[var(--cp-text-primary)]">{session.clients?.full_name ?? 'Client'}</p>
+                    <p className="text-sm text-[var(--cp-text-muted)]">
                           {format(new Date(session.scheduled_time), 'EEEE, MMM d, yyyy · h:mm a')}
                         </p>
                       </li>
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-slate-400">No upcoming sessions</p>
+                  <p className="text-[var(--cp-text-muted)]">No upcoming sessions</p>
                 )}
                 <Link
                   href="/coach/schedule"
-                  className="inline-flex font-medium text-blue-600 hover:text-blue-800"
+                  className="inline-flex font-medium text-[var(--cp-accent-primary)] hover:text-[var(--cp-accent-primary-strong)]"
                 >
                   Open schedule →
                 </Link>
@@ -478,13 +494,13 @@ export function DashboardContent({
 
             {expandedPanel === 'pending' && (
               <div className="space-y-4">
-                <p className="text-sm text-gray-500">{pendingSessions.length} pending confirmation(s)</p>
+                <p className="text-sm text-[var(--cp-text-muted)]">{pendingSessions.length} pending confirmation(s)</p>
                 {pendingSessions.length > 0 ? (
                   <ul className="space-y-3">
                     {pendingSessions.map((session) => (
-                      <li key={session.id} className="border-b border-gray-100 pb-3 last:border-0">
-                        <p className="font-medium text-gray-900">{session.clients?.full_name ?? 'Client'}</p>
-                        <p className="text-sm text-gray-500">
+                      <li key={session.id} className="border-b border-[var(--cp-border-subtle)] pb-3 last:border-0">
+                        <p className="font-medium text-[var(--cp-text-primary)]">{session.clients?.full_name ?? 'Client'}</p>
+                        <p className="text-sm text-[var(--cp-text-muted)]">
                           {format(new Date(session.scheduled_time), 'MMM d, yyyy h:mm a')}
                         </p>
                       </li>
@@ -492,10 +508,10 @@ export function DashboardContent({
                   </ul>
                 ) : (
                   <>
-                    <p className="text-slate-400">No session requests waiting. New requests from clients will show up here.</p>
+                    <p className="text-[var(--cp-text-muted)]">No session requests waiting. New requests from clients will show up here.</p>
                     <Link
                       href="/coach/schedule"
-                      className="inline-flex font-medium text-blue-400 hover:text-blue-300"
+                      className="inline-flex font-medium text-[var(--cp-accent-primary)] hover:text-[var(--cp-accent-primary-strong)]"
                     >
                       Open schedule →
                     </Link>
@@ -504,7 +520,7 @@ export function DashboardContent({
                 {pendingSessions.length > 0 && (
                   <Link
                     href="/coach/schedule"
-                    className="inline-flex font-medium text-blue-400 hover:text-blue-300"
+                    className="inline-flex font-medium text-[var(--cp-accent-primary)] hover:text-[var(--cp-accent-primary-strong)]"
                   >
                     Open schedule →
                   </Link>
@@ -514,24 +530,40 @@ export function DashboardContent({
 
             {expandedPanel === 'messages' && (
               <div className="space-y-4">
-                {unseenMessagesCount > 0 ? (
+                {unseenMessagesCount > 0 && (
+                  <p className="text-sm font-medium text-[var(--cp-text-primary)]">
+                    {unseenMessagesCount} unread message{unseenMessagesCount === 1 ? '' : 's'}
+                  </p>
+                )}
+                {recentMessages.length > 0 ? (
                   <>
-                    <p className="text-2xl font-bold text-slate-50">
-                      {unseenMessagesCount} unread message{unseenMessagesCount === 1 ? '' : 's'}
-                    </p>
+                    <ul className="space-y-3 max-h-[40vh] overflow-y-auto">
+                      {recentMessages.map((m) => {
+                        const fromCoach = m.sender_id === currentUserId
+                        const otherName = fromCoach ? (m.recipient_name ?? 'Client') : (m.sender_name ?? 'Client')
+                        const label = fromCoach ? `You → ${otherName}` : `${otherName} → you`
+                        const snippet = m.content.length > 80 ? `${m.content.slice(0, 80)}…` : m.content
+                        return (
+                          <li key={m.id} className="border-b border-[var(--cp-border-subtle)] pb-2 last:border-0">
+                            <p className="text-xs text-[var(--cp-text-muted)]">{label} · {format(new Date(m.created_at), 'MMM d, h:mm a')}</p>
+                            <p className="text-sm text-[var(--cp-text-primary)] mt-0.5">{snippet}</p>
+                          </li>
+                        )
+                      })}
+                    </ul>
                     <Link
                       href="/coach/messages"
-                      className="inline-flex font-medium text-blue-400 hover:text-blue-300"
+                      className="inline-flex font-medium text-[var(--cp-accent-primary)] hover:text-[var(--cp-accent-primary-strong)]"
                     >
                       Go to Messages →
                     </Link>
                   </>
                 ) : (
                   <>
-                    <p className="text-slate-300">You're all caught up — no new messages.</p>
+                    <p className="text-[var(--cp-text-muted)]">No recent messages.</p>
                     <Link
                       href="/coach/messages"
-                      className="inline-flex font-medium text-blue-400 hover:text-blue-300"
+                      className="inline-flex font-medium text-[var(--cp-accent-primary)] hover:text-[var(--cp-accent-primary-strong)]"
                     >
                       Open Messages →
                     </Link>
@@ -542,30 +574,30 @@ export function DashboardContent({
 
             {expandedPanel === 'week' && (
               <div className="space-y-6">
-                <div className="grid grid-cols-2 gap-4 rounded-lg border border-gray-200 p-4">
-                  <p className="text-sm text-gray-500">Completed (this month)</p>
-                  <p className="text-lg font-semibold text-gray-900">{completedCount}</p>
-                  <p className="text-sm text-gray-500">Canceled (this month)</p>
-                  <p className="text-lg font-semibold text-gray-900">{canceledCount}</p>
+                <div className="grid grid-cols-2 gap-4 rounded-lg border border-[var(--cp-border-subtle)] p-4">
+                  <p className="text-sm text-[var(--cp-text-muted)]">Completed (this month)</p>
+                  <p className="text-lg font-semibold text-[var(--cp-text-primary)]">{completedCount}</p>
+                  <p className="text-sm text-[var(--cp-text-muted)]">Canceled (this month)</p>
+                  <p className="text-lg font-semibold text-[var(--cp-text-primary)]">{canceledCount}</p>
                 </div>
                 {nextSession ? (
-                  <div className="rounded-lg border border-gray-200 p-4">
-                    <p className="text-sm font-medium text-gray-500">Next session</p>
-                    <p className="font-semibold text-gray-900">{nextSession.clients?.full_name ?? 'Client'}</p>
-                    <p className="text-sm text-gray-600">
+                  <div className="rounded-lg border border-[var(--cp-border-subtle)] p-4">
+                    <p className="text-sm font-medium text-[var(--cp-text-muted)]">Next session</p>
+                    <p className="font-semibold text-[var(--cp-text-primary)]">{nextSession.clients?.full_name ?? 'Client'}</p>
+                    <p className="text-sm text-[var(--cp-text-muted)]">
                       {format(new Date(nextSession.scheduled_time), 'EEEE, MMM d, yyyy · h:mm a')}
                     </p>
                   </div>
                 ) : (
-                  <p className="text-slate-400">No upcoming sessions this week. Schedule one when you're ready.</p>
+                  <p className="text-[var(--cp-text-muted)]">No upcoming sessions this week. Schedule one when you're ready.</p>
                 )}
                 <div>
-                  <p className="text-sm font-medium text-slate-400 mb-3">This week</p>
+                  <p className="text-sm font-medium text-[var(--cp-text-muted)] mb-3">This week</p>
                   <WeekMiniCalendar upcomingSessions={upcomingSessions} />
                 </div>
                 <Link
                   href="/coach/schedule"
-                  className="inline-flex font-medium text-blue-400 hover:text-blue-300"
+                  className="inline-flex font-medium text-[var(--cp-accent-primary)] hover:text-[var(--cp-accent-primary-strong)]"
                 >
                   Open schedule →
                 </Link>

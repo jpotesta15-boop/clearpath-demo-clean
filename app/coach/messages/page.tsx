@@ -193,6 +193,7 @@ export default function MessagesPage() {
             client_id: tenantId,
             content: `You have a new session offer: ${product.name} – $${amount}. Open your Schedule to review, pay, and share when you're available.`,
           })
+          await loadMessages()
         }
       }
 

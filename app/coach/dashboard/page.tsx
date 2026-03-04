@@ -85,10 +85,9 @@ export default async function CoachDashboard() {
   const revenue = revenueCents / 100
   const revenueThisWeek = revenueThisWeekCents / 100
 
-  // Last 8 weeks: revenue and sessions per week for charts
+  // Last 8 weeks: revenue per week for chart
   const weeksBack = 8
   const revenueByWeek: { weekLabel: string; revenue: number; weekStart: string }[] = []
-  const sessionsByWeek: { weekLabel: string; count: number; weekStart: string }[] = []
 
   for (let i = weeksBack - 1; i >= 0; i--) {
     const ws = startOfWeek(subWeeks(now, i), { weekStartsOn: 1 })
@@ -97,26 +96,7 @@ export default async function CoachDashboard() {
     const label = format(ws, 'MMM d')
     const revCents = (revenueRows ?? []).filter((r) => r.created_at && r.created_at >= weekStartIso && r.created_at < weekEndIso).reduce((s, r) => s + (r.amount_cents ?? 0), 0)
     revenueByWeek.push({ weekLabel: label, revenue: revCents / 100, weekStart: weekStartIso })
-    sessionsByWeek.push({ weekLabel: label, count: 0, weekStart: weekStartIso })
   }
-
-  const { data: sessionsForChart } = await supabase
-    .from('sessions')
-    .select('scheduled_time')
-    .eq('coach_id', user!.id)
-    .in('status', ['completed', 'confirmed', 'cancelled'])
-    .gte('scheduled_time', revenueByWeek[0]?.weekStart ?? weekStart)
-  const sessionCountByWeek = (sessionsForChart ?? []).reduce((acc, s) => {
-    const t = s.scheduled_time ? new Date(s.scheduled_time).getTime() : 0
-    const idx = revenueByWeek.findIndex((w) => {
-      const wStart = new Date(w.weekStart).getTime()
-      const wEnd = wStart + 7 * 24 * 60 * 60 * 1000
-      return t >= wStart && t < wEnd
-    })
-    if (idx >= 0) acc[idx] = (acc[idx] ?? 0) + 1
-    return acc
-  }, {} as Record<number, number>)
-  sessionsByWeek.forEach((w, i) => { w.count = sessionCountByWeek[i] ?? 0 })
 
   const { data: availabilityRequests } = await supabase
     .from('session_requests')
@@ -125,6 +105,24 @@ export default async function CoachDashboard() {
     .eq('status', 'availability_submitted')
     .order('created_at', { ascending: false })
     .limit(5)
+
+  const { data: recentMessagesRows } = await supabase
+    .from('messages')
+    .select('id, sender_id, recipient_id, content, created_at')
+    .or(`sender_id.eq.${user!.id},recipient_id.eq.${user!.id}`)
+    .order('created_at', { ascending: false })
+    .limit(10)
+
+  const recentMessageIds = [...new Set((recentMessagesRows ?? []).flatMap((m) => [m.sender_id, m.recipient_id]))]
+  const { data: recentMessageProfiles } = recentMessageIds.length > 0
+    ? await supabase.from('profiles').select('id, full_name').in('id', recentMessageIds)
+    : { data: [] as { id: string; full_name: string | null }[] }
+
+  const recentMessages = (recentMessagesRows ?? []).map((m) => ({
+    ...m,
+    sender_name: recentMessageProfiles?.find((p) => p.id === m.sender_id)?.full_name ?? null,
+    recipient_name: recentMessageProfiles?.find((p) => p.id === m.recipient_id)?.full_name ?? null,
+  }))
 
   const currentTime = format(now, 'h:mm a · EEEE, MMMM d')
 
@@ -144,8 +142,10 @@ export default async function CoachDashboard() {
       canceledCount={canceledCount ?? 0}
       currentTime={currentTime}
       revenueByWeek={revenueByWeek}
-      sessionsByWeek={sessionsByWeek}
       availabilityRequests={availabilityRequests ?? []}
+      clients={clients ?? []}
+      recentMessages={recentMessages ?? []}
+      currentUserId={user!.id}
     />
   )
 }

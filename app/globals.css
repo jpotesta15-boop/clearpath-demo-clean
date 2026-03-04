@@ -17,8 +17,8 @@
   --cp-border-focus: #38bdf8;
 
   --cp-text-primary: #e5e7eb;      /* gray-200 */
-  --cp-text-muted: #9ca3af;        /* gray-400 */
-  --cp-text-subtle: #6b7280;       /* gray-500 */
+  --cp-text-muted: #b0b8c2;        /* slightly lighter for readability */
+  --cp-text-subtle: #9ca3af;       /* gray-400 */
   --cp-text-on-accent: #0b1120;    /* slate-950 on bright accent */
 
   /* Accent palette (default: blue variant) */
