@@ -304,7 +304,7 @@ export function DashboardContent({
                 <Tooltip
                   contentStyle={{ backgroundColor: 'var(--cp-bg-elevated)', border: '1px solid var(--cp-border-subtle)', borderRadius: 8 }}
                   labelStyle={{ color: 'var(--cp-text-primary)' }}
-                  formatter={(value: number) => [`$${value.toFixed(2)}`, 'Revenue']}
+                  formatter={(value: number | undefined) => [`$${(value ?? 0).toFixed(2)}`, 'Revenue']}
                   labelFormatter={(label) => label}
                 />
                 <Bar
@@ -339,7 +339,7 @@ export function DashboardContent({
                 <Tooltip
                   contentStyle={{ backgroundColor: 'var(--cp-bg-elevated)', border: '1px solid var(--cp-border-subtle)', borderRadius: 8 }}
                   labelStyle={{ color: 'var(--cp-text-primary)' }}
-                  formatter={(value: number) => [value, 'Sessions']}
+                  formatter={(value: number | undefined) => [value ?? 0, 'Sessions']}
                   labelFormatter={(label) => label}
                 />
                 <Line
