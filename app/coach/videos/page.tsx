@@ -35,7 +35,7 @@ function getThumbnailUrl(url: string | null, thumbnailUrl: string | null): strin
 
 export default function VideosPage() {
   const [videos, setVideos] = useState<any[]>([])
-  const [clients, setClients] = useState<{ id: string; full_name: string }[]>([])
+  const [clients, setClients] = useState<{ id: string; full_name: string; email?: string | null }[]>([])
   const [programs, setPrograms] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
