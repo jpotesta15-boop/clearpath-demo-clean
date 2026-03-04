@@ -1,6 +1,6 @@
 # Demo seed data
 
-This document describes how to run and customize the ClearPath demo seed (`supabase/seed_demo.sql`).
+This document describes how to run and customize the ClearPath demo seed (`supabase/seed_demo.sql`). **Run seeds only after all migrations have been applied.** See [SQL_AND_MIGRATIONS.md](SQL_AND_MIGRATIONS.md) for migration order and runbook.
 
 ## What the seed includes
 
@@ -17,14 +17,17 @@ This document describes how to run and customize the ClearPath demo seed (`supab
 
 ## Before running
 
-1. **Create the coach user** in Supabase: **Authentication → Users → Add user** (e.g. `coach@demo.com`).
-2. **Ensure the coach profile exists** with `role = 'coach'` and `tenant_id = 'demo'` (create in **Table Editor → profiles** if not auto-created).
-3. **Replace `YOUR_COACH_UUID_HERE`** in the seed file with the coach user’s UUID (from Authentication → Users). Use Find & Replace so every occurrence is updated.
-4. **Tenant id**: The seed uses tenant/client_id `'demo'`. For the app to show this data (dashboard revenue, clients, etc.), set **`NEXT_PUBLIC_CLIENT_ID=demo`** in your env (or replace every `'demo'` in the seed with your tenant id).
+1. **Apply all migrations** first (see [SQL_AND_MIGRATIONS.md](SQL_AND_MIGRATIONS.md)). Run seeds only after the schema is in place.
+2. **Create the coach user** in Supabase: **Authentication → Users → Add user** (e.g. `coach@demo.com`).
+3. **Ensure the coach profile exists** with `role = 'coach'` and `tenant_id = 'demo'` (create in **Table Editor → profiles** if not auto-created).
+4. **Replace `YOUR_COACH_UUID_HERE`** in the seed file with the coach user’s UUID (from Authentication → Users). Use Find & Replace so every occurrence is updated.
+5. **Tenant id**: The seed uses tenant/client_id `'demo'`. For the app to show this data (dashboard revenue, clients, etc.), set **`NEXT_PUBLIC_CLIENT_ID=demo`** in your env (or replace every `'demo'` in the seed with your tenant id).
 
 ## How to run
 
-Run the entire `supabase/seed_demo.sql` file in the **Supabase SQL Editor** (Dashboard → SQL Editor → New query → paste → Run).
+Run the entire `supabase/seed_demo.sql` file in the **Supabase SQL Editor** (Dashboard → SQL Editor → New query → paste → Run). Replace every `YOUR_COACH_UUID_HERE` with your coach user UUID first.
+
+**Already have a coach and clients?** Use **`supabase/seed_full_using_existing.sql`** instead: it uses your existing coach and clients (no placeholders), adds session products, videos, programs, availability, ~2 months of sessions and payments, and messages so the site looks full. Run once in the SQL Editor.
 
 ## Test as client
 

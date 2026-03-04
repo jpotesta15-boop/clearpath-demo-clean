@@ -187,7 +187,7 @@ export function DashboardContent({
   const item = { hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0 } }
 
   return (
-    <div className="space-y-8">
+    <div className="max-w-6xl mx-auto space-y-8 px-2 sm:px-4">
       <motion.div initial="hidden" animate="show" variants={container}>
         <div className="flex flex-col gap-3">
           <h1 className="text-3xl font-bold text-[var(--cp-text-primary)]">Welcome back</h1>
@@ -305,14 +305,14 @@ export function DashboardContent({
       </motion.div>
       </motion.div>
 
-      <motion.div initial="hidden" animate="show" variants={container} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+      <motion.div initial="hidden" animate="show" variants={container} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-6 gap-5">
         {tiles.map(({ id, label, badge }) => (
           <motion.button
             key={id}
             variants={item}
             type="button"
             onClick={() => setExpandedPanel(id)}
-            className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] p-5 shadow-[var(--cp-shadow-soft)] hover:border-[var(--cp-accent-primary)] hover:bg-[var(--cp-accent-primary-soft)] hover:shadow-[var(--cp-shadow-card)] transition-all min-h-[140px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cp-border-focus)]"
+            className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] p-6 shadow-[var(--cp-shadow-soft)] hover:border-[var(--cp-accent-primary)] hover:bg-[var(--cp-accent-primary-soft)] hover:shadow-[var(--cp-shadow-card)] transition-all min-h-[160px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cp-border-focus)]"
           >
             <span className="text-[var(--cp-text-muted)]">{iconSvg[id]}</span>
             <span className="text-sm font-medium text-[var(--cp-text-primary)] text-center">{label}</span>
@@ -382,7 +382,8 @@ export function DashboardContent({
               Close
             </button>
           </div>
-          <div className="p-6 max-w-2xl mx-auto text-[var(--cp-text-primary)]">
+          <div className="p-6 max-w-2xl mx-auto">
+            <div className="rounded-2xl border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-elevated)] shadow-[var(--cp-shadow-card)] p-6 text-[var(--cp-text-primary)]">
             {expandedPanel === 'revenue' && (
               <div className="space-y-6">
                 <div className="grid grid-cols-2 gap-4">
@@ -603,6 +604,7 @@ export function DashboardContent({
                 </Link>
               </div>
             )}
+            </div>
           </div>
         </div>
       )}

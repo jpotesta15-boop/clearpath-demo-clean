@@ -87,6 +87,11 @@ export default function MessagesPage() {
       .order('created_at', { ascending: true })
 
     setMessages(data || [])
+
+    const unreadIds = (data || []).filter((m: any) => m.recipient_id === currentUser.id && !m.read_at).map((m: any) => m.id)
+    if (unreadIds.length > 0) {
+      await supabase.from('messages').update({ read_at: new Date().toISOString() }).in('id', unreadIds)
+    }
   }
 
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -203,13 +208,20 @@ export default function MessagesPage() {
           .eq('email', client.email)
           .maybeSingle()
 
-        if (clientProfile?.id) {
+        if (clientProfile?.id && sessionRequest?.id) {
           const amount = ((product.price_cents ?? 0) / 100).toFixed(2)
+          const offerPayload = JSON.stringify({
+            type: 'session_offer',
+            session_request_id: sessionRequest.id,
+            product_name: product.name,
+            amount_cents: product.price_cents ?? 0,
+            amount_display: amount,
+          })
           await supabase.from('messages').insert({
             sender_id: currentUser.id,
             recipient_id: clientProfile.id,
             client_id: tenantId,
-            content: `You have a new session offer: ${product.name} – $${amount}. Open your Schedule to review, pay, and share when you're available.`,
+            content: offerPayload,
           })
           await loadMessages()
         }
@@ -306,6 +318,13 @@ export default function MessagesPage() {
                     )}
                     {messages.map((message) => {
                       const isOwn = message.sender_id === currentUser?.id
+                      let offerData: { type: string; session_request_id?: string; product_name?: string; amount_cents?: number; amount_display?: string } | null = null
+                      try {
+                        const parsed = JSON.parse(message.content)
+                        if (parsed?.type === 'session_offer') offerData = parsed
+                      } catch {
+                        // not JSON
+                      }
                       return (
                         <div
                           key={message.id}
@@ -317,28 +336,48 @@ export default function MessagesPage() {
                             }`}
                           >
                             {!isOwn && (
-                              <p className="text-xs font-medium text-gray-500 mb-0.5">
+                              <p className="text-xs font-medium text-[var(--cp-text-muted)] mb-0.5">
                                 {selectedClientData?.full_name ?? 'Client'}
                               </p>
                             )}
-                            <div
-                              className={`rounded-lg px-4 py-2.5 ${
-                                isOwn
-                                  ? 'bg-[var(--cp-accent-primary)] text-[var(--cp-text-on-accent)]'
-                                  : 'bg-[rgba(15,23,42,0.8)] text-[var(--cp-text-primary)] border border-[var(--cp-border-subtle)]'
-                              }`}
-                            >
-                              <p className="text-sm whitespace-pre-wrap break-words">
-                                {message.content}
-                              </p>
-                              <p
-                                className={`text-xs mt-1 ${
-                                  isOwn ? 'text-[rgba(226,232,240,0.8)]' : 'text-[var(--cp-text-subtle)]'
+                            {offerData ? (
+                              <div
+                                className={`rounded-lg px-4 py-3 border ${
+                                  isOwn
+                                    ? 'bg-[var(--cp-accent-primary-soft)] border-[var(--cp-accent-primary)] text-[var(--cp-text-primary)]'
+                                    : 'bg-[var(--cp-bg-elevated)] border-[var(--cp-border-subtle)] text-[var(--cp-text-primary)]'
                                 }`}
                               >
-                                {format(new Date(message.created_at), 'MMM d, h:mm a')}
-                              </p>
-                            </div>
+                                <p className="text-xs font-medium text-[var(--cp-text-muted)] mb-1">Session offer</p>
+                                <p className="text-sm font-semibold">{offerData.product_name ?? 'Session'}</p>
+                                <p className="text-sm">${offerData.amount_display ?? ((offerData.amount_cents ?? 0) / 100).toFixed(2)}</p>
+                                <p className="text-xs text-[var(--cp-text-muted)] mt-2">
+                                  Client can respond in Messages or Schedule.
+                                </p>
+                                <p className="text-xs mt-1 opacity-80">
+                                  {format(new Date(message.created_at), 'MMM d, h:mm a')}
+                                </p>
+                              </div>
+                            ) : (
+                              <div
+                                className={`rounded-lg px-4 py-2.5 ${
+                                  isOwn
+                                    ? 'bg-[var(--cp-accent-primary)] text-[var(--cp-text-on-accent)]'
+                                    : 'bg-[rgba(15,23,42,0.8)] text-[var(--cp-text-primary)] border border-[var(--cp-border-subtle)]'
+                                }`}
+                              >
+                                <p className="text-sm whitespace-pre-wrap break-words">
+                                  {message.content}
+                                </p>
+                                <p
+                                  className={`text-xs mt-1 ${
+                                    isOwn ? 'text-[rgba(226,232,240,0.8)]' : 'text-[var(--cp-text-subtle)]'
+                                  }`}
+                                >
+                                  {format(new Date(message.created_at), 'MMM d, h:mm a')}
+                                </p>
+                              </div>
+                            )}
                           </div>
                         </div>
                       )

@@ -13,7 +13,7 @@ CREATE TABLE public.profiles (
 
 -- Clients table
 CREATE TABLE public.clients (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  id UUID DEFAULT extensions.uuid_generate_v4() PRIMARY KEY,
   coach_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
   full_name TEXT NOT NULL,
   email TEXT,
@@ -25,7 +25,7 @@ CREATE TABLE public.clients (
 
 -- Programs table
 CREATE TABLE public.programs (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  id UUID DEFAULT extensions.uuid_generate_v4() PRIMARY KEY,
   coach_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
   name TEXT NOT NULL,
   description TEXT,
@@ -35,7 +35,7 @@ CREATE TABLE public.programs (
 
 -- Program assignments
 CREATE TABLE public.program_assignments (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  id UUID DEFAULT extensions.uuid_generate_v4() PRIMARY KEY,
   program_id UUID REFERENCES public.programs(id) ON DELETE CASCADE NOT NULL,
   client_id UUID REFERENCES public.clients(id) ON DELETE CASCADE NOT NULL,
   assigned_at TIMESTAMPTZ DEFAULT NOW(),
@@ -44,7 +44,7 @@ CREATE TABLE public.program_assignments (
 
 -- Videos table
 CREATE TABLE public.videos (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  id UUID DEFAULT extensions.uuid_generate_v4() PRIMARY KEY,
   coach_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
   title TEXT NOT NULL,
   description TEXT,
@@ -55,7 +55,7 @@ CREATE TABLE public.videos (
 
 -- Video assignments
 CREATE TABLE public.video_assignments (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  id UUID DEFAULT extensions.uuid_generate_v4() PRIMARY KEY,
   video_id UUID REFERENCES public.videos(id) ON DELETE CASCADE NOT NULL,
   client_id UUID REFERENCES public.clients(id) ON DELETE CASCADE NOT NULL,
   assigned_at TIMESTAMPTZ DEFAULT NOW(),
@@ -64,7 +64,7 @@ CREATE TABLE public.video_assignments (
 
 -- Availability slots
 CREATE TABLE public.availability_slots (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  id UUID DEFAULT extensions.uuid_generate_v4() PRIMARY KEY,
   coach_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
   start_time TIMESTAMPTZ NOT NULL,
   end_time TIMESTAMPTZ NOT NULL,
@@ -75,7 +75,7 @@ CREATE TABLE public.availability_slots (
 
 -- Sessions (bookings)
 CREATE TABLE public.sessions (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  id UUID DEFAULT extensions.uuid_generate_v4() PRIMARY KEY,
   coach_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
   client_id UUID REFERENCES public.clients(id) ON DELETE CASCADE NOT NULL,
   availability_slot_id UUID REFERENCES public.availability_slots(id) ON DELETE SET NULL,
@@ -88,7 +88,7 @@ CREATE TABLE public.sessions (
 
 -- Messages
 CREATE TABLE public.messages (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  id UUID DEFAULT extensions.uuid_generate_v4() PRIMARY KEY,
   sender_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
   recipient_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
   content TEXT NOT NULL,
@@ -98,7 +98,7 @@ CREATE TABLE public.messages (
 
 -- Activity log
 CREATE TABLE public.activity_log (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  id UUID DEFAULT extensions.uuid_generate_v4() PRIMARY KEY,
   user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
   action TEXT NOT NULL,
   entity_type TEXT,
@@ -135,7 +135,7 @@ CREATE POLICY "Coaches can manage their clients" ON public.clients
 
 CREATE POLICY "Clients can view themselves" ON public.clients
   FOR SELECT USING (
-    id IN (SELECT client_id FROM public.clients WHERE coach_id IN (
+    id IN (SELECT id FROM public.clients WHERE coach_id IN (
       SELECT id FROM public.profiles WHERE id = auth.uid()
     ))
   );

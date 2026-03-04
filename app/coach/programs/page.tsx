@@ -141,16 +141,22 @@ export default function ProgramsPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {programs.map((program) => (
-          <Card key={program.id} className="hover:shadow-[var(--cp-shadow-card)] transition-shadow flex flex-col">
-            <Link href={`/coach/programs/${program.id}`} className="flex-1 min-w-0">
-              <CardHeader>
-                <CardTitle>{program.name}</CardTitle>
+          <Card key={program.id} className="hover:shadow-[var(--cp-shadow-card)] transition-shadow flex flex-col border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)]">
+            <Link href={`/coach/programs/${program.id}`} className="flex-1 min-w-0 flex flex-col">
+              <CardHeader className="flex flex-row items-start gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[var(--cp-accent-primary-soft)] text-[var(--cp-accent-primary)]">
+                  <svg className="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                  </svg>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <CardTitle className="text-[var(--cp-text-primary)]">{program.name}</CardTitle>
+                  {program.description && (
+                    <p className="mt-1 text-sm text-[var(--cp-text-muted)] line-clamp-2">{program.description}</p>
+                  )}
+                </div>
               </CardHeader>
-              <CardContent className="pt-0">
-                {program.description && (
-                  <p className="text-sm text-[var(--cp-text-muted)] line-clamp-3">{program.description}</p>
-                )}
-              </CardContent>
+              <CardContent className="pt-0" />
             </Link>
             <div className="px-6 pb-4 flex flex-wrap gap-2" onClick={(e) => e.preventDefault()}>
               <Button

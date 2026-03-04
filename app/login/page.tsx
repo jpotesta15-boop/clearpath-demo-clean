@@ -24,6 +24,14 @@ function LoginForm() {
     if (error === 'auth') {
       setLoginError('Sign-in failed. Please try again.')
     }
+    const emailParam = searchParams.get('email')
+    if (emailParam && typeof emailParam === 'string') {
+      try {
+        setEmail(decodeURIComponent(emailParam))
+      } catch {
+        setEmail(emailParam)
+      }
+    }
   }, [searchParams])
 
   const handleGoogleSignIn = async () => {

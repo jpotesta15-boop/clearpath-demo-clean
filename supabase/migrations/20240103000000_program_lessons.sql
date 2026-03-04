@@ -1,6 +1,6 @@
 -- Program lessons: programs as ordered lists of videos
 CREATE TABLE public.program_lessons (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  id UUID DEFAULT extensions.uuid_generate_v4() PRIMARY KEY,
   program_id UUID REFERENCES public.programs(id) ON DELETE CASCADE NOT NULL,
   video_id UUID REFERENCES public.videos(id) ON DELETE CASCADE NOT NULL,
   sort_order INTEGER NOT NULL DEFAULT 0,

@@ -10,7 +10,8 @@ ALTER TABLE public.clients ADD COLUMN IF NOT EXISTS client_id TEXT;
 ALTER TABLE public.programs ADD COLUMN IF NOT EXISTS client_id TEXT;
 ALTER TABLE public.videos ADD COLUMN IF NOT EXISTS client_id TEXT;
 ALTER TABLE public.availability_slots ADD COLUMN IF NOT EXISTS client_id TEXT;
-ALTER TABLE public.sessions ADD COLUMN IF NOT EXISTS client_id TEXT;
+-- sessions.client_id is already UUID (FK to clients); add tenant_id for tenant RLS
+ALTER TABLE public.sessions ADD COLUMN IF NOT EXISTS tenant_id TEXT;
 ALTER TABLE public.messages ADD COLUMN IF NOT EXISTS client_id TEXT;
 ALTER TABLE public.activity_log ADD COLUMN IF NOT EXISTS client_id TEXT;
 
@@ -27,6 +28,9 @@ CREATE INDEX IF NOT EXISTS idx_sessions_client_id ON public.sessions(client_id);
 CREATE INDEX IF NOT EXISTS idx_messages_client_id ON public.messages(client_id);
 
 -- Drop existing policies that don't account for tenant isolation
+DROP POLICY IF EXISTS "Users can view own profile" ON public.profiles;
+DROP POLICY IF EXISTS "Users can view profiles in their tenant" ON public.profiles;
+DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
 DROP POLICY IF EXISTS "Coaches can manage their clients" ON public.clients;
 DROP POLICY IF EXISTS "Clients can view themselves" ON public.clients;
 DROP POLICY IF EXISTS "Coaches can manage their programs" ON public.programs;
@@ -152,7 +156,7 @@ CREATE POLICY "Clients can view coach availability in their tenant" ON public.av
 -- Sessions: Coaches can manage sessions in their tenant
 CREATE POLICY "Coaches can manage sessions in their tenant" ON public.sessions
   FOR ALL USING (
-    client_id = get_current_client_id() AND
+    tenant_id = get_current_client_id() AND
     coach_id IN (
       SELECT id FROM public.profiles 
       WHERE id = auth.uid() 
@@ -163,7 +167,7 @@ CREATE POLICY "Coaches can manage sessions in their tenant" ON public.sessions
 
 CREATE POLICY "Clients can view sessions in their tenant" ON public.sessions
   FOR SELECT USING (
-    client_id = get_current_client_id() AND
+    tenant_id = get_current_client_id() AND
     client_id IN (
       SELECT id FROM public.clients 
       WHERE email = (SELECT email FROM public.profiles WHERE id = auth.uid())
@@ -173,7 +177,7 @@ CREATE POLICY "Clients can view sessions in their tenant" ON public.sessions
 
 CREATE POLICY "Clients can create session requests in their tenant" ON public.sessions
   FOR INSERT WITH CHECK (
-    client_id = get_current_client_id() AND
+    tenant_id = get_current_client_id() AND
     client_id IN (
       SELECT id FROM public.clients 
       WHERE email = (SELECT email FROM public.profiles WHERE id = auth.uid())

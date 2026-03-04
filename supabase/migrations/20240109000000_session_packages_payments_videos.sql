@@ -4,7 +4,7 @@ ALTER TABLE public.videos ADD COLUMN IF NOT EXISTS thumbnail_url TEXT;
 
 -- 2) session_products (sellable packages)
 CREATE TABLE public.session_products (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  id UUID DEFAULT extensions.uuid_generate_v4() PRIMARY KEY,
   coach_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
   client_id TEXT NOT NULL,
   name TEXT NOT NULL,
@@ -32,7 +32,7 @@ CREATE POLICY "Coaches can manage session_products in their tenant" ON public.se
 
 -- 3) session_requests (offer -> accept -> pay -> availability -> scheduled)
 CREATE TABLE public.session_requests (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  id UUID DEFAULT extensions.uuid_generate_v4() PRIMARY KEY,
   coach_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
   client_id UUID REFERENCES public.clients(id) ON DELETE CASCADE NOT NULL,
   session_product_id UUID REFERENCES public.session_products(id) ON DELETE SET NULL,
@@ -84,7 +84,7 @@ CREATE POLICY "Clients can update own session_requests" ON public.session_reques
 
 -- 4) payments
 CREATE TABLE public.payments (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  id UUID DEFAULT extensions.uuid_generate_v4() PRIMARY KEY,
   coach_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
   client_id TEXT NOT NULL,
   session_request_id UUID REFERENCES public.session_requests(id) ON DELETE SET NULL,

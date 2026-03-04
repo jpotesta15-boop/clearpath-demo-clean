@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -43,6 +44,7 @@ type Session = {
 type Client = {
   id: string
   full_name: string
+  email?: string | null
 }
 
 function getSlotsForDay(slots: Slot[], day: Date): Slot[] {
@@ -102,6 +104,9 @@ export default function SchedulePage() {
     end_time: '',
     is_group_session: false,
     max_participants: 1,
+    repeat: 'none' as 'none' | 'daily' | 'weekly',
+    repeatEndDate: '',
+    repeatCount: 4,
   })
   const [bookClient, setBookClient] = useState<Client | null>(null)
   const [bookForm, setBookForm] = useState({ date: '', startTime: '', endTime: '' })
@@ -114,8 +119,15 @@ export default function SchedulePage() {
   const [schedulingRequest, setSchedulingRequest] = useState<any>(null)
   const [schedulingSlotId, setSchedulingSlotId] = useState<string | null>(null)
   const [schedulingSubmitting, setSchedulingSubmitting] = useState(false)
+  const [coachTimezone, setCoachTimezone] = useState<string | null>(null)
   const supabase = createClient()
   const tenantId = process.env.NEXT_PUBLIC_CLIENT_ID ?? 'demo'
+
+  const displayTz = coachTimezone || (typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'UTC')
+
+  function formatInTz(isoString: string, options: Intl.DateTimeFormatOptions = { dateStyle: 'short', timeStyle: 'short' }): string {
+    return new Date(isoString).toLocaleString('en-US', { ...options, timeZone: displayTz })
+  }
 
   useEffect(() => {
     loadData()
@@ -126,6 +138,13 @@ export default function SchedulePage() {
       data: { user },
     } = await supabase.auth.getUser()
     if (!user) return
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('timezone')
+      .eq('id', user.id)
+      .single()
+    if (profile?.timezone) setCoachTimezone(profile.timezone)
 
     const { data: slotsData } = await supabase
       .from('availability_slots')
@@ -141,7 +160,7 @@ export default function SchedulePage() {
 
     const { data: clientsData } = await supabase
       .from('clients')
-      .select('id, full_name')
+      .select('id, full_name, email')
       .eq('coach_id', user.id)
       .order('full_name', { ascending: true })
 
@@ -166,22 +185,69 @@ export default function SchedulePage() {
     } = await supabase.auth.getUser()
     if (!user) return
 
-    const { error } = await supabase.from('availability_slots').insert({
-      coach_id: user.id,
-      client_id: tenantId,
-      ...newSlot,
-    })
+    const start = new Date(newSlot.start_time)
+    const end = new Date(newSlot.end_time)
+    if (isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) return
 
-    if (!error) {
-      setShowForm(false)
-      setNewSlot({
-        start_time: '',
-        end_time: '',
-        is_group_session: false,
-        max_participants: 1,
-      })
-      loadData()
+    const durationMs = end.getTime() - start.getTime()
+    const occurrences: { start_time: string; end_time: string }[] = []
+
+    if (newSlot.repeat === 'none') {
+      occurrences.push({ start_time: newSlot.start_time, end_time: newSlot.end_time })
+    } else {
+      const maxCount = 100
+      let count = 0
+      if (newSlot.repeat === 'daily') {
+        const endDate = newSlot.repeatEndDate ? new Date(newSlot.repeatEndDate) : null
+        const limit = endDate ? undefined : Math.min(newSlot.repeatCount, maxCount)
+        let d = new Date(start)
+        while ((!endDate || d <= endDate) && (limit === undefined || count < limit)) {
+          const e = new Date(d.getTime() + durationMs)
+          occurrences.push({ start_time: d.toISOString(), end_time: e.toISOString() })
+          d.setDate(d.getDate() + 1)
+          count++
+          if (count >= maxCount) break
+        }
+      } else {
+        const endDate = newSlot.repeatEndDate ? new Date(newSlot.repeatEndDate) : null
+        const limit = endDate ? undefined : Math.min(newSlot.repeatCount, maxCount)
+        let d = new Date(start)
+        while ((!endDate || d <= endDate) && (limit === undefined || count < limit)) {
+          const e = new Date(d.getTime() + durationMs)
+          occurrences.push({ start_time: d.toISOString(), end_time: e.toISOString() })
+          d.setDate(d.getDate() + 7)
+          count++
+          if (count >= maxCount) break
+        }
+      }
     }
+
+    for (const occ of occurrences) {
+      const { error } = await supabase.from('availability_slots').insert({
+        coach_id: user.id,
+        client_id: tenantId,
+        start_time: occ.start_time,
+        end_time: occ.end_time,
+        is_group_session: newSlot.is_group_session,
+        max_participants: newSlot.max_participants,
+      })
+      if (error) {
+        loadData()
+        return
+      }
+    }
+
+    setShowForm(false)
+    setNewSlot({
+      start_time: '',
+      end_time: '',
+      is_group_session: false,
+      max_participants: 1,
+      repeat: 'none',
+      repeatEndDate: '',
+      repeatCount: 4,
+    })
+    loadData()
   }
 
   const handleApproveSession = async (sessionId: string) => {
@@ -192,12 +258,30 @@ export default function SchedulePage() {
     if (!error) loadData()
   }
 
+  const notifySessionBooked = async (sessionId: string, coachId: string, clientId: string, scheduledTime: string) => {
+    try {
+      await fetch('/api/webhooks/n8n-session-booked', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: sessionId,
+          coach_id: coachId,
+          client_id: clientId,
+          scheduled_time: scheduledTime,
+        }),
+        credentials: 'include',
+      })
+    } catch {
+      // non-blocking
+    }
+  }
+
   const handleScheduleRequestToSlot = async () => {
     if (!schedulingRequest || !schedulingSlotId) return
     const slot = slots.find((s) => s.id === schedulingSlotId)
     if (!slot) return
     setSchedulingSubmitting(true)
-    const { error: sessionError } = await supabase.from('sessions').insert({
+    const { data: newSession, error: sessionError } = await supabase.from('sessions').insert({
       coach_id: schedulingRequest.coach_id,
       client_id: schedulingRequest.client_id,
       availability_slot_id: schedulingSlotId,
@@ -207,12 +291,13 @@ export default function SchedulePage() {
       session_request_id: schedulingRequest.id,
       session_product_id: schedulingRequest.session_product_id ?? null,
       amount_cents: schedulingRequest.amount_cents ?? null,
-    })
-    if (!sessionError) {
+    }).select('id').single()
+    if (!sessionError && newSession?.id) {
       await supabase
         .from('session_requests')
         .update({ status: 'scheduled', updated_at: new Date().toISOString() })
         .eq('id', schedulingRequest.id)
+      notifySessionBooked(newSession.id, schedulingRequest.coach_id, schedulingRequest.client_id, slot.start_time)
       setSchedulingRequest(null)
       setSchedulingSlotId(null)
       loadData()
@@ -361,16 +446,17 @@ export default function SchedulePage() {
       return
     }
 
-    const { error: sessionError } = await supabase.from('sessions').insert({
+    const { data: newSession, error: sessionError } = await supabase.from('sessions').insert({
       coach_id: user.id,
       client_id: bookClient.id,
       availability_slot_id: slot.id,
       scheduled_time: start_time,
       status: 'confirmed',
       tenant_id: tenantId,
-    })
+    }).select('id').single()
     setSubmitting(false)
-    if (!sessionError) {
+    if (!sessionError && newSession?.id) {
+      notifySessionBooked(newSession.id, user.id, bookClient.id, start_time)
       setBookClient(null)
       setBookForm({ date: '', startTime: '', endTime: '' })
       loadData()
@@ -395,10 +481,23 @@ export default function SchedulePage() {
           <p className="mt-1 text-sm text-[var(--cp-text-muted)]">
             Click a client to choose date and time; confirmed sessions appear on your calendar.
           </p>
+          <p className="mt-0.5 text-xs text-[var(--cp-text-muted)]">
+            Times in {displayTz}
+          </p>
         </div>
-        <Button onClick={() => setShowForm(!showForm)}>
-          {showForm ? 'Cancel' : 'Add Availability'}
-        </Button>
+        <div className="flex items-center gap-2">
+          <a
+            href="/api/calendar/feed"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm font-medium text-[var(--cp-accent-primary)] hover:underline"
+          >
+            Export calendar
+          </a>
+          <Button onClick={() => setShowForm(!showForm)}>
+            {showForm ? 'Cancel' : 'Add Availability'}
+          </Button>
+        </div>
       </div>
 
       {showForm && (
@@ -458,7 +557,43 @@ export default function SchedulePage() {
                   />
                 </div>
               )}
-              <Button type="submit">Create slot</Button>
+              <div>
+                <label className="block text-sm font-medium text-[var(--cp-text-primary)]">Repeat</label>
+                <select
+                  value={newSlot.repeat}
+                  onChange={(e) => setNewSlot({ ...newSlot, repeat: e.target.value as 'none' | 'daily' | 'weekly' })}
+                  className="mt-1 w-full max-w-xs h-10 rounded-md border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] px-3 py-2 text-sm text-[var(--cp-text-primary)]"
+                >
+                  <option value="none">No repeat</option>
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                </select>
+              </div>
+              {(newSlot.repeat === 'daily' || newSlot.repeat === 'weekly') && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-[var(--cp-text-primary)]">End date (optional)</label>
+                    <Input
+                      type="date"
+                      value={newSlot.repeatEndDate}
+                      onChange={(e) => setNewSlot({ ...newSlot, repeatEndDate: e.target.value })}
+                      className="mt-1 max-w-xs bg-[var(--cp-bg-surface)] border-[var(--cp-border-subtle)]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[var(--cp-text-primary)]">Or number of occurrences (if no end date)</label>
+                    <Input
+                      type="number"
+                      min={2}
+                      max={100}
+                      value={newSlot.repeatCount}
+                      onChange={(e) => setNewSlot({ ...newSlot, repeatCount: parseInt(e.target.value, 10) || 4 })}
+                      className="mt-1 max-w-[8rem] bg-[var(--cp-bg-surface)] border-[var(--cp-border-subtle)]"
+                    />
+                  </div>
+                </>
+              )}
+              <Button type="submit">Create slot{newSlot.repeat !== 'none' ? 's' : ''}</Button>
             </form>
           </CardContent>
         </Card>
@@ -527,7 +662,7 @@ export default function SchedulePage() {
                         : 'border-[var(--cp-border-subtle)] hover:bg-[rgba(148,163,184,0.16)]'
                     }`}
                   >
-                    {format(parseISO(slot.start_time), 'EEE, MMM d, yyyy h:mm a')} – {format(parseISO(slot.end_time), 'h:mm a')}
+                    {formatInTz(slot.start_time, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })} – {formatInTz(slot.end_time, { hour: 'numeric', minute: '2-digit' })}
                   </button>
                 ))}
             </div>
@@ -564,12 +699,23 @@ export default function SchedulePage() {
                   className="w-full text-left px-4 py-3 hover:bg-[rgba(148,163,184,0.12)] border-b border-[var(--cp-border-subtle)] last:border-0"
                 >
                   <p className="font-medium text-[var(--cp-text-primary)]">
-                    {client.full_name}
+                    {client.full_name?.trim() || 'Unnamed'}
                   </p>
+                  {client.email && (
+                    <p className="text-xs text-[var(--cp-text-muted)] truncate mt-0.5">{client.email}</p>
+                  )}
                 </button>
               ))}
               {clients.length === 0 && (
-                <p className="px-4 py-6 text-[var(--cp-text-muted)] text-sm">No clients</p>
+                <div className="px-4 py-6 text-center">
+                  <p className="text-[var(--cp-text-muted)] text-sm mb-2">No clients yet.</p>
+                  <Link
+                    href="/coach/clients/new"
+                    className="text-sm font-medium text-[var(--cp-accent-primary)] hover:text-[var(--cp-accent-primary-strong)]"
+                  >
+                    Add client
+                  </Link>
+                </div>
               )}
             </div>
           </CardContent>
@@ -736,7 +882,7 @@ export default function SchedulePage() {
                                   {session.clients?.full_name ?? 'Client'}
                                 </div>
                                 <div className="text-[11px] opacity-90">
-                                  {format(start, 'h:mm a')} – {format(end, 'h:mm a')}
+                                  {formatInTz(session.scheduled_time, { hour: 'numeric', minute: '2-digit' })} – {formatInTz(end.toISOString(), { hour: 'numeric', minute: '2-digit' })}
                                 </div>
                               </button>
                             )
@@ -923,7 +1069,7 @@ export default function SchedulePage() {
                                   {session.clients?.full_name ?? 'Client'}
                                 </div>
                                 <div className="text-[11px] opacity-90">
-                                  {format(start, 'h:mm a')} – {format(end, 'h:mm a')}
+                                  {formatInTz(session.scheduled_time, { hour: 'numeric', minute: '2-digit' })} – {formatInTz(end.toISOString(), { hour: 'numeric', minute: '2-digit' })}
                                 </div>
                               </button>
                             )

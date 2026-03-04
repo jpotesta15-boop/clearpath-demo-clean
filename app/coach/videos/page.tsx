@@ -51,6 +51,12 @@ export default function VideosPage() {
   const [updatingClientId, setUpdatingClientId] = useState<string | null>(null)
   const [deletingVideoId, setDeletingVideoId] = useState<string | null>(null)
   const [newVideo, setNewVideo] = useState({ title: '', description: '', url: '', category: '' })
+  const [searchQuery, setSearchQuery] = useState('')
+  const [filterCategory, setFilterCategory] = useState('')
+  const [filterProgramId, setFilterProgramId] = useState('')
+  const [filterClientId, setFilterClientId] = useState('')
+  const [videoProgramIds, setVideoProgramIds] = useState<Record<string, string[]>>({})
+  const [videoClientIds, setVideoClientIds] = useState<Record<string, string[]>>({})
   const supabase = createClient()
   const tenantId = process.env.NEXT_PUBLIC_CLIENT_ID ?? 'demo'
 
@@ -82,7 +88,7 @@ export default function VideosPage() {
     if (!user) return
     const { data } = await supabase
       .from('clients')
-      .select('id, full_name')
+      .select('id, full_name, email')
       .eq('coach_id', user.id)
       .order('full_name')
     setClients(data || [])
@@ -133,6 +139,34 @@ export default function VideosPage() {
       .order('created_at', { ascending: false })
 
     setVideos(data || [])
+
+    const videoIds = (data || []).map((v: any) => v.id)
+    if (videoIds.length > 0) {
+      const [lessonsRes, assignmentsRes] = await Promise.all([
+        supabase.from('program_lessons').select('program_id, video_id').in('video_id', videoIds),
+        supabase.from('video_assignments').select('video_id, client_id').in('video_id', videoIds),
+      ])
+      const byVideoProgram: Record<string, string[]> = {}
+      ;(lessonsRes.data || []).forEach((r: any) => {
+        if (!r.video_id) return
+        if (!byVideoProgram[r.video_id]) byVideoProgram[r.video_id] = []
+        if (r.program_id && !byVideoProgram[r.video_id].includes(r.program_id)) {
+          byVideoProgram[r.video_id].push(r.program_id)
+        }
+      })
+      const byVideoClient: Record<string, string[]> = {}
+      ;(assignmentsRes.data || []).forEach((r: any) => {
+        if (!byVideoClient[r.video_id]) byVideoClient[r.video_id] = []
+        if (r.client_id && !byVideoClient[r.video_id].includes(r.client_id)) {
+          byVideoClient[r.video_id].push(r.client_id)
+        }
+      })
+      setVideoProgramIds(byVideoProgram)
+      setVideoClientIds(byVideoClient)
+    } else {
+      setVideoProgramIds({})
+      setVideoClientIds({})
+    }
     setLoading(false)
   }
 
@@ -295,7 +329,7 @@ export default function VideosPage() {
   return (
     <div className="space-y-6">
       {error && (
-        <div className="rounded-md bg-red-50 border border-red-200 px-4 py-2 text-sm text-red-800">
+        <div className="rounded-md bg-[var(--cp-accent-danger)]/10 border border-[var(--cp-accent-danger)]/30 px-4 py-2 text-sm text-[var(--cp-accent-danger)]">
           {error}
         </div>
       )}
@@ -310,46 +344,49 @@ export default function VideosPage() {
       </div>
 
       {showForm && (
-        <Card>
+        <Card className="border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)]">
           <CardHeader>
-            <CardTitle>Add New Video</CardTitle>
-            <p className="text-sm font-normal text-gray-500 mt-1">Add from link — paste a URL to add to your library</p>
+            <CardTitle className="text-[var(--cp-text-primary)]">Add New Video</CardTitle>
+            <p className="text-sm font-normal text-[var(--cp-text-muted)] mt-1">Add from link — paste a URL to add to your library</p>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleCreateVideo} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Title</label>
+                <label className="block text-sm font-medium text-[var(--cp-text-primary)]">Title</label>
                 <Input
                   value={newVideo.title}
                   onChange={(e) => setNewVideo({ ...newVideo, title: e.target.value })}
                   required
+                  className="bg-[var(--cp-bg-surface)] border-[var(--cp-border-subtle)] text-[var(--cp-text-primary)]"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Description</label>
+                <label className="block text-sm font-medium text-[var(--cp-text-primary)]">Description</label>
                 <textarea
                   value={newVideo.description}
                   onChange={(e) => setNewVideo({ ...newVideo, description: e.target.value })}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2"
+                  className="w-full rounded-md border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] px-3 py-2 text-[var(--cp-text-primary)]"
                   rows={3}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Video URL</label>
-                <p className="text-xs text-gray-500 mt-0.5 mb-1">YouTube, Vimeo, or a shareable link (e.g. Google Drive)</p>
+                <label className="block text-sm font-medium text-[var(--cp-text-primary)]">Video URL</label>
+                <p className="text-xs text-[var(--cp-text-muted)] mt-0.5 mb-1">YouTube, Vimeo, or a shareable link (e.g. Google Drive)</p>
                 <Input
                   value={newVideo.url}
                   onChange={(e) => setNewVideo({ ...newVideo, url: e.target.value })}
                   placeholder="https://..."
                   required
+                  className="bg-[var(--cp-bg-surface)] border-[var(--cp-border-subtle)] text-[var(--cp-text-primary)]"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Category</label>
+                <label className="block text-sm font-medium text-[var(--cp-text-primary)]">Category</label>
                 <Input
                   value={newVideo.category}
                   onChange={(e) => setNewVideo({ ...newVideo, category: e.target.value })}
                   placeholder="e.g., Technique, Warm-up"
+                  className="bg-[var(--cp-bg-surface)] border-[var(--cp-border-subtle)] text-[var(--cp-text-primary)]"
                 />
               </div>
               <Button type="submit">Add Video</Button>
@@ -358,16 +395,74 @@ export default function VideosPage() {
         </Card>
       )}
 
+      {(() => {
+        const q = searchQuery.trim().toLowerCase()
+        const filteredVideos = videos.filter((video: any) => {
+          if (q) {
+            const title = (video.title ?? '').toLowerCase()
+            const desc = (video.description ?? '').toLowerCase()
+            const cat = (video.category ?? '').toLowerCase()
+            if (!title.includes(q) && !desc.includes(q) && !cat.includes(q)) return false
+          }
+          if (filterCategory && (video.category ?? '') !== filterCategory) return false
+          if (filterProgramId && !(videoProgramIds[video.id] ?? []).includes(filterProgramId)) return false
+          if (filterClientId && !(videoClientIds[video.id] ?? []).includes(filterClientId)) return false
+          return true
+        })
+        const categories = Array.from(new Set(videos.map((v: any) => v.category).filter(Boolean))) as string[]
+
+        return (
+          <>
+            <div className="flex flex-wrap items-center gap-3 mb-4">
+              <Input
+                type="search"
+                placeholder="Search by title, description, category..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="max-w-xs bg-[var(--cp-bg-surface)] border-[var(--cp-border-subtle)] text-[var(--cp-text-primary)]"
+              />
+              <select
+                value={filterCategory}
+                onChange={(e) => setFilterCategory(e.target.value)}
+                className="h-10 rounded-md border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] px-3 py-2 text-sm text-[var(--cp-text-primary)]"
+              >
+                <option value="">All categories</option>
+                {categories.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+              <select
+                value={filterProgramId}
+                onChange={(e) => setFilterProgramId(e.target.value)}
+                className="h-10 rounded-md border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] px-3 py-2 text-sm text-[var(--cp-text-primary)]"
+              >
+                <option value="">All programs</option>
+                {programs.map((p: any) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+              <select
+                value={filterClientId}
+                onChange={(e) => setFilterClientId(e.target.value)}
+                className="h-10 rounded-md border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] px-3 py-2 text-sm text-[var(--cp-text-primary)]"
+              >
+                <option value="">All clients</option>
+                {clients.map((c: any) => (
+                  <option key={c.id} value={c.id}>{c.full_name ?? c.email ?? 'Unnamed'}</option>
+                ))}
+              </select>
+            </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {videos.map((video) => {
+        {filteredVideos.map((video: any) => {
           const thumb = getThumbnailUrl(video.url, video.thumbnail_url)
           return (
             <Card
               key={video.id}
-              className="cursor-pointer hover:shadow-md transition-shadow overflow-hidden"
+              className="cursor-pointer hover:shadow-[var(--cp-shadow-card)] transition-shadow overflow-hidden border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)]"
               onClick={() => setSelectedVideo(video)}
             >
-              <div className="aspect-video bg-gray-100 relative">
+              <div className="aspect-video bg-[var(--cp-bg-subtle)] relative">
                 {thumb ? (
                   <img
                     src={thumb}
@@ -375,7 +470,7 @@ export default function VideosPage() {
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-gray-400">
+                  <div className="w-full h-full flex items-center justify-center text-[var(--cp-text-muted)]">
                     <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                     </svg>
@@ -383,16 +478,16 @@ export default function VideosPage() {
                 )}
               </div>
               <CardHeader>
-                <CardTitle>{video.title}</CardTitle>
+                <CardTitle className="text-[var(--cp-text-primary)]">{video.title}</CardTitle>
               </CardHeader>
               <CardContent>
                 {video.category && (
-                  <p className="text-sm text-primary-600 mb-2">{video.category}</p>
+                  <p className="text-sm text-[var(--cp-accent-primary)] mb-2">{video.category}</p>
                 )}
                 {video.description && (
-                  <p className="text-sm text-gray-600 mb-4 line-clamp-2">{video.description}</p>
+                  <p className="text-sm text-[var(--cp-text-muted)] mb-4 line-clamp-2">{video.description}</p>
                 )}
-                <span className="text-primary-600 hover:underline text-sm font-medium">
+                <span className="text-[var(--cp-accent-primary)] hover:underline text-sm font-medium">
                   Watch Video →
                 </span>
               </CardContent>
@@ -400,80 +495,91 @@ export default function VideosPage() {
           )
         })}
       </div>
+          </>
+        )
+      })()}
 
       {selectedVideo && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--cp-bg-backdrop)] p-4"
           onClick={() => setSelectedVideo(null)}
         >
           <div
-            className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden"
+            className="rounded-2xl border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-elevated)] shadow-[var(--cp-shadow-card)] max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between px-4 py-2 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900 truncate pr-4">{selectedVideo.title}</h3>
+            <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--cp-border-subtle)] shrink-0">
+              <h3 className="text-lg font-semibold text-[var(--cp-text-primary)] truncate pr-4">{selectedVideo.title}</h3>
               <div className="flex items-center gap-2">
-                <button
+                <Button
                   type="button"
+                  variant="outline"
+                  size="sm"
+                  className="border-[var(--cp-accent-danger)]/50 text-[var(--cp-accent-danger)] hover:bg-[var(--cp-accent-danger)]/10"
                   onClick={() => handleDeleteVideo(selectedVideo.id)}
                   disabled={deletingVideoId === selectedVideo.id}
-                  className="inline-flex items-center rounded-md border border-red-200 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {deletingVideoId === selectedVideo.id ? 'Deleting…' : 'Delete'}
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="sm"
                   onClick={() => setSelectedVideo(null)}
-                  className="p-2 text-gray-500 hover:text-gray-700 rounded-md hover:bg-gray-100"
+                  className="text-[var(--cp-text-muted)] hover:text-[var(--cp-text-primary)]"
                   aria-label="Close"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
-                </button>
+                </Button>
               </div>
             </div>
-            <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
-              {getEmbedUrl(selectedVideo.url) ? (
-                <div className="relative w-full aspect-video bg-gray-900 rounded overflow-hidden">
-                  <iframe
-                    src={getEmbedUrl(selectedVideo.url)!}
-                    title={selectedVideo.title}
-                    className="absolute inset-0 w-full h-full"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  />
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-8 gap-4">
-                  <p className="text-sm text-gray-600">This video cannot be embedded. Open the link to watch.</p>
-                  <a
-                    href={selectedVideo.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary-600 hover:underline font-medium"
-                  >
-                    Open in new tab →
-                  </a>
-                </div>
-              )}
-              <div className="border-t border-gray-200 pt-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Edit title & description</h4>
-                <form onSubmit={handleSaveEdit} className="space-y-2">
+            <div className="flex-1 min-h-0 overflow-y-auto p-6 space-y-6">
+              <section>
+                <h4 className="text-sm font-medium text-[var(--cp-text-muted)] mb-3">Watch</h4>
+                {getEmbedUrl(selectedVideo.url) ? (
+                  <div className="relative w-full aspect-video bg-[var(--cp-bg-subtle)] rounded-lg overflow-hidden">
+                    <iframe
+                      src={getEmbedUrl(selectedVideo.url)!}
+                      title={selectedVideo.title}
+                      className="absolute inset-0 w-full h-full"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-8 gap-4 rounded-lg border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-subtle)]">
+                    <p className="text-sm text-[var(--cp-text-muted)]">This video cannot be embedded. Open the link to watch.</p>
+                    <a
+                      href={selectedVideo.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[var(--cp-accent-primary)] hover:underline font-medium"
+                    >
+                      Open in new tab →
+                    </a>
+                  </div>
+                )}
+              </section>
+
+              <section className="border-t border-[var(--cp-border-subtle)] pt-4">
+                <h4 className="text-sm font-medium text-[var(--cp-text-primary)] mb-3">Edit title & description</h4>
+                <form onSubmit={handleSaveEdit} className="space-y-3">
                   <div>
-                    <label className="block text-xs text-gray-500">Title</label>
+                    <label className="block text-xs text-[var(--cp-text-muted)] mb-1">Title</label>
                     <Input
                       value={editingVideo.title}
                       onChange={(e) => setEditingVideo((p) => ({ ...p, title: e.target.value }))}
-                      className="mt-0.5"
+                      className="bg-[var(--cp-bg-surface)] border-[var(--cp-border-subtle)] text-[var(--cp-text-primary)]"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-500">Description</label>
+                    <label className="block text-xs text-[var(--cp-text-muted)] mb-1">Description</label>
                     <textarea
                       value={editingVideo.description}
                       onChange={(e) => setEditingVideo((p) => ({ ...p, description: e.target.value }))}
-                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm mt-0.5"
+                      className="w-full rounded-md border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] px-3 py-2 text-sm text-[var(--cp-text-primary)]"
                       rows={2}
                     />
                   </div>
@@ -481,68 +587,66 @@ export default function VideosPage() {
                     {savingEdit ? 'Saving...' : 'Save changes'}
                   </Button>
                 </form>
-              </div>
-            </div>
-            <div className="border-t border-gray-200 px-4 py-3 space-y-4">
-              <div className="space-y-3">
-                <h4 className="text-sm font-medium text-gray-700">Assign to clients</h4>
+              </section>
+
+              <section className="border-t border-[var(--cp-border-subtle)] pt-4">
+                <h4 className="text-sm font-medium text-[var(--cp-text-primary)] mb-2">Assign to clients</h4>
                 {assignedClientIds.length > 0 && (
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-[var(--cp-text-muted)] mb-2">
                     Assigned to:{' '}
                     {assignedClientIds
-                      .map((id) => clients.find((c) => c.id === id)?.full_name)
-                      .filter(Boolean)
+                      .map((id) => clients.find((c) => c.id === id)?.full_name || clients.find((c) => c.id === id)?.email || '—')
+                      .filter((s) => s !== '—')
                       .join(', ')}
                   </p>
                 )}
-                <div className="space-y-2">
-                  <div className="flex flex-wrap gap-2">
-                    {clients.map((client) => {
-                      const isSelected = pendingAssignedClientIds.includes(client.id)
-                      return (
-                        <label
-                          key={client.id}
-                          className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium transition ${
-                            isSelected
-                              ? 'bg-primary-600 text-white border-primary-600'
-                              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                          }`}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={() => toggleClientSelection(client.id)}
-                            className="h-3 w-3 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                          />
-                          <span>{client.full_name}</span>
-                        </label>
-                      )
-                    })}
-                    {clients.length === 0 && (
-                      <p className="text-xs text-gray-500">No clients found. Add clients to assign this video.</p>
-                    )}
-                  </div>
-                  <div className="flex justify-end">
-                    <button
-                      type="button"
-                      onClick={saveClientAssignments}
-                      disabled={
-                        savingAssignments ||
-                        JSON.stringify(pendingAssignedClientIds) === JSON.stringify(initialAssignedClientIds)
-                      }
-                      className="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60 disabled:cursor-not-allowed"
-                    >
-                      {savingAssignments ? 'Saving…' : 'Save assignments'}
-                    </button>
-                  </div>
+                <div className="flex flex-wrap gap-2">
+                  {clients.map((client) => {
+                    const isSelected = pendingAssignedClientIds.includes(client.id)
+                    return (
+                      <label
+                        key={client.id}
+                        className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium cursor-pointer transition ${
+                          isSelected
+                            ? 'bg-[var(--cp-accent-primary)] text-[var(--cp-text-on-accent)] border-[var(--cp-accent-primary)]'
+                            : 'border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] text-[var(--cp-text-primary)] hover:bg-[var(--cp-bg-subtle)]'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleClientSelection(client.id)}
+                          className="sr-only"
+                        />
+                        <span>{client.full_name?.trim() || client.email || 'Unnamed'}</span>
+                      </label>
+                    )
+                  })}
+                  {clients.length === 0 && (
+                    <p className="text-xs text-[var(--cp-text-muted)]">No clients found. Add clients to assign this video.</p>
+                  )}
                 </div>
-              </div>
+                <div className="mt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={saveClientAssignments}
+                    disabled={
+                      savingAssignments ||
+                      JSON.stringify(pendingAssignedClientIds) === JSON.stringify(initialAssignedClientIds)
+                    }
+                  >
+                    {savingAssignments ? 'Saving…' : 'Save assignments'}
+                  </Button>
+                </div>
+              </section>
 
-              <div className="space-y-3 border-t border-gray-100 pt-3">
-                <h4 className="text-sm font-medium text-gray-700">Add to programs</h4>
+              <section className="border-t border-[var(--cp-border-subtle)] pt-4">
+                <h4 className="text-sm font-medium text-[var(--cp-text-primary)] mb-2">Add to programs</h4>
                 {selectedProgramIds.length > 0 && (
-                  <p className="text-xs text-gray-500">
-                    Used in:{' '}
+                  <p className="text-xs text-[var(--cp-text-muted)] mb-2">
+                    In:{' '}
                     {selectedProgramIds
                       .map((id) => programs.find((p) => p.id === id)?.name)
                       .filter(Boolean)
@@ -553,25 +657,23 @@ export default function VideosPage() {
                   {programs.map((program) => {
                     const isSelected = selectedProgramIds.includes(program.id)
                     return (
-                      <button
+                      <Button
                         key={program.id}
                         type="button"
+                        variant={isSelected ? 'default' : 'outline'}
+                        size="sm"
+                        className={isSelected ? '' : 'border-[var(--cp-border-subtle)] text-[var(--cp-text-primary)]'}
                         onClick={() => toggleProgramMembership(program.id)}
-                        className={`px-3 py-1 rounded-full border text-xs font-medium transition ${
-                          isSelected
-                            ? 'bg-indigo-600 text-white border-indigo-600'
-                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                        }`}
                       >
                         {program.name}
-                      </button>
+                      </Button>
                     )
                   })}
                   {programs.length === 0 && (
-                    <p className="text-xs text-gray-500">No programs yet. Create a program to attach this video.</p>
+                    <p className="text-xs text-[var(--cp-text-muted)]">No programs yet. Create a program to attach this video.</p>
                   )}
                 </div>
-              </div>
+              </section>
             </div>
           </div>
         </div>

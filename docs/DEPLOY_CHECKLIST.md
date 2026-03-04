@@ -35,7 +35,7 @@ Set these in `.env.local` (local) or your host’s environment (e.g. Vercel, Rai
 - Add your production base URL to Supabase **Redirect URLs** and set **Site URL** to the production URL.
 - In Google OAuth (Google Cloud Console), add the production callback URL if you use Google login.
 - Use **HTTPS** in production.
-- Run migrations on the production DB (e.g. `20240107000000_handle_new_user.sql`, `20240108000000_coach_video_assignments.sql`) if not already applied.
+- **Run all migrations** on the production DB in order. Apply every file in `supabase/migrations/` in alphabetical order (oldest first). See [SQL_AND_MIGRATIONS.md](SQL_AND_MIGRATIONS.md) for the full list. If using Supabase CLI: `supabase db push`. Do not skip migrations.
 
 ## References
 

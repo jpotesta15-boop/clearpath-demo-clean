@@ -10,9 +10,14 @@ import { format } from 'date-fns'
 export default function ClientMessagesPage() {
   const [messages, setMessages] = useState<any[]>([])
   const [coach, setCoach] = useState<any>(null)
+  const [sessionRequests, setSessionRequests] = useState<any[]>([])
   const [newMessage, setNewMessage] = useState('')
   const [currentUser, setCurrentUser] = useState<any>(null)
   const [clientNotFound, setClientNotFound] = useState(false)
+  const [availabilityRequestId, setAvailabilityRequestId] = useState<string | null>(null)
+  const [availabilityText, setAvailabilityText] = useState('')
+  const [submittingAvailability, setSubmittingAvailability] = useState(false)
+  const [payingRequestId, setPayingRequestId] = useState<string | null>(null)
   const supabase = createClient()
 
   useEffect(() => {
@@ -24,34 +29,87 @@ export default function ClientMessagesPage() {
     if (!user) return
     setCurrentUser(user)
 
-    const { data: client } = await supabase
+    const { data: clientData } = await supabase
       .from('clients')
       .select('*, coach:profiles!clients_coach_id_fkey(*)')
       .eq('email', user.email)
       .single()
 
-    if (!client) {
+    if (!clientData) {
       setClientNotFound(true)
       return
     }
 
-    setCoach(client.coach)
+    setCoach(clientData.coach)
 
     const { data: coachProfile } = await supabase
       .from('profiles')
       .select('id')
-      .eq('id', client.coach_id)
+      .eq('id', clientData.coach_id)
       .single()
 
     if (coachProfile) {
-      const { data } = await supabase
-        .from('messages')
-        .select('*')
-        .or(`and(sender_id.eq.${user.id},recipient_id.eq.${coachProfile.id}),and(sender_id.eq.${coachProfile.id},recipient_id.eq.${user.id})`)
-        .order('created_at', { ascending: true })
+      const [messagesRes, requestsRes] = await Promise.all([
+        supabase
+          .from('messages')
+          .select('*')
+          .or(`and(sender_id.eq.${user.id},recipient_id.eq.${coachProfile.id}),and(sender_id.eq.${coachProfile.id},recipient_id.eq.${user.id})`)
+          .order('created_at', { ascending: true }),
+        supabase
+          .from('session_requests')
+          .select('*, session_products(name, duration_minutes)')
+          .eq('client_id', clientData.id)
+          .in('status', ['offered', 'accepted', 'payment_pending', 'paid', 'availability_submitted', 'scheduled'])
+          .order('created_at', { ascending: false }),
+      ])
+      const msgs = messagesRes.data || []
+      setMessages(msgs)
+      setSessionRequests(requestsRes.data || [])
 
-      setMessages(data || [])
+      const unreadIds = msgs.filter((m: any) => m.recipient_id === user.id && !m.read_at).map((m: any) => m.id)
+      if (unreadIds.length > 0) {
+        await supabase.from('messages').update({ read_at: new Date().toISOString() }).in('id', unreadIds)
+      }
     }
+  }
+
+  const handleAcceptOffer = async (requestId: string) => {
+    setPayingRequestId(requestId)
+    try {
+      const res = await fetch('/api/stripe/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_request_id: requestId }),
+        credentials: 'include',
+      })
+      const data = await res.json().catch(() => ({}))
+      if (data.url) {
+        window.location.href = data.url
+        return
+      }
+      setPayingRequestId(null)
+    } catch {
+      setPayingRequestId(null)
+    }
+  }
+
+  const handleSubmitAvailability = async () => {
+    if (!availabilityRequestId || !availabilityText.trim()) return
+    setSubmittingAvailability(true)
+    const { error } = await supabase
+      .from('session_requests')
+      .update({
+        status: 'availability_submitted',
+        availability_preferences: { notes: availabilityText.trim() },
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', availabilityRequestId)
+    if (!error) {
+      setAvailabilityRequestId(null)
+      setAvailabilityText('')
+      loadData()
+    }
+    setSubmittingAvailability(false)
   }
 
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -89,59 +147,185 @@ export default function ClientMessagesPage() {
     )
   }
 
+  const activeOffers = sessionRequests.filter((r: any) =>
+    ['offered', 'paid', 'availability_submitted'].includes(r.status)
+  )
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Messages</h1>
-        <p className="mt-1 text-sm text-gray-500">Chat with your coach</p>
+        <h1 className="text-3xl font-bold text-[var(--cp-text-primary)]">Messages</h1>
+        <p className="mt-1 text-sm text-[var(--cp-text-muted)]">Chat with your coach</p>
       </div>
 
-      <Card>
+      <Card className="border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)]">
         <CardContent className="p-0">
-          <div className="p-4 border-b">
-            <h3 className="font-semibold">{coach?.full_name || 'Coach'}</h3>
+          <div className="p-4 border-b border-[var(--cp-border-subtle)]">
+            <h3 className="font-semibold text-[var(--cp-text-primary)]">{coach?.full_name || 'Coach'}</h3>
           </div>
-          <div className="p-4 border-b max-h-96 overflow-y-auto">
+          <div className="p-4 border-b border-[var(--cp-border-subtle)] max-h-[420px] overflow-y-auto">
+            {activeOffers.length > 0 && (
+              <div className="space-y-3 mb-4">
+                <p className="text-xs font-medium text-[var(--cp-text-muted)]">Session offers</p>
+                {activeOffers.map((req: any) => {
+                  const product = req.session_products
+                  const name = product?.name ?? 'Session'
+                  const amount = ((req.amount_cents ?? 0) / 100).toFixed(2)
+                  const isOffered = req.status === 'offered'
+                  const isPaid = req.status === 'paid'
+                  const isScheduled = req.status === 'scheduled'
+                  const isAvailabilitySubmitted = req.status === 'availability_submitted'
+                  return (
+                    <div
+                      key={req.id}
+                      className="rounded-lg border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-elevated)] p-3 text-[var(--cp-text-primary)]"
+                    >
+                      <p className="text-sm font-semibold">{name} – ${amount}</p>
+                      <p className="text-xs text-[var(--cp-text-muted)] mt-0.5">
+                        {isScheduled
+                          ? 'Session scheduled — pay now if you haven’t yet'
+                          : isAvailabilitySubmitted
+                            ? 'Waiting for coach to confirm a time'
+                            : isPaid
+                              ? 'Share when you’re available'
+                              : 'Accept & pay, or share availability first'}
+                      </p>
+                      <div className="flex flex-wrap gap-2 mt-3">
+                        {isOffered && (
+                          <>
+                            <Button
+                              size="sm"
+                              onClick={() => handleAcceptOffer(req.id)}
+                              disabled={!!payingRequestId}
+                            >
+                              {payingRequestId === req.id ? 'Redirecting…' : 'Accept & pay'}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setAvailabilityRequestId(req.id)}
+                            >
+                              Share availability
+                            </Button>
+                          </>
+                        )}
+                        {isPaid && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setAvailabilityRequestId(req.id)}
+                          >
+                            Submit availability
+                          </Button>
+                        )}
+                        {isScheduled && (
+                          <Button
+                            size="sm"
+                            onClick={() => handleAcceptOffer(req.id)}
+                            disabled={!!payingRequestId}
+                          >
+                            {payingRequestId === req.id ? 'Redirecting…' : 'Pay now'}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
             <div className="space-y-4">
               {messages.map((message) => {
                 const isOwn = message.sender_id === currentUser?.id
+                let offerData: { type: string; product_name?: string; amount_display?: string; amount_cents?: number } | null = null
+                try {
+                  const parsed = JSON.parse(message.content)
+                  if (parsed?.type === 'session_offer') offerData = parsed
+                } catch {
+                  // not JSON
+                }
                 return (
                   <div
                     key={message.id}
                     className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
                   >
-                    <div
-                      className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                        isOwn
-                          ? 'bg-primary-600 text-white'
-                          : 'bg-gray-200 text-gray-900'
-                      }`}
-                    >
-                      <p>{message.content}</p>
-                      <p className={`text-xs mt-1 ${
-                        isOwn ? 'text-primary-100' : 'text-gray-500'
-                      }`}>
-                        {format(new Date(message.created_at), 'MMM d, h:mm a')}
-                      </p>
+                    <div className={`max-w-[85%] lg:max-w-md ${isOwn ? 'items-end' : 'items-start'}`}>
+                      {offerData ? (
+                        <div className="rounded-lg px-4 py-3 border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-elevated)] text-[var(--cp-text-primary)]">
+                          <p className="text-xs font-medium text-[var(--cp-text-muted)] mb-1">Session offer from coach</p>
+                          <p className="text-sm font-semibold">{offerData.product_name ?? 'Session'}</p>
+                          <p className="text-sm">${offerData.amount_display ?? ((offerData.amount_cents ?? 0) / 100).toFixed(2)}</p>
+                          <p className="text-xs text-[var(--cp-text-muted)] mt-2">
+                            Use the buttons above to respond.
+                          </p>
+                          <p className="text-xs mt-1 text-[var(--cp-text-muted)]">
+                            {format(new Date(message.created_at), 'MMM d, h:mm a')}
+                          </p>
+                        </div>
+                      ) : (
+                        <div
+                          className={`rounded-lg px-4 py-2.5 ${
+                            isOwn
+                              ? 'bg-[var(--cp-accent-primary)] text-[var(--cp-text-on-accent)]'
+                              : 'bg-[var(--cp-bg-elevated)] text-[var(--cp-text-primary)] border border-[var(--cp-border-subtle)]'
+                          }`}
+                        >
+                          <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
+                          <p className={`text-xs mt-1 ${isOwn ? 'opacity-80' : 'text-[var(--cp-text-muted)]'}`}>
+                            {format(new Date(message.created_at), 'MMM d, h:mm a')}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )
               })}
             </div>
           </div>
-          <form onSubmit={handleSendMessage} className="p-4 border-t">
+          <form onSubmit={handleSendMessage} className="p-4 border-t border-[var(--cp-border-subtle)]">
             <div className="flex gap-2">
               <Input
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 placeholder="Type a message..."
-                className="flex-1"
+                className="flex-1 bg-[var(--cp-bg-surface)] border-[var(--cp-border-subtle)] text-[var(--cp-text-primary)]"
               />
               <Button type="submit">Send</Button>
             </div>
           </form>
         </CardContent>
       </Card>
+
+      {availabilityRequestId && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--cp-bg-backdrop)] p-4"
+          onClick={() => !submittingAvailability && setAvailabilityRequestId(null)}
+        >
+          <div
+            className="rounded-2xl border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-elevated)] shadow-[var(--cp-shadow-card)] max-w-md w-full p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-semibold text-[var(--cp-text-primary)] mb-2">Share your availability</h3>
+            <p className="text-sm text-[var(--cp-text-muted)] mb-3">
+              When are you available? Your coach will confirm a time.
+            </p>
+            <textarea
+              value={availabilityText}
+              onChange={(e) => setAvailabilityText(e.target.value)}
+              placeholder="e.g. Mornings next week, or Tue 2pm, Thu 10am"
+              className="w-full rounded-md border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] px-3 py-2 text-sm text-[var(--cp-text-primary)] mb-4 min-h-[80px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cp-border-focus)]"
+              rows={3}
+            />
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setAvailabilityRequestId(null)} disabled={submittingAvailability}>
+                Cancel
+              </Button>
+              <Button onClick={handleSubmitAvailability} disabled={!availabilityText.trim() || submittingAvailability}>
+                {submittingAvailability ? 'Sending…' : 'Submit'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

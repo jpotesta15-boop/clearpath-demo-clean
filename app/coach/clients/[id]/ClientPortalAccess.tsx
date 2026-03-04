@@ -141,7 +141,22 @@ export function ClientPortalAccess({ clientEmail }: ClientPortalAccessProps) {
                 </div>
               </div>
             )}
+            <p className="text-xs text-[var(--cp-text-muted)]">
+              Share the invite link so the client can open the login page with their email pre-filled.
+            </p>
             <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  const origin = typeof window !== 'undefined' ? window.location.origin : ''
+                  const url = `${origin}/login?email=${encodeURIComponent(clientEmail)}`
+                  navigator.clipboard.writeText(url).then(() => setCopied(true)).catch(() => {})
+                  setTimeout(() => setCopied(false), 2000)
+                }}
+              >
+                {copied ? 'Copied' : 'Copy invite link'}
+              </Button>
               <Button
                 type="button"
                 variant="outline"

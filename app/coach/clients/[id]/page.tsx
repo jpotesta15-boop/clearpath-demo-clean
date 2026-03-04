@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { ClientNotesEditor } from './ClientNotesEditor'
 import { SessionHistoryWithPay } from './SessionHistoryWithPay'
 import { ClientPortalAccess } from './ClientPortalAccess'
+import { DeleteClientButton } from './DeleteClientButton'
 
 export default async function ClientDetailPage({
   params,
@@ -217,6 +218,18 @@ export default async function ClientDetailPage({
               paid_at: (s as { paid_at?: string | null }).paid_at ?? null,
             })) ?? []}
           />
+        </CardContent>
+      </Card>
+
+      <Card className="border-[var(--cp-accent-danger)]/30">
+        <CardHeader>
+          <CardTitle className="text-[var(--cp-accent-danger)]">Danger zone</CardTitle>
+          <p className="text-sm font-normal text-[var(--cp-text-muted)] mt-1">
+            Permanently remove this client. This will remove their assignments and session history.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <DeleteClientButton clientId={client.id} clientName={client.full_name ?? undefined} />
         </CardContent>
       </Card>
     </div>

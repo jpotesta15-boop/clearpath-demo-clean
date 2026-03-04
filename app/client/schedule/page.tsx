@@ -5,7 +5,6 @@ import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { format } from 'date-fns'
 
 function ClientScheduleContent() {
   const [slots, setSlots] = useState<any[]>([])
@@ -17,8 +16,15 @@ function ClientScheduleContent() {
   const [decliningRequestId, setDecliningRequestId] = useState<string | null>(null)
   const [availabilityText, setAvailabilityText] = useState('')
   const [submittingAvailability, setSubmittingAvailability] = useState(false)
+  const [coachTimezone, setCoachTimezone] = useState<string | null>(null)
   const searchParams = useSearchParams()
   const supabase = createClient()
+
+  const displayTz = coachTimezone || (typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'UTC')
+
+  function formatInTz(isoString: string, options: Intl.DateTimeFormatOptions = { dateStyle: 'short', timeStyle: 'short' }): string {
+    return new Date(isoString).toLocaleString('en-US', { ...options, timeZone: displayTz })
+  }
 
   useEffect(() => {
     loadData()
@@ -48,6 +54,13 @@ function ClientScheduleContent() {
       return
     }
     setClient(clientData)
+
+    const { data: coachProfile } = await supabase
+      .from('profiles')
+      .select('timezone')
+      .eq('id', clientData.coach_id)
+      .single()
+    if (coachProfile?.timezone) setCoachTimezone(coachProfile.timezone)
 
     const [slotsRes, sessionsRes, requestsRes] = await Promise.all([
       supabase
@@ -173,6 +186,9 @@ function ClientScheduleContent() {
         <p className="mt-1 text-sm text-[var(--cp-text-muted)]">
           View your coach&apos;s availability and request sessions.
         </p>
+        <p className="mt-0.5 text-xs text-[var(--cp-text-muted)]">
+          Times in {displayTz}
+        </p>
       </div>
 
       {sessionRequests.filter((r) => ['offered', 'accepted', 'payment_pending', 'paid', 'availability_submitted'].includes(r.status)).length > 0 && (
@@ -276,8 +292,7 @@ function ClientScheduleContent() {
                       className="border-b border-[var(--cp-border-subtle)] pb-4 last:border-0"
                     >
                       <p className="font-medium text-[var(--cp-text-primary)]">
-                        {format(new Date(slot.start_time), 'MMM d, yyyy h:mm a')} -{' '}
-                        {format(new Date(slot.end_time), 'h:mm a')}
+                        {formatInTz(slot.start_time, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })} – {formatInTz(slot.end_time, { hour: 'numeric', minute: '2-digit' })}
                       </p>
                       <p className="text-sm text-[var(--cp-text-muted)] mb-2">
                         {slot.is_group_session ? 'Group session' : 'Private session'}
@@ -312,7 +327,7 @@ function ClientScheduleContent() {
                 sessions.map((session) => (
                   <div key={session.id} className="border-b pb-4 last:border-0">
                     <p className="font-medium text-[var(--cp-text-primary)]">
-                      {format(new Date(session.scheduled_time), 'MMM d, yyyy h:mm a')}
+                      {formatInTz(session.scheduled_time, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
                     </p>
                     <span
                       className={`inline-block mt-2 px-2 py-1 text-xs rounded ${

@@ -211,7 +211,23 @@ export default function NewClientPage() {
                 </div>
               )}
             </div>
-            <div className="flex gap-3">
+            <p className="text-sm text-gray-600">
+              Share the invite link so your client can log in. If you sent an invite email, they can also use the link in that email.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  const origin = typeof window !== 'undefined' ? window.location.origin : ''
+                  const url = createdCredentials.email
+                    ? `${origin}/login?email=${encodeURIComponent(createdCredentials.email)}`
+                    : `${origin}/login`
+                  navigator.clipboard.writeText(url).then(() => {}).catch(() => {})
+                }}
+              >
+                Copy invite link
+              </Button>
               <Button
                 type="button"
                 variant="outline"
