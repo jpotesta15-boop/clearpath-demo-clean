@@ -21,6 +21,7 @@ export default function MessagesPage() {
   const [selectedProductId, setSelectedProductId] = useState('')
   const [requestLoading, setRequestLoading] = useState(false)
   const [requestError, setRequestError] = useState<string | null>(null)
+  const [sendError, setSendError] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const searchParams = useSearchParams()
   const supabase = createClient()
@@ -90,34 +91,51 @@ export default function MessagesPage() {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
+    setSendError(null)
     if (!selectedClient || !newMessage.trim() || !currentUser) return
 
-    // Get client's profile ID
-    const client = clients.find(c => c.id === selectedClient)
+    const client = clients.find((c) => c.id === selectedClient)
     if (!client) return
 
-    // Find or create client profile
     const { data: clientProfile } = await supabase
       .from('profiles')
       .select('id')
       .eq('email', client.email)
-      .single()
+      .maybeSingle()
 
-    if (clientProfile) {
-      const { error } = await supabase
-        .from('messages')
-        .insert({
-          sender_id: currentUser.id,
-          recipient_id: clientProfile.id,
-          client_id: tenantId,
-          content: newMessage,
-        })
-
-      if (!error) {
-        setNewMessage('')
-        loadMessages()
-      }
+    if (!clientProfile) {
+      setSendError("This client doesn't have an account linked yet.")
+      return
     }
+
+    const contentToSend = newMessage.trim()
+    const { error } = await supabase
+      .from('messages')
+      .insert({
+        sender_id: currentUser.id,
+        recipient_id: clientProfile.id,
+        client_id: tenantId,
+        content: contentToSend,
+      })
+
+    if (error) {
+      setSendError(error.message)
+      return
+    }
+
+    setSendError(null)
+    setNewMessage('')
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: `temp-${Date.now()}`,
+        sender_id: currentUser.id,
+        recipient_id: clientProfile.id,
+        content: contentToSend,
+        created_at: new Date().toISOString(),
+      },
+    ])
+    await loadMessages()
   }
 
   const ensureSessionProductsLoaded = async () => {
@@ -328,14 +346,20 @@ export default function MessagesPage() {
                     <div ref={messagesEndRef} />
                   </div>
                 </div>
+                {sendError && (
+                  <p className="px-4 pt-2 text-sm text-[var(--cp-accent-danger)]">{sendError}</p>
+                )}
                 <form
                   onSubmit={handleSendMessage}
-                  className="p-4 border-t border-gray-100 bg-gray-50/30"
+                  className="p-4 border-t border-[var(--cp-border-subtle)] bg-[var(--cp-bg-subtle)]"
                 >
                   <div className="flex gap-2">
                     <Input
                       value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
+                      onChange={(e) => {
+                        setNewMessage(e.target.value)
+                        if (sendError) setSendError(null)
+                      }}
                       placeholder="Type a message..."
                       className="flex-1"
                     />
