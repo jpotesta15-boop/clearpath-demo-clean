@@ -26,8 +26,8 @@ type WeekDatum = { weekLabel: string; revenue?: number; count?: number }
 
 type AvailabilityRequest = {
   id: string
-  clients?: { full_name?: string } | null
-  session_products?: { name?: string } | null
+  clients?: { full_name?: string }[] | null
+  session_products?: { name?: string }[] | null
 }
 
 type DashboardContentProps = {
@@ -263,9 +263,11 @@ export function DashboardContent({
             {availabilityRequests.map((req) => (
               <li key={req.id} className="flex flex-wrap items-center justify-between gap-2 py-2 border-b border-[var(--cp-border-subtle)] last:border-0 last:pb-0">
                 <div>
-                  <p className="font-medium text-[var(--cp-text-primary)]">{req.clients?.full_name ?? 'Client'}</p>
+                  <p className="font-medium text-[var(--cp-text-primary)]">
+                    {req.clients?.[0]?.full_name ?? 'Client'}
+                  </p>
                   <p className="text-sm text-[var(--cp-text-muted)]">
-                    {(req.session_products as { name?: string } | null)?.name ?? 'Session'} — waiting for you to pick a time
+                    {req.session_products?.[0]?.name ?? 'Session'} — waiting for you to pick a time
                   </p>
                 </div>
                 <Link
