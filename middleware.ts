@@ -32,8 +32,35 @@ function getCorsOrigin(request: NextRequest): string | null {
 }
 
 export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({ request })
+  // Generate a nonce per request for CSP and pass it via request headers
+  const nonce = crypto.randomUUID()
+  const requestHeaders = new Headers(request.headers)
+  requestHeaders.set('x-nonce', nonce)
+
+  let response = NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  })
+
   const pathname = request.nextUrl.pathname
+
+  // Apply strict CSP only in production; dev relies on inline scripts for HMR.
+  if (process.env.NODE_ENV === 'production') {
+    const csp = [
+      "default-src 'self'",
+      `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: blob: https:",
+      "font-src 'self'",
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com",
+      "frame-src 'self' https://js.stripe.com https://hooks.stripe.com",
+      "object-src 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+    ].join('; ')
+    response.headers.set('Content-Security-Policy', csp)
+  }
 
   if (pathname.startsWith('/api/')) {
     const corsOrigin = getCorsOrigin(request)

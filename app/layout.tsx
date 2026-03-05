@@ -4,6 +4,7 @@ import "./globals.css"
 import { ThemeProvider } from "@/components/providers/ThemeProvider"
 import { getBrandColors } from "@/lib/branding"
 import { ThemeVariantProvider } from "@/components/providers/ThemeVariantProvider"
+import { headers } from "next/headers"
 
 const fontSans = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -21,11 +22,13 @@ export default async function RootLayout({
   children: React.ReactNode
 }>) {
   const brandColors = await getBrandColors()
+  const nonce = (await headers()).get('x-nonce') ?? undefined
 
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
         <script
+          nonce={nonce}
           dangerouslySetInnerHTML={{
             __html: `(function(){var m=localStorage.getItem("cp-theme-mode");document.documentElement.setAttribute("data-theme",m==="light"?"light":"dark");})();`,
           }}
