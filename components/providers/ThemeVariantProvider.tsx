@@ -2,7 +2,7 @@
 
 import * as React from "react"
 
-export type ThemeVariant = "blue" | "green" | "red" | "purple"
+export type ThemeVariant = "blue" | "green" | "red" | "purple" | "amber" | "teal"
 
 type VariantConfig = {
   primary: string
@@ -31,13 +31,28 @@ const VARIANT_COLORS: Record<ThemeVariant, VariantConfig> = {
     strong: "#c4b5fd",
     soft: "rgba(168, 85, 247, 0.16)",
   },
+  amber: {
+    primary: "#f59e0b",
+    strong: "#fbbf24",
+    soft: "rgba(245, 158, 11, 0.16)",
+  },
+  teal: {
+    primary: "#14b8a6",
+    strong: "#2dd4bf",
+    soft: "rgba(20, 184, 166, 0.16)",
+  },
 }
 
 const VARIANT_STORAGE_KEY = "cp-theme-variant"
+export const THEME_MODE_STORAGE_KEY = "cp-theme-mode"
+
+export type ThemeMode = "light" | "dark" | "system"
 
 interface ThemeVariantContextValue {
   variant: ThemeVariant
   setVariant: (variant: ThemeVariant) => void
+  mode: ThemeMode
+  setMode: (mode: ThemeMode) => void
 }
 
 const ThemeVariantContext = React.createContext<ThemeVariantContextValue | undefined>(
@@ -54,17 +69,43 @@ function applyVariant(variant: ThemeVariant) {
   root.style.setProperty("--cp-accent-primary-soft", config.soft)
 }
 
+function resolveEffectiveMode(mode: ThemeMode): "light" | "dark" {
+  if (mode !== "system" || typeof window === "undefined") return mode === "light" ? "light" : "dark"
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
+}
+
+function applyMode(mode: ThemeMode) {
+  if (typeof document === "undefined") return
+  const effective = resolveEffectiveMode(mode)
+  document.documentElement.setAttribute("data-theme", effective)
+}
+
 export function ThemeVariantProvider({ children }: { children: React.ReactNode }) {
   const [variant, setVariantState] = React.useState<ThemeVariant>("blue")
+  const [mode, setModeState] = React.useState<ThemeMode>("dark")
 
-  // Load persisted variant on mount
+  // Load persisted variant and mode on mount
   React.useEffect(() => {
     if (typeof window === "undefined") return
-    const stored = window.localStorage.getItem(VARIANT_STORAGE_KEY) as ThemeVariant | null
-    const initial = stored && VARIANT_COLORS[stored] ? stored : "blue"
-    setVariantState(initial)
-    applyVariant(initial)
+    const storedVariant = window.localStorage.getItem(VARIANT_STORAGE_KEY) as ThemeVariant | null
+    const initialVariant = storedVariant && VARIANT_COLORS[storedVariant] ? storedVariant : "blue"
+    setVariantState(initialVariant)
+    applyVariant(initialVariant)
+
+    const storedMode = window.localStorage.getItem(THEME_MODE_STORAGE_KEY) as ThemeMode | null
+    const initialMode = storedMode === "light" || storedMode === "dark" || storedMode === "system" ? storedMode : "dark"
+    setModeState(initialMode)
+    applyMode(initialMode)
   }, [])
+
+  // React to system preference when mode is "system"
+  React.useEffect(() => {
+    if (mode !== "system" || typeof window === "undefined") return
+    const mq = window.matchMedia("(prefers-color-scheme: dark)")
+    const handle = () => applyMode("system")
+    mq.addEventListener("change", handle)
+    return () => mq.removeEventListener("change", handle)
+  }, [mode])
 
   const setVariant = React.useCallback((next: ThemeVariant) => {
     setVariantState(next)
@@ -74,9 +115,17 @@ export function ThemeVariantProvider({ children }: { children: React.ReactNode }
     applyVariant(next)
   }, [])
 
+  const setMode = React.useCallback((next: ThemeMode) => {
+    setModeState(next)
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(THEME_MODE_STORAGE_KEY, next)
+    }
+    applyMode(next)
+  }, [])
+
   const value = React.useMemo(
-    () => ({ variant, setVariant }),
-    [variant, setVariant]
+    () => ({ variant, setVariant, mode, setMode }),
+    [variant, setVariant, mode, setMode]
   )
 
   return (

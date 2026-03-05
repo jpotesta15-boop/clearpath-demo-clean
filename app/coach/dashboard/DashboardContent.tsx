@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { format, addDays, startOfDay, isSameDay } from 'date-fns'
-import { motion } from 'framer-motion'
+import { motion, animate } from 'framer-motion'
 import {
   BarChart,
   Bar,
@@ -13,6 +13,19 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from 'recharts'
+
+function useRevenueCountUp(revenue: number, duration = 1.2) {
+  const [displayValue, setDisplayValue] = useState(0)
+  useEffect(() => {
+    const controls = animate(0, revenue, {
+      duration,
+      ease: 'easeOut',
+      onUpdate: (v) => setDisplayValue(v),
+    })
+    return () => controls.stop()
+  }, [revenue, duration])
+  return displayValue
+}
 
 type Session = {
   id: string
@@ -185,30 +198,80 @@ export function DashboardContent({
     { id: 'week', label: 'This Week' },
   ]
 
+  const revenueDisplay = useRevenueCountUp(revenue)
   const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.06 } } }
   const item = { hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0 } }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 px-2 sm:px-4">
+    <div className="max-w-6xl mx-auto space-y-10 px-4 sm:px-6">
       <motion.div initial="hidden" animate="show" variants={container}>
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3 mb-2">
           <h1 className="text-3xl font-bold text-[var(--cp-text-primary)]">Welcome back</h1>
           <p className="text-sm text-[var(--cp-text-muted)]">
             {tagline?.trim() ?? 'Your coaching at a glance — tap any tile for details.'}
           </p>
         </div>
 
-      <motion.div variants={item} className="rounded-2xl border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-elevated)] text-[var(--cp-text-primary)] p-4 shadow-[var(--cp-shadow-card)]">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
+        {/* Revenue hero: chart at top with count-up summary */}
+        <motion.div
+          variants={item}
+          className="rounded-2xl border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-elevated)] p-6 shadow-[var(--cp-shadow-card)]"
+        >
+          <div className="flex flex-wrap items-baseline gap-6 gap-y-2 mb-4">
+            <div>
+              <h3 className="text-sm font-medium text-[var(--cp-text-muted)] mb-0.5">Total revenue</h3>
+              <p className="text-3xl font-bold tabular-nums text-[var(--cp-text-primary)]">
+                ${Math.round(revenueDisplay).toLocaleString()}
+              </p>
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-[var(--cp-text-muted)] mb-0.5">This week</h3>
+              <p className="text-xl font-semibold tabular-nums text-[var(--cp-text-primary)]">
+                ${revenueThisWeek.toLocaleString()}
+              </p>
+            </div>
+          </div>
+          <h3 className="text-sm font-medium text-[var(--cp-text-muted)] mb-2">Revenue by week</h3>
+          <div className="h-[240px] w-full min-h-[200px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={revenueByWeek}
+                margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
+                barCategoryGap="20%"
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--cp-border-subtle)" />
+                <XAxis dataKey="weekLabel" tick={{ fill: 'var(--cp-text-muted)', fontSize: 11 }} />
+                <YAxis tick={{ fill: 'var(--cp-text-muted)', fontSize: 11 }} tickFormatter={(v) => `$${v}`} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: 'var(--cp-bg-elevated)', border: '1px solid var(--cp-border-subtle)', borderRadius: 8 }}
+                  labelStyle={{ color: 'var(--cp-text-primary)' }}
+                  formatter={(value: number | undefined) => [`$${(value ?? 0).toFixed(2)}`, 'Revenue']}
+                  labelFormatter={(label) => label}
+                />
+                <Bar
+                  dataKey="revenue"
+                  fill="var(--cp-accent-primary)"
+                  radius={[4, 4, 0, 0]}
+                  isAnimationActive
+                  animationDuration={800}
+                  animationEasing="ease-out"
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </motion.div>
+
+      <motion.div variants={item} className="rounded-2xl border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-elevated)] text-[var(--cp-text-primary)] p-5 sm:p-6 shadow-[var(--cp-shadow-card)]">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="min-w-0">
             <h3 className="font-medium text-[var(--cp-text-primary)]">Accept session payments</h3>
-            <p className="text-sm text-[var(--cp-text-muted)]">
+            <p className="text-sm text-[var(--cp-text-muted)] mt-0.5">
               {stripeConnectAccountId
                 ? 'Your Stripe account is connected. Clients can pay for session offers.'
                 : 'Connect Stripe to accept payments when clients book sessions.'}
             </p>
           </div>
-          <div>
+          <div className="shrink-0">
             {stripeConnectAccountId ? (
               <div className="flex items-center gap-2">
                 <span className="inline-flex items-center rounded-full bg-[var(--cp-accent-success)]/20 px-3 py-1 text-sm font-medium text-[var(--cp-accent-success)]">
@@ -240,10 +303,10 @@ export function DashboardContent({
       <motion.div variants={item}>
         <Link
           href="/coach/analytics"
-          className="block rounded-2xl border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-elevated)] p-4 shadow-[var(--cp-shadow-soft)] hover:border-[var(--cp-accent-primary)]/50 transition-colors"
+          className="block rounded-2xl border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-elevated)] p-5 sm:p-6 shadow-[var(--cp-shadow-soft)] hover:border-[var(--cp-accent-primary)]/50 transition-colors"
         >
-          <div className="flex items-center justify-between gap-3">
-            <div>
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="min-w-0">
               <h3 className="font-medium text-[var(--cp-text-primary)]">Revenue & activity</h3>
               <p className="text-sm text-[var(--cp-text-muted)] mt-0.5">
                 View analytics: monthly revenue, client sessions, and spending.
@@ -254,13 +317,13 @@ export function DashboardContent({
         </Link>
       </motion.div>
 
-      <motion.div variants={item} className="rounded-2xl border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-elevated)] p-4 shadow-[var(--cp-shadow-soft)]">
+      <motion.div variants={item} className="rounded-2xl border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-elevated)] p-5 sm:p-6 shadow-[var(--cp-shadow-soft)]">
         <h3 className="text-sm font-medium text-[var(--cp-text-muted)] mb-3">Next up</h3>
         {upcomingSessions.length > 0 ? (
-          <ul className="space-y-2">
+          <ul className="space-y-3">
             {upcomingSessions.slice(0, 2).map((session) => (
               <li key={session.id} className="flex flex-wrap items-center justify-between gap-2 py-2 border-b border-[var(--cp-border-subtle)] last:border-0 last:pb-0">
-                <div>
+                <div className="min-w-0">
                   <p className="font-medium text-[var(--cp-text-primary)]">{session.clients?.full_name ?? 'Client'}</p>
                   <p className="text-sm text-[var(--cp-text-muted)]">
                     {format(new Date(session.scheduled_time), 'EEE, MMM d · h:mm a')}
@@ -268,7 +331,7 @@ export function DashboardContent({
                 </div>
                 <Link
                   href="/coach/schedule"
-                  className="text-sm font-medium text-[var(--cp-accent-primary)] hover:text-[var(--cp-accent-primary-strong)]"
+                  className="text-sm font-medium text-[var(--cp-accent-primary)] hover:text-[var(--cp-accent-primary-strong)] shrink-0"
                 >
                   View schedule →
                 </Link>
@@ -288,14 +351,14 @@ export function DashboardContent({
         )}
       </motion.div>
 
-      <motion.div variants={item} className="rounded-2xl border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-elevated)] p-4 shadow-[var(--cp-shadow-soft)]">
+      <motion.div variants={item} className="rounded-2xl border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-elevated)] p-5 sm:p-6 shadow-[var(--cp-shadow-soft)]">
         <h3 className="text-sm font-medium text-[var(--cp-text-muted)] mb-3">Ready to schedule</h3>
-        <p className="text-xs text-[var(--cp-text-muted)] mb-2">Clients have submitted their availability. Confirm a time on Schedule to book.</p>
+        <p className="text-sm text-[var(--cp-text-muted)] mb-3">Clients have submitted their availability. Confirm a time on Schedule to book.</p>
         {availabilityRequests.length > 0 ? (
-          <ul className="space-y-2">
+          <ul className="space-y-3">
             {availabilityRequests.map((req) => (
               <li key={req.id} className="flex flex-wrap items-center justify-between gap-2 py-2 border-b border-[var(--cp-border-subtle)] last:border-0 last:pb-0">
-                <div>
+                <div className="min-w-0">
                   <p className="font-medium text-[var(--cp-text-primary)]">
                     {req.clients?.[0]?.full_name ?? 'Client'}
                   </p>
@@ -317,21 +380,21 @@ export function DashboardContent({
         )}
         <Link
           href="/coach/schedule"
-          className="mt-2 inline-block text-sm font-medium text-[var(--cp-accent-primary)] hover:text-[var(--cp-accent-primary-strong)]"
+          className="mt-3 inline-block text-sm font-medium text-[var(--cp-accent-primary)] hover:text-[var(--cp-accent-primary-strong)]"
         >
           Open Schedule →
         </Link>
       </motion.div>
       </motion.div>
 
-      <motion.div initial="hidden" animate="show" variants={container} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-6 gap-5">
+      <motion.div initial="hidden" animate="show" variants={container} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-6 gap-6">
         {tiles.map(({ id, label, badge }) => (
           <motion.button
             key={id}
             variants={item}
             type="button"
             onClick={() => setExpandedPanel(id)}
-            className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] p-6 shadow-[var(--cp-shadow-soft)] hover:border-[var(--cp-accent-primary)] hover:bg-[var(--cp-accent-primary-soft)] hover:shadow-[var(--cp-shadow-card)] transition-all min-h-[160px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cp-border-focus)]"
+            className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] p-6 shadow-[var(--cp-shadow-soft)] hover:border-[var(--cp-accent-primary)] hover:bg-[var(--cp-accent-primary-soft)] hover:shadow-[var(--cp-shadow-card)] transition-all min-h-[140px] sm:min-h-[160px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cp-border-focus)]"
           >
             <span className="text-[var(--cp-text-muted)]">{iconSvg[id]}</span>
             <span className="text-sm font-medium text-[var(--cp-text-primary)] text-center">{label}</span>
@@ -342,45 +405,6 @@ export function DashboardContent({
             )}
           </motion.button>
         ))}
-      </motion.div>
-
-      <motion.div
-        initial="hidden"
-        animate="show"
-        variants={container}
-        className="rounded-2xl border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-elevated)] p-4 shadow-[var(--cp-shadow-soft)]"
-      >
-        <motion.div variants={item}>
-          <h3 className="text-sm font-medium text-[var(--cp-text-muted)] mb-1">Revenue by week</h3>
-          <p className="text-xs text-[var(--cp-text-muted)] mb-3">Total: ${revenue.toLocaleString()} · This week: ${revenueThisWeek.toLocaleString()}</p>
-          <div className="h-[200px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={revenueByWeek}
-                margin={{ top: 4, right: 4, left: 0, bottom: 0 }}
-                barCategoryGap="20%"
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--cp-border-subtle)" />
-                <XAxis dataKey="weekLabel" tick={{ fill: 'var(--cp-text-muted)', fontSize: 11 }} />
-                <YAxis tick={{ fill: 'var(--cp-text-muted)', fontSize: 11 }} tickFormatter={(v) => `$${v}`} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: 'var(--cp-bg-elevated)', border: '1px solid var(--cp-border-subtle)', borderRadius: 8 }}
-                  labelStyle={{ color: 'var(--cp-text-primary)' }}
-                  formatter={(value: number | undefined) => [`$${(value ?? 0).toFixed(2)}`, 'Revenue']}
-                  labelFormatter={(label) => label}
-                />
-                <Bar
-                  dataKey="revenue"
-                  fill="var(--cp-accent-primary)"
-                  radius={[4, 4, 0, 0]}
-                  isAnimationActive
-                  animationDuration={800}
-                  animationEasing="ease-out"
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </motion.div>
       </motion.div>
 
       {expandedPanel && (

@@ -39,18 +39,39 @@
   --foreground: var(--cp-text-primary);
 }
 
+/* Light theme – applied when data-theme="light" on html */
+[data-theme="light"] {
+  --cp-bg-page: #f8fafc;
+  --cp-bg-surface: #f1f5f9;
+  --cp-bg-elevated: #ffffff;
+  --cp-bg-subtle: #e2e8f0;
+  --cp-bg-backdrop: rgba(15, 23, 42, 0.4);
+
+  --cp-border-subtle: #cbd5e1;
+  --cp-border-strong: #94a3b8;
+  --cp-border-focus: var(--cp-accent-primary);
+
+  --cp-text-primary: #0f172a;
+  --cp-text-muted: #475569;
+  --cp-text-subtle: #64748b;
+  --cp-text-on-accent: #ffffff;
+
+  --cp-shadow-soft: 0 1px 2px rgba(15, 23, 42, 0.08);
+  --cp-shadow-card: 0 4px 12px rgba(15, 23, 42, 0.1);
+  --cp-shadow-elevated: 0 10px 30px rgba(15, 23, 42, 0.12);
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
 }
 
 /* Body respects semantic tokens; ThemeProvider can tune them per brand */
 body {
   background: var(--cp-bg-page);
   color: var(--cp-text-primary);
-  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
   font-size: 1rem;
   line-height: 1.5;
 }

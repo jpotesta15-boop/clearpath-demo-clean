@@ -1,19 +1,27 @@
 'use client'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { useThemeVariant, type ThemeVariant } from '@/components/providers/ThemeVariantProvider'
+import { useThemeVariant, type ThemeVariant, type ThemeMode } from '@/components/providers/ThemeVariantProvider'
 
 const VARIANT_LABELS: Record<ThemeVariant, string> = {
   blue: 'Blue',
   green: 'Green',
   red: 'Red',
   purple: 'Purple',
+  amber: 'Amber',
+  teal: 'Teal',
+}
+
+const THEME_MODE_LABELS: Record<ThemeMode, string> = {
+  dark: 'Dark',
+  light: 'Light',
+  system: 'System',
 }
 
 export default function ClientSettingsPage() {
-  const { variant, setVariant } = useThemeVariant()
+  const { variant, setVariant, mode, setMode } = useThemeVariant()
 
-  const variants: ThemeVariant[] = ['blue', 'green', 'red', 'purple']
+  const variants: ThemeVariant[] = ['blue', 'green', 'red', 'purple', 'amber', 'teal']
 
   return (
     <div className="max-w-3xl space-y-6">
@@ -26,12 +34,37 @@ export default function ClientSettingsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Theme</CardTitle>
+          <CardTitle>Theme mode</CardTitle>
           <p className="text-sm font-normal text-[var(--cp-text-muted)]">
-            Choose one of the dark athletic accent themes. All pages will update to match.
+            Dark, light, or follow your device setting.
           </p>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <CardContent className="flex flex-wrap gap-3">
+          {(['dark', 'light', 'system'] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => setMode(m)}
+              className={`rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
+                m === mode
+                  ? 'border-[var(--cp-accent-primary)] bg-[var(--cp-accent-primary-soft)] text-[var(--cp-accent-primary)]'
+                  : 'border-[var(--cp-border-subtle)] text-[var(--cp-text-primary)] hover:border-[var(--cp-accent-primary)] hover:bg-[var(--cp-bg-subtle)]'
+              }`}
+            >
+              {THEME_MODE_LABELS[m]}
+            </button>
+          ))}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Accent color</CardTitle>
+          <p className="text-sm font-normal text-[var(--cp-text-muted)]">
+            Choose an accent color. All pages will update to match.
+          </p>
+        </CardHeader>
+        <CardContent className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           {variants.map((v) => (
             <button
               key={v}
@@ -39,8 +72,8 @@ export default function ClientSettingsPage() {
               onClick={() => setVariant(v)}
               className={`flex flex-col items-start rounded-lg border px-3 py-2 text-left transition-colors ${
                 v === variant
-                  ? 'border-[var(--cp-accent-primary)] bg-[rgba(56,189,248,0.12)]'
-                  : 'border-[var(--cp-border-subtle)] hover:border-[var(--cp-accent-primary)] hover:bg-[rgba(148,163,184,0.16)]'
+                  ? 'border-[var(--cp-accent-primary)] bg-[var(--cp-accent-primary-soft)]'
+                  : 'border-[var(--cp-border-subtle)] hover:border-[var(--cp-accent-primary)] hover:bg-[var(--cp-bg-subtle)]'
               }`}
             >
               <span className="text-sm font-medium text-[var(--cp-text-primary)]">

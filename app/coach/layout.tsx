@@ -7,14 +7,14 @@ import { AnimatedPage } from '@/components/layout/AnimatedPage'
 
 const coachNavItems = [
   { href: '/coach/dashboard', label: 'Dashboard' },
-  { href: '/coach/analytics', label: 'Analytics' },
-  { href: '/coach/clients', label: 'Clients' },
   { href: '/coach/schedule', label: 'Schedule' },
-  { href: '/coach/session-packages', label: 'Session Packages' },
+  { href: '/coach/clients', label: 'Clients' },
+  { href: '/coach/messages', label: 'Messages' },
   { href: '/coach/programs', label: 'Programs' },
   { href: '/coach/videos', label: 'Videos' },
+  { href: '/coach/session-packages', label: 'Session Packages' },
   { href: '/coach/payments', label: 'Payments' },
-  { href: '/coach/messages', label: 'Messages' },
+  { href: '/coach/analytics', label: 'Analytics' },
   { href: '/coach/settings', label: 'Settings' },
 ]
 
