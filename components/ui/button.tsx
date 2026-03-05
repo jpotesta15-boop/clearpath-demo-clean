@@ -13,13 +13,13 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       <button
         ref={ref}
         className={cn(
-          "inline-flex items-center justify-center rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--cp-accent-primary-muted)] focus-visible:ring-offset-[var(--cp-bg-page)] disabled:pointer-events-none disabled:opacity-50",
+          "inline-flex items-center justify-center rounded-md font-medium transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--cp-accent-primary-muted)] focus-visible:ring-offset-[var(--cp-bg-page)] disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98]",
           {
-            // Primary action
-            "border border-transparent bg-[var(--cp-accent-primary)] text-[var(--cp-text-on-accent)] hover:bg-[var(--cp-accent-primary-strong)]":
+            // Primary action: hover scale + brighter background
+            "border border-transparent bg-[var(--cp-accent-primary)] text-[var(--cp-text-on-accent)] hover:bg-[var(--cp-accent-primary-strong)] hover:scale-[1.02]":
               variant === "default",
             // Secondary action: accent border and hover tint for palette consistency
-            "border border-[var(--cp-accent-primary-muted)] bg-transparent text-[var(--cp-accent-primary)] hover:bg-[var(--cp-accent-primary-soft)]":
+            "border border-[var(--cp-accent-primary-muted)] bg-transparent text-[var(--cp-accent-primary)] hover:bg-[var(--cp-accent-primary-soft)] hover:scale-[1.02]":
               variant === "outline",
             // Text / ghost button
             "border border-transparent text-[var(--cp-text-muted)] hover:bg-[var(--cp-accent-primary-subtle)]":

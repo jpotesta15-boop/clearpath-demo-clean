@@ -40,8 +40,12 @@ To keep n8n and the app decoupled, the app exposes a **local** route that runs w
   "client_id": "uuid",
   "scheduled_time": "2025-03-15T14:00:00.000Z",
   "client_email": "client@example.com",
-  "client_name": "Jane Doe"
+  "client_name": "Jane Doe",
+  "coach_name": "Coach Name",
+  "coach_email": "coach@example.com"
 }
 ```
 
-**App webhook (Option B) — implemented:** When a session is confirmed (from Schedule), the app calls `POST /api/webhooks/n8n-session-booked` with `{ session_id, coach_id, client_id, scheduled_time }`. The route enriches this with client email/name and coach name, then forwards to the URL in **`N8N_SESSION_BOOKED_WEBHOOK_URL`** (optional). Set that env var to your n8n webhook URL to have the app push session-booked events to n8n. If unset, the route still returns 200 and does not forward.
+**App webhook (Option B) — implemented:** When a session is confirmed (from Schedule), the app calls `POST /api/webhooks/n8n-session-booked` with `{ session_id, coach_id, client_id, scheduled_time }`. The route enriches this with client email/name and coach name/email, then forwards to the URL in **`N8N_SESSION_BOOKED_WEBHOOK_URL`** (optional). Set that env var to your n8n webhook URL to have the app push session-booked events to n8n. If unset, the route still returns 200 and does not forward. The payload includes `coach_email` so n8n can email the coach without an extra Supabase lookup.
+
+**Ready-to-use n8n workflow:** Import `docs/n8n-session-booked-workflow.json` and follow [docs/n8n-session-booked.md](n8n-session-booked.md) to send email alerts to coach and client when a session is booked.

@@ -73,6 +73,11 @@ type DashboardContentProps = {
   clients: ClientRow[]
   recentMessages: RecentMessageRow[]
   currentUserId: string
+  onboardingDismissed: boolean
+  hasClients: boolean
+  hasAvailability: boolean
+  hasSessionPackage: boolean
+  onDismissOnboarding: () => Promise<void>
 }
 
 type PanelId =
@@ -163,9 +168,15 @@ export function DashboardContent({
   clients,
   recentMessages,
   currentUserId,
+  onboardingDismissed,
+  hasClients,
+  hasAvailability,
+  hasSessionPackage,
+  onDismissOnboarding,
 }: DashboardContentProps) {
   const [expandedPanel, setExpandedPanel] = useState<PanelId | null>(null)
   const [connectLoading, setConnectLoading] = useState(false)
+  const [dismissingOnboarding, setDismissingOnboarding] = useState(false)
   const [currentTime, setCurrentTime] = useState(initialCurrentTime)
 
   useEffect(() => {
@@ -211,6 +222,76 @@ export function DashboardContent({
             {tagline?.trim() ?? 'Your coaching at a glance — tap any tile for details.'}
           </p>
         </div>
+
+        {!onboardingDismissed && (
+          <motion.div
+            variants={item}
+            className="rounded-2xl border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-elevated)] p-5 sm:p-6 shadow-[var(--cp-shadow-card)]"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+              <h3 className="font-medium text-[var(--cp-text-primary)]">Get started</h3>
+              <button
+                type="button"
+                onClick={async () => {
+                  setDismissingOnboarding(true)
+                  await onDismissOnboarding()
+                  setDismissingOnboarding(false)
+                }}
+                disabled={dismissingOnboarding}
+                className="text-sm text-[var(--cp-text-muted)] hover:text-[var(--cp-text-primary)] disabled:opacity-50"
+              >
+                {dismissingOnboarding ? 'Dismissing…' : 'Dismiss'}
+              </button>
+            </div>
+            <ul className="space-y-3">
+              <li className="flex items-center gap-3">
+                {hasClients ? (
+                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[var(--cp-accent-success)]/20 text-[var(--cp-accent-success)]" aria-hidden>
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                  </span>
+                ) : (
+                  <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-[var(--cp-border-subtle)] text-[var(--cp-text-muted)]" aria-hidden>1</span>
+                )}
+                <Link
+                  href="/coach/clients/new"
+                  className={hasClients ? 'text-[var(--cp-text-muted)]' : 'font-medium text-[var(--cp-accent-primary)] hover:text-[var(--cp-accent-primary-strong)]'}
+                >
+                  Add your first client
+                </Link>
+              </li>
+              <li className="flex items-center gap-3">
+                {hasAvailability ? (
+                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[var(--cp-accent-success)]/20 text-[var(--cp-accent-success)]" aria-hidden>
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                  </span>
+                ) : (
+                  <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-[var(--cp-border-subtle)] text-[var(--cp-text-muted)]" aria-hidden>2</span>
+                )}
+                <Link
+                  href="/coach/schedule"
+                  className={hasAvailability ? 'text-[var(--cp-text-muted)]' : 'font-medium text-[var(--cp-accent-primary)] hover:text-[var(--cp-accent-primary-strong)]'}
+                >
+                  Set your availability
+                </Link>
+              </li>
+              <li className="flex items-center gap-3">
+                {hasSessionPackage ? (
+                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[var(--cp-accent-success)]/20 text-[var(--cp-accent-success)]" aria-hidden>
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                  </span>
+                ) : (
+                  <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-[var(--cp-border-subtle)] text-[var(--cp-text-muted)]" aria-hidden>3</span>
+                )}
+                <Link
+                  href="/coach/session-packages"
+                  className={hasSessionPackage ? 'text-[var(--cp-text-muted)]' : 'font-medium text-[var(--cp-accent-primary)] hover:text-[var(--cp-accent-primary-strong)]'}
+                >
+                  Create a session package
+                </Link>
+              </li>
+            </ul>
+          </motion.div>
+        )}
 
         {/* Revenue hero: chart at top with count-up summary */}
         <motion.div

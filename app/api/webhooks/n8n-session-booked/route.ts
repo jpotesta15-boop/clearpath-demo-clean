@@ -42,7 +42,7 @@ export async function POST(request: Request) {
 
   const { data: coachRow } = await supabase
     .from('profiles')
-    .select('full_name')
+    .select('full_name, email')
     .eq('id', coach_id)
     .single()
 
@@ -54,6 +54,7 @@ export async function POST(request: Request) {
     client_email: clientRow?.email ?? null,
     client_name: clientRow?.full_name ?? null,
     coach_name: coachRow?.full_name ?? null,
+    coach_email: coachRow?.email ?? null,
   }
 
   if (!N8N_URL) {

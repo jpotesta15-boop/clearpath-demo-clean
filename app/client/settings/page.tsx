@@ -1,13 +1,15 @@
 'use client'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { useThemeVariant, type ThemeVariant, type ThemeMode } from '@/components/providers/ThemeVariantProvider'
+import { useThemeVariant, type ThemeVariant, type ThemeMode, VARIANT_SWATCH_COLORS } from '@/components/providers/ThemeVariantProvider'
 
 const VARIANT_LABELS: Record<ThemeVariant, string> = {
-  ocean: 'Ocean',
-  forest: 'Forest',
-  sunset: 'Sunset',
-  slate: 'Slate',
+  blue: 'Blue',
+  orange: 'Orange',
+  purple: 'Purple',
+  red: 'Red',
+  green: 'Green',
+  neutral: 'Neutral',
 }
 
 const THEME_MODE_LABELS: Record<ThemeMode, string> = {
@@ -18,7 +20,7 @@ const THEME_MODE_LABELS: Record<ThemeMode, string> = {
 export default function ClientSettingsPage() {
   const { variant, setVariant, mode, setMode } = useThemeVariant()
 
-  const variants: ThemeVariant[] = ['ocean', 'forest', 'sunset', 'slate']
+  const variants: ThemeVariant[] = ['blue', 'orange', 'purple', 'red', 'green', 'neutral']
 
   return (
     <div className="max-w-3xl space-y-6">
@@ -61,27 +63,31 @@ export default function ClientSettingsPage() {
             Accent sets buttons, links, cards, and subtle tints across the site.
           </p>
         </CardHeader>
-        <CardContent className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {variants.map((v) => (
-            <button
-              key={v}
-              type="button"
-              onClick={() => setVariant(v)}
-              className={`flex flex-col items-start rounded-lg border px-3 py-2 text-left transition-colors ${
-                v === variant
-                  ? 'border-[var(--cp-accent-primary)] bg-[var(--cp-accent-primary-soft)]'
-                  : 'border-[var(--cp-border-subtle)] hover:border-[var(--cp-accent-primary)] hover:bg-[var(--cp-bg-subtle)]'
-              }`}
-            >
-              <span className="text-sm font-medium text-[var(--cp-text-primary)]">
-                {VARIANT_LABELS[v]}
-              </span>
-              <span className="mt-1 inline-flex items-center gap-1">
-                <span className="h-2 w-6 rounded-full bg-[var(--cp-accent-primary)]" />
-                <span className="h-2 w-6 rounded-full bg-[var(--cp-accent-primary-strong)] opacity-80" />
-              </span>
-            </button>
-          ))}
+        <CardContent className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          {variants.map((v) => {
+            const [shade1, shade2, shade3] = VARIANT_SWATCH_COLORS[v]
+            return (
+              <button
+                key={v}
+                type="button"
+                onClick={() => setVariant(v)}
+                className={`flex flex-col items-start rounded-lg border px-3 py-2 text-left transition-colors ${
+                  v === variant
+                    ? 'border-[var(--cp-accent-primary)] bg-[var(--cp-accent-primary-soft)]'
+                    : 'border-[var(--cp-border-subtle)] hover:border-[var(--cp-accent-primary)] hover:bg-[var(--cp-bg-subtle)]'
+                }`}
+              >
+                <span className="text-sm font-medium text-[var(--cp-text-primary)]">
+                  {VARIANT_LABELS[v]}
+                </span>
+                <span className="mt-1 inline-flex items-center gap-1">
+                  <span className="h-2 w-6 rounded-full shrink-0" style={{ backgroundColor: shade1 }} />
+                  <span className="h-2 w-6 rounded-full shrink-0" style={{ backgroundColor: shade2 }} />
+                  <span className="h-2 w-6 rounded-full shrink-0" style={{ backgroundColor: shade3 }} />
+                </span>
+              </button>
+            )
+          })}
         </CardContent>
       </Card>
     </div>

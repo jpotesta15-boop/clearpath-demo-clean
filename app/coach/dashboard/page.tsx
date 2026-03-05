@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { startOfMonth, endOfMonth, startOfWeek, subWeeks, format } from 'date-fns'
 import { DashboardContent } from './DashboardContent'
 import { getClientId } from '@/lib/config'
+import { dismissOnboardingChecklist } from './actions'
 
 export default async function CoachDashboard() {
   const supabase = await createClient()
@@ -69,9 +70,26 @@ export default async function CoachDashboard() {
 
   const { data: coachProfile } = await supabase
     .from('profiles')
-    .select('stripe_connect_account_id, tagline')
+    .select('stripe_connect_account_id, tagline, preferences')
     .eq('id', user!.id)
     .single()
+
+  const preferences = (coachProfile?.preferences as Record<string, unknown>) ?? {}
+  const onboardingDismissed = preferences.onboarding_checklist_dismissed === true
+
+  const { count: availabilitySlotsCount } = await supabase
+    .from('availability_slots')
+    .select('*', { count: 'exact', head: true })
+    .eq('coach_id', user!.id)
+
+  const { count: sessionProductsCount } = await supabase
+    .from('session_products')
+    .select('*', { count: 'exact', head: true })
+    .eq('coach_id', user!.id)
+
+  const hasClients = (clients?.length ?? 0) > 0
+  const hasAvailability = (availabilitySlotsCount ?? 0) > 0
+  const hasSessionPackage = (sessionProductsCount ?? 0) > 0
 
   const { data: revenueRows } = await supabase
     .from('payments')
@@ -147,6 +165,11 @@ export default async function CoachDashboard() {
       clients={clients ?? []}
       recentMessages={recentMessages ?? []}
       currentUserId={user!.id}
+      onboardingDismissed={onboardingDismissed}
+      hasClients={hasClients}
+      hasAvailability={hasAvailability}
+      hasSessionPackage={hasSessionPackage}
+      onDismissOnboarding={dismissOnboardingChecklist}
     />
   )
 }

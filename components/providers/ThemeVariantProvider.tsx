@@ -2,79 +2,117 @@
 
 import * as React from "react"
 
-export type ThemeVariant = "ocean" | "forest" | "sunset" | "slate"
+export type ThemeVariant = "blue" | "orange" | "purple" | "red" | "green" | "neutral"
 
 type VariantConfig = {
   primary: string
   strong: string
+  light: string
   soft: string
   subtle: string
   muted: string
-  secondary?: string
 }
 
+// Three shades per variant: primary (darkest), strong (mid), light (lightest). Single-hue only.
 const VARIANT_COLORS: Record<ThemeVariant, VariantConfig> = {
-  ocean: {
-    primary: "#0ea5e9",
-    strong: "#38bdf8",
-    soft: "rgba(56, 189, 248, 0.16)",
-    subtle: "rgba(56, 189, 248, 0.06)",
+  blue: {
+    primary: "#0c4a6e",
+    strong: "#0ea5e9",
+    light: "#38bdf8",
+    soft: "rgba(14, 165, 233, 0.16)",
+    subtle: "rgba(14, 165, 233, 0.06)",
     muted: "rgba(56, 189, 248, 0.25)",
-    secondary: "#14b8a6",
   },
-  forest: {
-    primary: "#22c55e",
-    strong: "#4ade80",
+  orange: {
+    primary: "#c2410c",
+    strong: "#ea580c",
+    light: "#fb923c",
+    soft: "rgba(234, 88, 12, 0.16)",
+    subtle: "rgba(234, 88, 12, 0.06)",
+    muted: "rgba(251, 146, 60, 0.25)",
+  },
+  purple: {
+    primary: "#6b21a8",
+    strong: "#9333ea",
+    light: "#c084fc",
+    soft: "rgba(147, 51, 234, 0.16)",
+    subtle: "rgba(147, 51, 234, 0.06)",
+    muted: "rgba(192, 132, 252, 0.25)",
+  },
+  red: {
+    primary: "#b91c1c",
+    strong: "#dc2626",
+    light: "#f87171",
+    soft: "rgba(220, 38, 38, 0.16)",
+    subtle: "rgba(220, 38, 38, 0.06)",
+    muted: "rgba(248, 113, 113, 0.25)",
+  },
+  green: {
+    primary: "#15803d",
+    strong: "#22c55e",
+    light: "#4ade80",
     soft: "rgba(34, 197, 94, 0.16)",
     subtle: "rgba(34, 197, 94, 0.06)",
-    muted: "rgba(34, 197, 94, 0.25)",
-    secondary: "#2dd4bf",
+    muted: "rgba(74, 222, 128, 0.25)",
   },
-  sunset: {
-    primary: "#f59e0b",
-    strong: "#fbbf24",
-    soft: "rgba(245, 158, 11, 0.16)",
-    subtle: "rgba(245, 158, 11, 0.06)",
-    muted: "rgba(245, 158, 11, 0.25)",
-    secondary: "#ef4444",
-  },
-  slate: {
-    primary: "#64748b",
-    strong: "#94a3b8",
+  neutral: {
+    primary: "#475569",
+    strong: "#64748b",
+    light: "#94a3b8",
     soft: "rgba(100, 116, 139, 0.16)",
     subtle: "rgba(100, 116, 139, 0.06)",
-    muted: "rgba(100, 116, 139, 0.25)",
-    secondary: "#a78bfa",
+    muted: "rgba(148, 163, 184, 0.25)",
   },
+}
+
+export const VARIANT_SWATCH_COLORS: Record<ThemeVariant, [string, string, string]> = {
+  blue: ["#0c4a6e", "#0ea5e9", "#38bdf8"],
+  orange: ["#c2410c", "#ea580c", "#fb923c"],
+  purple: ["#6b21a8", "#9333ea", "#c084fc"],
+  red: ["#b91c1c", "#dc2626", "#f87171"],
+  green: ["#15803d", "#22c55e", "#4ade80"],
+  neutral: ["#475569", "#64748b", "#94a3b8"],
 }
 
 type TintedNeutrals = { bgSubtle: string; borderSubtle: string }
 const VARIANT_TINTED_NEUTRALS: Record<ThemeVariant, { dark: TintedNeutrals; light: TintedNeutrals }> = {
-  ocean: {
+  blue: {
     dark: { bgSubtle: "#0f172a", borderSubtle: "#1e293b" },
-    light: { bgSubtle: "#e2e8f0", borderSubtle: "#cbd5e1" },
+    light: { bgSubtle: "#e0f2fe", borderSubtle: "#bae6fd" },
   },
-  forest: {
+  orange: {
+    dark: { bgSubtle: "#1c1917", borderSubtle: "#292524" },
+    light: { bgSubtle: "#fff7ed", borderSubtle: "#ffedd5" },
+  },
+  purple: {
+    dark: { bgSubtle: "#1e1b4b", borderSubtle: "#312e81" },
+    light: { bgSubtle: "#f5f3ff", borderSubtle: "#e9d5ff" },
+  },
+  red: {
+    dark: { bgSubtle: "#1f1212", borderSubtle: "#2e1e1e" },
+    light: { bgSubtle: "#fef2f2", borderSubtle: "#fecaca" },
+  },
+  green: {
     dark: { bgSubtle: "#0f1f12", borderSubtle: "#1e3324" },
     light: { bgSubtle: "#dcfce7", borderSubtle: "#bbf7d0" },
   },
-  sunset: {
-    dark: { bgSubtle: "#1f1a0f", borderSubtle: "#2e281a" },
-    light: { bgSubtle: "#fef3c7", borderSubtle: "#fde68a" },
-  },
-  slate: {
-    dark: { bgSubtle: "#0f172a", borderSubtle: "#1e293b" },
+  neutral: {
+    dark: { bgSubtle: "#1e293b", borderSubtle: "#334155" },
     light: { bgSubtle: "#f1f5f9", borderSubtle: "#e2e8f0" },
   },
 }
 
 const LEGACY_VARIANT_MAP: Record<string, ThemeVariant> = {
-  blue: "ocean",
-  green: "forest",
-  red: "sunset",
-  purple: "slate",
-  amber: "sunset",
-  teal: "ocean",
+  ocean: "blue",
+  forest: "green",
+  sunset: "orange",
+  slate: "neutral",
+  blue: "blue",
+  green: "green",
+  red: "red",
+  purple: "purple",
+  amber: "orange",
+  teal: "blue",
 }
 
 const VARIANT_STORAGE_KEY = "cp-theme-variant"
@@ -103,9 +141,7 @@ function applyVariant(variant: ThemeVariant) {
   root.style.setProperty("--cp-accent-primary-soft", config.soft)
   root.style.setProperty("--cp-accent-primary-subtle", config.subtle)
   root.style.setProperty("--cp-accent-primary-muted", config.muted)
-  if (config.secondary) {
-    root.style.setProperty("--cp-accent-secondary", config.secondary)
-  }
+  root.style.setProperty("--cp-accent-secondary", config.strong)
 
   const effective = root.getAttribute("data-theme") === "light" ? "light" : "dark"
   const tinted = VARIANT_TINTED_NEUTRALS[variant][effective]
@@ -119,7 +155,7 @@ function applyMode(mode: ThemeMode) {
 }
 
 export function ThemeVariantProvider({ children }: { children: React.ReactNode }) {
-  const [variant, setVariantState] = React.useState<ThemeVariant>("ocean")
+  const [variant, setVariantState] = React.useState<ThemeVariant>("blue")
   const [mode, setModeState] = React.useState<ThemeMode>("dark")
 
   // Load persisted variant and mode on mount (mode first so applyVariant can read data-theme for tinted neutrals)
@@ -134,7 +170,7 @@ export function ThemeVariantProvider({ children }: { children: React.ReactNode }
     const resolvedVariant =
       storedVariant && VARIANT_COLORS[storedVariant as ThemeVariant]
         ? (storedVariant as ThemeVariant)
-        : LEGACY_VARIANT_MAP[storedVariant ?? ""] ?? "ocean"
+        : LEGACY_VARIANT_MAP[storedVariant ?? ""] ?? "blue"
     setVariantState(resolvedVariant)
     applyVariant(resolvedVariant)
   }, [])

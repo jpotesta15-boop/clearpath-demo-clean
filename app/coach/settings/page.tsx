@@ -5,13 +5,15 @@ import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { useThemeVariant, type ThemeVariant, type ThemeMode } from '@/components/providers/ThemeVariantProvider'
+import { useThemeVariant, type ThemeVariant, type ThemeMode, VARIANT_SWATCH_COLORS } from '@/components/providers/ThemeVariantProvider'
 
 const VARIANT_LABELS: Record<ThemeVariant, string> = {
-  ocean: 'Ocean',
-  forest: 'Forest',
-  sunset: 'Sunset',
-  slate: 'Slate',
+  blue: 'Blue',
+  orange: 'Orange',
+  purple: 'Purple',
+  red: 'Red',
+  green: 'Green',
+  neutral: 'Neutral',
 }
 
 const TIMEZONES = [
@@ -46,7 +48,7 @@ export default function CoachSettingsPage() {
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const supabase = createClient()
-  const variants: ThemeVariant[] = ['ocean', 'forest', 'sunset', 'slate']
+  const variants: ThemeVariant[] = ['blue', 'orange', 'purple', 'red', 'green', 'neutral']
 
   useEffect(() => {
     const load = async () => {
@@ -117,6 +119,13 @@ export default function CoachSettingsPage() {
         </p>
       </div>
 
+      <div className="rounded-lg border border-[var(--cp-border-subtle)] bg-[var(--cp-accent-primary-subtle)] px-4 py-3">
+        <p className="text-sm font-medium text-[var(--cp-text-primary)]">Recommended</p>
+        <p className="mt-1 text-sm text-[var(--cp-text-muted)]">
+          Set your display name, business name, and logo so your client portal looks complete. Add a tagline for your dashboard. These appear in the sidebar and client-facing views.
+        </p>
+      </div>
+
       <Card>
         <CardHeader>
           <CardTitle>Theme mode</CardTitle>
@@ -149,42 +158,47 @@ export default function CoachSettingsPage() {
             Accent sets buttons, links, cards, and subtle tints across the site.
           </p>
         </CardHeader>
-        <CardContent className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {variants.map((v) => (
-            <button
-              key={v}
-              type="button"
-              onClick={() => setVariant(v)}
-              className={`flex flex-col items-start rounded-lg border px-3 py-2 text-left transition-colors ${
-                v === variant
-                  ? 'border-[var(--cp-accent-primary)] bg-[var(--cp-accent-primary-soft)]'
-                  : 'border-[var(--cp-border-subtle)] hover:border-[var(--cp-accent-primary)] hover:bg-[var(--cp-bg-subtle)]'
-              }`}
-            >
-              <span className="text-sm font-medium text-[var(--cp-text-primary)]">
-                {VARIANT_LABELS[v]}
-              </span>
-              <span className="mt-1 inline-flex items-center gap-1">
-                <span className="h-2 w-6 rounded-full bg-[var(--cp-accent-primary)]" />
-                <span className="h-2 w-6 rounded-full bg-[var(--cp-accent-primary-strong)] opacity-80" />
-              </span>
-            </button>
-          ))}
+        <CardContent className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          {variants.map((v) => {
+            const [shade1, shade2, shade3] = VARIANT_SWATCH_COLORS[v]
+            return (
+              <button
+                key={v}
+                type="button"
+                onClick={() => setVariant(v)}
+                className={`flex flex-col items-start rounded-lg border px-3 py-2 text-left transition-colors ${
+                  v === variant
+                    ? 'border-[var(--cp-accent-primary)] bg-[var(--cp-accent-primary-soft)]'
+                    : 'border-[var(--cp-border-subtle)] hover:border-[var(--cp-accent-primary)] hover:bg-[var(--cp-bg-subtle)]'
+                }`}
+              >
+                <span className="text-sm font-medium text-[var(--cp-text-primary)]">
+                  {VARIANT_LABELS[v]}
+                </span>
+                <span className="mt-1 inline-flex items-center gap-1">
+                  <span className="h-2 w-6 rounded-full shrink-0" style={{ backgroundColor: shade1 }} />
+                  <span className="h-2 w-6 rounded-full shrink-0" style={{ backgroundColor: shade2 }} />
+                  <span className="h-2 w-6 rounded-full shrink-0" style={{ backgroundColor: shade3 }} />
+                </span>
+              </button>
+            )
+          })}
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Display name</CardTitle>
+          <CardTitle>Profile & preferences</CardTitle>
           <p className="text-sm font-normal text-[var(--cp-text-muted)]">
-            Name shown in the sidebar. Leave blank to use your organization brand name.
+            Your name, business details, and branding. Recommended fields help your client portal look complete.
           </p>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSavePreferences} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-[var(--cp-text-primary)] mb-1">
-                Sidebar label
+              <label className="flex items-center gap-2 text-sm font-medium text-[var(--cp-text-primary)] mb-1">
+                Display name
+                <span className="text-[10px] font-normal uppercase tracking-wider text-[var(--cp-accent-primary)]">Recommended</span>
               </label>
               <Input
                 value={displayName}
@@ -192,10 +206,14 @@ export default function CoachSettingsPage() {
                 placeholder="e.g. My Coaching"
                 className="max-w-xs bg-[var(--cp-bg-surface)] border-[var(--cp-border-subtle)]"
               />
+              <p className="text-xs text-[var(--cp-text-muted)] mt-1">
+                Shown in the sidebar. Leave blank to use your business name.
+              </p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-[var(--cp-text-primary)] mb-1">
+              <label className="flex items-center gap-2 text-sm font-medium text-[var(--cp-text-primary)] mb-1">
                 Business / organization name
+                <span className="text-[10px] font-normal uppercase tracking-wider text-[var(--cp-accent-primary)]">Recommended</span>
               </label>
               <Input
                 value={businessName}
@@ -204,7 +222,7 @@ export default function CoachSettingsPage() {
                 className="max-w-xs bg-[var(--cp-bg-surface)] border-[var(--cp-border-subtle)]"
               />
               <p className="text-xs text-[var(--cp-text-muted)] mt-1">
-                For invoices or client-facing labels. Optional.
+                Shown in the client portal and on invoices.
               </p>
             </div>
             <div>
@@ -258,8 +276,9 @@ export default function CoachSettingsPage() {
               Notification preferences. More options may be added later.
             </p>
             <div>
-              <label className="block text-sm font-medium text-[var(--cp-text-primary)] mb-1">
+              <label className="flex items-center gap-2 text-sm font-medium text-[var(--cp-text-primary)] mb-1">
                 Logo URL
+                <span className="text-[10px] font-normal uppercase tracking-wider text-[var(--cp-accent-primary)]">Recommended</span>
               </label>
               <Input
                 value={logoUrl}
@@ -268,12 +287,13 @@ export default function CoachSettingsPage() {
                 className="max-w-md bg-[var(--cp-bg-surface)] border-[var(--cp-border-subtle)]"
               />
               <p className="text-xs text-[var(--cp-text-muted)] mt-1">
-                Optional. Shown in the sidebar. Use a direct image URL.
+                Shown in the sidebar and client portal header. Use a direct image URL.
               </p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-[var(--cp-text-primary)] mb-1">
+              <label className="flex items-center gap-2 text-sm font-medium text-[var(--cp-text-primary)] mb-1">
                 Tagline
+                <span className="text-[10px] font-normal uppercase tracking-wider text-[var(--cp-accent-primary)]">Recommended</span>
               </label>
               <Input
                 value={tagline}
@@ -282,7 +302,7 @@ export default function CoachSettingsPage() {
                 className="max-w-md bg-[var(--cp-bg-surface)] border-[var(--cp-border-subtle)]"
               />
               <p className="text-xs text-[var(--cp-text-muted)] mt-1">
-                Optional. Short line shown on your dashboard.
+                Short line shown on your dashboard and in the client portal.
               </p>
             </div>
             {message && (

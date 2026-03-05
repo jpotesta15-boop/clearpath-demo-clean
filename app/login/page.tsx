@@ -2,11 +2,12 @@
 
 import { Suspense, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { motion } from 'framer-motion'
 import { createClient } from '@/lib/supabase/client'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { AppLayout } from '@/components/layout/AppLayout'
 import { FormField, FormLabel, FormError } from '@/components/ui/form'
+import { pageTransition } from '@/lib/theme/animation'
 
 function LoginForm() {
   const [email, setEmail] = useState('')
@@ -101,36 +102,30 @@ function LoginForm() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--cp-bg-page)] text-[var(--cp-text-primary)] flex items-stretch">
-      <AppLayout className="flex items-stretch gap-0 lg:gap-12">
-        <div className="hidden lg:flex flex-1 items-center justify-center relative overflow-hidden">
-          <div className="absolute inset-0 opacity-60 bg-[radial-gradient(circle_at_top,_var(--cp-accent-primary)_0,_transparent_55%),_radial-gradient(circle_at_bottom,_var(--cp-accent-success)_0,_transparent_55%)]" />
-          <div className="relative max-w-md w-full">
-            <h1 className="text-3xl font-semibold tracking-tight mb-4 text-[var(--cp-text-primary)]">ClearPath Coach OS</h1>
-            <p className="text-sm text-[var(--cp-text-muted)] mb-6">
-              Run your coaching business in one place: programs, videos, messaging, and payments.
-            </p>
-            <div className="rounded-2xl bg-[var(--cp-bg-elevated)] border border-[var(--cp-border-subtle)] shadow-[var(--cp-shadow-card)] p-4 space-y-3">
-              <div className="flex items-center justify-between text-xs text-[var(--cp-text-muted)]">
-                <span>Today&apos;s sessions</span>
-                <span className="text-[var(--cp-accent-success)] font-medium">+3 scheduled</span>
-              </div>
-              <div className="h-1.5 w-full rounded-full bg-[var(--cp-border-subtle)] overflow-hidden">
-                <div className="h-full w-2/3 rounded-full bg-gradient-to-r from-[var(--cp-accent-primary)] to-[var(--cp-accent-success)]" />
-              </div>
-              <p className="text-[11px] text-[var(--cp-text-subtle)]">
-                Log in as a coach or client to see your personalized dashboard.
-              </p>
-            </div>
-          </div>
-        </div>
+    <div className="min-h-screen bg-[var(--cp-bg-page)] text-[var(--cp-text-primary)] flex flex-col items-center justify-center p-4 relative overflow-hidden">
+      {/* Distinct gate background: soft grid pattern instead of dashboard-style gradient */}
+      <div
+        className="absolute inset-0 opacity-[0.03]"
+        style={{
+          backgroundImage: `linear-gradient(var(--cp-border-subtle) 1px, transparent 1px), linear-gradient(90deg, var(--cp-border-subtle) 1px, transparent 1px)`,
+          backgroundSize: '24px 24px',
+        }}
+      />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,var(--cp-accent-primary)_0%,transparent_50%)] opacity-20" />
 
-        <div className="flex-1 flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-[var(--cp-bg-elevated)] border border-[var(--cp-border-subtle)] rounded-2xl shadow-[var(--cp-shadow-card)] p-6 sm:p-8">
-            <div className="mb-8 text-center">
-              <h2 className="text-2xl font-semibold tracking-tight text-[var(--cp-text-primary)]">Welcome back</h2>
-              <p className="mt-2 text-sm text-[var(--cp-text-muted)]">Sign in to your coach or client portal.</p>
-            </div>
+      <motion.div
+        className="relative w-full max-w-md"
+        initial={pageTransition.initial}
+        animate={pageTransition.animate}
+        transition={pageTransition.transition}
+      >
+        <div className="rounded-2xl border border-[var(--cp-border-subtle)] border-t-4 border-t-[var(--cp-accent-primary)] bg-[var(--cp-bg-elevated)] shadow-[var(--cp-shadow-card)] p-6 sm:p-8">
+          <div className="mb-8 text-center">
+            <h1 className="text-2xl font-semibold tracking-tight text-[var(--cp-text-primary)]">ClearPath Coach OS</h1>
+            <p className="mt-1 text-[11px] uppercase tracking-wider text-[var(--cp-text-subtle)]">Coach & client portal</p>
+            <h2 className="mt-6 text-xl font-semibold tracking-tight text-[var(--cp-text-primary)]">Welcome back</h2>
+            <p className="mt-2 text-sm text-[var(--cp-text-muted)]">Sign in to your coach or client portal.</p>
+          </div>
             <form className="space-y-5" onSubmit={handleLogin}>
               <div className="space-y-4">
                 <FormField>
@@ -220,8 +215,7 @@ function LoginForm() {
               )}
             </div>
           </div>
-        </div>
-      </AppLayout>
+        </motion.div>
     </div>
   )
 }
