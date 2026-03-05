@@ -41,6 +41,7 @@ type RecentMessageRow = {
 }
 
 type DashboardContentProps = {
+  tagline?: string | null
   stripeConnectAccountId: string | null
   totalClients: number
   upcomingCount: number
@@ -192,7 +193,7 @@ export function DashboardContent({
         <div className="flex flex-col gap-3">
           <h1 className="text-3xl font-bold text-[var(--cp-text-primary)]">Welcome back</h1>
           <p className="text-sm text-[var(--cp-text-muted)]">
-            Your coaching at a glance — tap any tile for details.
+            {tagline?.trim() ?? 'Your coaching at a glance — tap any tile for details.'}
           </p>
         </div>
 
@@ -233,6 +234,23 @@ export function DashboardContent({
             )}
           </div>
         </div>
+      </motion.div>
+
+      <motion.div variants={item}>
+        <Link
+          href="/coach/analytics"
+          className="block rounded-2xl border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-elevated)] p-4 shadow-[var(--cp-shadow-soft)] hover:border-[var(--cp-accent-primary)]/50 transition-colors"
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h3 className="font-medium text-[var(--cp-text-primary)]">Revenue & activity</h3>
+              <p className="text-sm text-[var(--cp-text-muted)] mt-0.5">
+                View analytics: monthly revenue, client sessions, and spending.
+              </p>
+            </div>
+            <span className="text-[var(--cp-accent-primary)] font-medium text-sm shrink-0">View analytics →</span>
+          </div>
+        </Link>
       </motion.div>
 
       <motion.div variants={item} className="rounded-2xl border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-elevated)] p-4 shadow-[var(--cp-shadow-soft)]">

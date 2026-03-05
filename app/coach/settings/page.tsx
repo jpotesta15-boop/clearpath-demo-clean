@@ -31,8 +31,12 @@ const TIMEZONES = [
 export default function CoachSettingsPage() {
   const { variant, setVariant } = useThemeVariant()
   const [displayName, setDisplayName] = useState('')
+  const [businessName, setBusinessName] = useState('')
   const [timezone, setTimezone] = useState('')
   const [defaultSessionMinutes, setDefaultSessionMinutes] = useState(45)
+  const [notifySessionBooked, setNotifySessionBooked] = useState(false)
+  const [logoUrl, setLogoUrl] = useState('')
+  const [tagline, setTagline] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
@@ -48,18 +52,22 @@ export default function CoachSettingsPage() {
       }
       const { data: profile } = await supabase
         .from('profiles')
-        .select('display_name, timezone, preferences')
+        .select('display_name, timezone, preferences, logo_url, tagline')
         .eq('id', user.id)
         .single()
       if (profile) {
         setDisplayName(profile.display_name ?? '')
         setTimezone(profile.timezone ?? '')
         const prefs = (profile.preferences as Record<string, unknown>) ?? {}
+        setBusinessName((prefs.business_name as string) ?? '')
         setDefaultSessionMinutes(
           typeof prefs.default_session_duration_minutes === 'number'
             ? prefs.default_session_duration_minutes
             : 45
         )
+        setNotifySessionBooked(prefs.notify_session_booked === true)
+        setLogoUrl(profile.logo_url ?? '')
+        setTagline(profile.tagline ?? '')
       }
       setLoading(false)
     }
@@ -77,7 +85,13 @@ export default function CoachSettingsPage() {
       .update({
         display_name: displayName.trim() || null,
         timezone: timezone || null,
-        preferences: { default_session_duration_minutes: defaultSessionMinutes },
+        preferences: {
+          default_session_duration_minutes: defaultSessionMinutes,
+          business_name: businessName.trim() || null,
+          notify_session_booked: notifySessionBooked,
+        },
+        logo_url: logoUrl.trim() || null,
+        tagline: tagline.trim() || null,
         updated_at: new Date().toISOString(),
       })
       .eq('id', user.id)
@@ -151,6 +165,20 @@ export default function CoachSettingsPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-[var(--cp-text-primary)] mb-1">
+                Business / organization name
+              </label>
+              <Input
+                value={businessName}
+                onChange={(e) => setBusinessName(e.target.value)}
+                placeholder="e.g. Acme Fitness"
+                className="max-w-xs bg-[var(--cp-bg-surface)] border-[var(--cp-border-subtle)]"
+              />
+              <p className="text-xs text-[var(--cp-text-muted)] mt-1">
+                For invoices or client-facing labels. Optional.
+              </p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[var(--cp-text-primary)] mb-1">
                 Time zone
               </label>
               <select
@@ -182,6 +210,49 @@ export default function CoachSettingsPage() {
               />
               <p className="text-xs text-[var(--cp-text-muted)] mt-1">
                 Default when creating availability or session packages.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="notify_session_booked"
+                checked={notifySessionBooked}
+                onChange={(e) => setNotifySessionBooked(e.target.checked)}
+                className="rounded border-[var(--cp-border-subtle)]"
+              />
+              <label htmlFor="notify_session_booked" className="text-sm text-[var(--cp-text-primary)]">
+                Email me when a session is booked
+              </label>
+            </div>
+            <p className="text-xs text-[var(--cp-text-muted)]">
+              Notification preferences. More options may be added later.
+            </p>
+            <div>
+              <label className="block text-sm font-medium text-[var(--cp-text-primary)] mb-1">
+                Logo URL
+              </label>
+              <Input
+                value={logoUrl}
+                onChange={(e) => setLogoUrl(e.target.value)}
+                placeholder="https://..."
+                className="max-w-md bg-[var(--cp-bg-surface)] border-[var(--cp-border-subtle)]"
+              />
+              <p className="text-xs text-[var(--cp-text-muted)] mt-1">
+                Optional. Shown in the sidebar. Use a direct image URL.
+              </p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[var(--cp-text-primary)] mb-1">
+                Tagline
+              </label>
+              <Input
+                value={tagline}
+                onChange={(e) => setTagline(e.target.value)}
+                placeholder="e.g. Your journey to peak performance"
+                className="max-w-md bg-[var(--cp-bg-surface)] border-[var(--cp-border-subtle)]"
+              />
+              <p className="text-xs text-[var(--cp-text-muted)] mt-1">
+                Optional. Short line shown on your dashboard.
               </p>
             </div>
             {message && (

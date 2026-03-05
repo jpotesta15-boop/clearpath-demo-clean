@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { ClientNotesEditor } from './ClientNotesEditor'
 import { SessionHistoryWithPay } from './SessionHistoryWithPay'
 import { ClientPortalAccess } from './ClientPortalAccess'
+import { ClientProfileDetails } from './ClientProfileDetails'
 import { DeleteClientButton } from './DeleteClientButton'
 
 export default async function ClientDetailPage({
@@ -132,6 +133,12 @@ export default async function ClientDetailPage({
             <p><span className="font-medium">Phone:</span> {client.phone || 'N/A'}</p>
           </CardContent>
         </Card>
+        <ClientProfileDetails
+          clientId={client.id}
+          height={(client as { height?: string | null }).height ?? null}
+          weightKg={(client as { weight_kg?: number | null }).weight_kg ?? null}
+          dateOfBirth={(client as { date_of_birth?: string | null }).date_of_birth ?? null}
+        />
         <ClientPortalAccess clientEmail={client.email ?? null} />
       </div>
 

@@ -36,3 +36,26 @@ export async function deleteClientAction(clientId: string): Promise<{ error?: st
   revalidatePath('/coach/clients/[id]', 'page')
   redirect('/coach/clients')
 }
+
+export async function updateClientProfileAction(
+  clientId: string,
+  data: { height?: string | null; weight_kg?: number | null; date_of_birth?: string | null }
+): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+
+  const { error } = await supabase
+    .from('clients')
+    .update({
+      height: data.height ?? null,
+      weight_kg: data.weight_kg ?? null,
+      date_of_birth: data.date_of_birth ?? null,
+    })
+    .eq('id', clientId)
+    .eq('coach_id', user.id)
+
+  if (error) return { error: error.message }
+  revalidatePath(`/coach/clients/${clientId}`)
+  return {}
+}

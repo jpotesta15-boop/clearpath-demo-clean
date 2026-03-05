@@ -13,6 +13,11 @@ const iconMap: Record<string, React.ReactNode> = {
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
     </svg>
   ),
+  Analytics: (
+    <svg className="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+    </svg>
+  ),
   Clients: (
     <svg className="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
@@ -72,6 +77,7 @@ export default function SidebarNav({ navItems }: { navItems: NavItem[] }) {
   const router = useRouter()
   const supabase = createClient()
   const [brandLabel, setBrandLabel] = useState('ClearPath')
+  const [logoUrl, setLogoUrl] = useState<string | null>(null)
   const [expanded, setExpanded] = useState(true)
 
   useEffect(() => {
@@ -85,13 +91,20 @@ export default function SidebarNav({ navItems }: { navItems: NavItem[] }) {
       if (user) {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('display_name')
+          .select('display_name, logo_url')
           .eq('id', user.id)
           .single()
         if (profile?.display_name?.trim()) {
           setBrandLabel(profile.display_name.trim())
-          return
+        } else {
+          getClientName().then(setBrandLabel).catch(() => {})
         }
+        if (profile?.logo_url?.trim()) {
+          setLogoUrl(profile.logo_url.trim())
+        } else {
+          setLogoUrl(null)
+        }
+        return
       }
       getClientName().then(setBrandLabel).catch(() => {})
     }
@@ -117,8 +130,17 @@ export default function SidebarNav({ navItems }: { navItems: NavItem[] }) {
         }`}
         aria-label="Primary navigation"
       >
-        <div className="flex h-16 items-center border-b border-[var(--cp-border-subtle)] px-3">
-          {expanded ? (
+        <div className="flex h-16 items-center border-b border-[var(--cp-border-subtle)] px-3 gap-2">
+          {logoUrl ? (
+            <>
+              <img src={logoUrl} alt="" className="h-8 w-8 object-contain shrink-0 rounded" />
+              {expanded && (
+                <span className="text-lg font-bold text-[var(--cp-accent-primary)] truncate">
+                  {brandLabel}
+                </span>
+              )}
+            </>
+          ) : expanded ? (
             <span className="text-lg font-bold text-[var(--cp-accent-primary)] truncate">
               {brandLabel}
             </span>

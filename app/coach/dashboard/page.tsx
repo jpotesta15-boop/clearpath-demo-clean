@@ -69,7 +69,7 @@ export default async function CoachDashboard() {
 
   const { data: coachProfile } = await supabase
     .from('profiles')
-    .select('stripe_connect_account_id')
+    .select('stripe_connect_account_id, tagline')
     .eq('id', user!.id)
     .single()
 
@@ -128,6 +128,7 @@ export default async function CoachDashboard() {
 
   return (
     <DashboardContent
+      tagline={coachProfile?.tagline ?? null}
       stripeConnectAccountId={coachProfile?.stripe_connect_account_id ?? null}
       totalClients={clients?.length ?? 0}
       upcomingCount={upcomingSessions?.length ?? 0}
