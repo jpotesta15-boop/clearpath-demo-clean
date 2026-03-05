@@ -149,7 +149,7 @@ export default function CoachSettingsPage() {
         <CardHeader>
           <CardTitle>Accent color</CardTitle>
           <p className="text-sm font-normal text-[var(--cp-text-muted)]">
-            Choose an accent color. All pages will update to match.
+            Accent sets buttons, links, cards, and subtle tints across the site.
           </p>
         </CardHeader>
         <CardContent className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">

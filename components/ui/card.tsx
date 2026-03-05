@@ -24,11 +24,11 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
     const baseClasses = cn(
       "rounded-lg border transition-shadow",
       {
-        // Default content surface
+        // Default content surface; subtle accent tint for cohesion
         "border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] shadow-[var(--cp-shadow-soft)]":
           variant === "surface",
-        // Elevated / primary tiles
-        "border-[var(--cp-border-strong)] bg-[var(--cp-bg-elevated)] shadow-[var(--cp-shadow-card)]":
+        // Elevated / primary tiles; left border accent + optional subtle bg tint
+        "border-[var(--cp-border-strong)] border-l-[3px] border-l-[var(--cp-accent-primary-muted)] bg-[var(--cp-bg-elevated)] shadow-[var(--cp-shadow-card)]":
           variant === "raised",
         // Minimal / inline container
         "border-transparent bg-transparent shadow-none": variant === "ghost",

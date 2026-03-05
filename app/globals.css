@@ -21,10 +21,13 @@
   --cp-text-subtle: #9ca3af;       /* gray-400 */
   --cp-text-on-accent: #0b1120;    /* slate-950 on bright accent */
 
-  /* Accent palette (default: blue variant) */
+  /* Accent palette (default: blue variant; overwritten by ThemeVariantProvider) */
   --cp-accent-primary: var(--cp-brand-primary);
   --cp-accent-primary-soft: rgba(56, 189, 248, 0.16);
   --cp-accent-primary-strong: var(--cp-brand-secondary);
+  --cp-accent-primary-subtle: rgba(56, 189, 248, 0.06);
+  --cp-accent-primary-muted: rgba(56, 189, 248, 0.25);
+  --cp-bg-accent-subtle: var(--cp-accent-primary-subtle);
   --cp-accent-success: #22c55e;
   --cp-accent-warning: #f97316;
   --cp-accent-danger: #ef4444;
