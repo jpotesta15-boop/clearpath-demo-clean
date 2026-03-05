@@ -8,12 +8,10 @@ import { Input } from '@/components/ui/input'
 import { useThemeVariant, type ThemeVariant, type ThemeMode } from '@/components/providers/ThemeVariantProvider'
 
 const VARIANT_LABELS: Record<ThemeVariant, string> = {
-  blue: 'Blue',
-  green: 'Green',
-  red: 'Red',
-  purple: 'Purple',
-  amber: 'Amber',
-  teal: 'Teal',
+  ocean: 'Ocean',
+  forest: 'Forest',
+  sunset: 'Sunset',
+  slate: 'Slate',
 }
 
 const TIMEZONES = [
@@ -33,7 +31,6 @@ const TIMEZONES = [
 const THEME_MODE_LABELS: Record<ThemeMode, string> = {
   dark: 'Dark',
   light: 'Light',
-  system: 'System',
 }
 
 export default function CoachSettingsPage() {
@@ -49,7 +46,7 @@ export default function CoachSettingsPage() {
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const supabase = createClient()
-  const variants: ThemeVariant[] = ['blue', 'green', 'red', 'purple', 'amber', 'teal']
+  const variants: ThemeVariant[] = ['ocean', 'forest', 'sunset', 'slate']
 
   useEffect(() => {
     const load = async () => {
@@ -124,11 +121,11 @@ export default function CoachSettingsPage() {
         <CardHeader>
           <CardTitle>Theme mode</CardTitle>
           <p className="text-sm font-normal text-[var(--cp-text-muted)]">
-            Dark, light, or follow your device setting.
+            Dark or light theme.
           </p>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-3">
-          {(['dark', 'light', 'system'] as const).map((m) => (
+          {(['dark', 'light'] as const).map((m) => (
             <button
               key={m}
               type="button"
@@ -152,7 +149,7 @@ export default function CoachSettingsPage() {
             Accent sets buttons, links, cards, and subtle tints across the site.
           </p>
         </CardHeader>
-        <CardContent className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <CardContent className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {variants.map((v) => (
             <button
               key={v}

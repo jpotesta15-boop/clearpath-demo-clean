@@ -27,6 +27,7 @@
   --cp-accent-primary-strong: var(--cp-brand-secondary);
   --cp-accent-primary-subtle: rgba(56, 189, 248, 0.06);
   --cp-accent-primary-muted: rgba(56, 189, 248, 0.25);
+  --cp-accent-secondary: #14b8a6;
   --cp-bg-accent-subtle: var(--cp-accent-primary-subtle);
   --cp-accent-success: #22c55e;
   --cp-accent-warning: #f97316;
