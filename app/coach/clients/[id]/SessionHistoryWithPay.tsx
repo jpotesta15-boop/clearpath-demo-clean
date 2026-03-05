@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
+import { EmptyState } from '@/components/ui/empty-state'
 import { format } from 'date-fns'
 
 type SessionRow = {
@@ -26,7 +27,13 @@ export function SessionHistoryWithPay({ sessions }: { sessions: SessionRow[] }) 
   }
 
   if (!sessions || sessions.length === 0) {
-    return <p className="text-gray-500">No sessions yet</p>
+    return (
+      <EmptyState
+        title="No sessions yet"
+        description="Sessions will appear here after you schedule them."
+        className="py-6"
+      />
+    )
   }
 
   return (

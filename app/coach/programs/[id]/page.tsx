@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Loading } from '@/components/ui/loading'
 import { Input } from '@/components/ui/input'
 import Link from 'next/link'
 import {
@@ -359,7 +360,7 @@ export default function ProgramDetailPage() {
     loadData()
   }
 
-  if (loading) return <div className="p-4">Loading...</div>
+  if (loading) return <Loading />
   if (!program) return <div className="p-4">Program not found</div>
 
   const unassignedClients = allClients.filter(

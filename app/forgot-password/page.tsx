@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { FormField, FormLabel, FormError } from '@/components/ui/form'
+import { getSafeAuthMessage } from '@/lib/safe-messages'
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('')
@@ -26,7 +27,7 @@ export default function ForgotPasswordPage() {
     })
     setLoading(false)
     if (err) {
-      setError(err.message)
+      setError(getSafeAuthMessage('forgot'))
     } else {
       setSent(true)
     }

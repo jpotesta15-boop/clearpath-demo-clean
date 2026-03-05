@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useThemeVariant, type ThemeVariant, type ThemeMode, VARIANT_SWATCH_COLORS } from '@/components/providers/ThemeVariantProvider'
+import { GENERIC_FAILED } from '@/lib/safe-messages'
 
 const VARIANT_LABELS: Record<ThemeVariant, string> = {
   blue: 'Blue',
@@ -104,7 +105,7 @@ export default function CoachSettingsPage() {
     const { error } = await supabase.storage.from('avatars').upload(path, file, { upsert: true })
     setLogoUploading(false)
     if (error) {
-      setLogoError(error.message)
+      setLogoError(GENERIC_FAILED)
       return
     }
     const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path)
@@ -141,7 +142,7 @@ export default function CoachSettingsPage() {
       .eq('id', user.id)
     setSaving(false)
     if (error) {
-      setMessage(error.message)
+      setMessage(GENERIC_FAILED)
     } else {
       setMessage('Saved.')
     }

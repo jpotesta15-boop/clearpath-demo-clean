@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getClientId } from '@/lib/config'
 import SidebarNav from '@/components/SidebarNav'
 import { AppLayout } from '@/components/layout/AppLayout'
-import { AnimatedPage } from '@/components/layout/AnimatedPage'
+import { AnimatedPageWithExit } from '@/components/layout/AnimatedPage'
 
 const clientNavItems = [
   { href: '/client/dashboard', label: 'Dashboard' },
@@ -47,7 +47,7 @@ export default async function ClientLayout({
     <div className="flex min-h-screen bg-[var(--cp-bg-page)] text-[var(--cp-text-primary)]">
       <SidebarNav navItems={clientNavItems} />
       <AppLayout>
-        <AnimatedPage>{children}</AnimatedPage>
+        <AnimatedPageWithExit>{children}</AnimatedPageWithExit>
       </AppLayout>
     </div>
   )

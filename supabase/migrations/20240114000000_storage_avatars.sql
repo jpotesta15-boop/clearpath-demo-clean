@@ -12,6 +12,7 @@ VALUES (
 ON CONFLICT (id) DO NOTHING;
 
 -- RLS: users can upload/update/delete only in their own folder (path: {auth.uid()}/...)
+DROP POLICY IF EXISTS "Users can upload own avatar" ON storage.objects;
 CREATE POLICY "Users can upload own avatar"
 ON storage.objects FOR INSERT
 TO authenticated
@@ -20,6 +21,7 @@ WITH CHECK (
   AND (storage.foldername(name))[1] = auth.uid()::text
 );
 
+DROP POLICY IF EXISTS "Users can update own avatar" ON storage.objects;
 CREATE POLICY "Users can update own avatar"
 ON storage.objects FOR UPDATE
 TO authenticated
@@ -28,6 +30,7 @@ USING (
   AND (storage.foldername(name))[1] = auth.uid()::text
 );
 
+DROP POLICY IF EXISTS "Users can delete own avatar" ON storage.objects;
 CREATE POLICY "Users can delete own avatar"
 ON storage.objects FOR DELETE
 TO authenticated

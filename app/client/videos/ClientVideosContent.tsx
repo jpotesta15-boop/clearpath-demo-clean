@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { EmptyState } from '@/components/ui/empty-state'
 import { getEmbedUrl } from '@/lib/video-embed'
 
 type VideoAssignment = {
@@ -69,7 +70,11 @@ export function ClientVideosContent({ assignments }: { assignments: VideoAssignm
             )
           })
         ) : (
-          <p className="text-[var(--cp-text-muted)] col-span-full">No videos assigned yet</p>
+          <EmptyState
+            title="No videos assigned yet"
+            description="Your coach will assign videos here."
+            className="col-span-full py-8"
+          />
         )}
       </div>
 

@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { EmptyState } from '@/components/ui/empty-state'
 import { format } from 'date-fns'
 
 export default async function ClientDashboard() {
@@ -69,7 +70,11 @@ export default async function ClientDashboard() {
                 ))}
               </div>
             ) : (
-              <p className="text-[var(--cp-text-muted)] text-sm">No upcoming sessions</p>
+              <EmptyState
+                title="No upcoming sessions"
+                description="Nothing scheduled yet. Your coach may send you an offer."
+                action={{ label: "View schedule", href: "/client/schedule" }}
+              />
             )}
           </CardContent>
         </Card>
@@ -91,7 +96,11 @@ export default async function ClientDashboard() {
                 ))}
               </div>
             ) : (
-              <p className="text-[var(--cp-text-muted)] text-sm">No programs assigned</p>
+              <EmptyState
+                title="No programs assigned"
+                description="Your coach will assign programs here."
+                action={{ label: "View programs", href: "/client/programs" }}
+              />
             )}
           </CardContent>
         </Card>

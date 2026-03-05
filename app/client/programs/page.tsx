@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { EmptyState } from '@/components/ui/empty-state'
 import Link from 'next/link'
 
 export default async function ClientProgramsPage() {
@@ -134,14 +135,22 @@ export default async function ClientProgramsPage() {
                       })}
                     </ol>
                   ) : (
-                    <p className="text-gray-500 text-sm">No lessons in this program yet.</p>
+                    <EmptyState
+                      title="No lessons in this program yet"
+                      description="Your coach will add content here."
+                      className="py-6"
+                    />
                   )}
                 </CardContent>
               </Card>
             )
           })
         ) : (
-          <p className="text-gray-500">No programs assigned yet</p>
+          <EmptyState
+            title="No programs assigned yet"
+            description="Your coach will assign programs here."
+            action={{ label: "Back to dashboard", href: "/client/dashboard" }}
+          />
         )}
       </div>
     </div>

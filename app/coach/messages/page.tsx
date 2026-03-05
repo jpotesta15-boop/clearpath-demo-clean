@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { EmptyState } from '@/components/ui/empty-state'
 import { Input } from '@/components/ui/input'
 import { format } from 'date-fns'
 import { getClientId } from '@/lib/config'
@@ -124,7 +125,7 @@ export default function MessagesPage() {
       })
 
     if (error) {
-      setSendError(error.message)
+      setSendError('Failed to send. Please try again.')
       return
     }
 
@@ -312,10 +313,12 @@ export default function MessagesPage() {
                 <div className="flex-1 overflow-y-auto p-4 min-h-0">
                   <div className="space-y-3">
                       {messages.length === 0 && (
-                        <p className="text-center text-[var(--cp-text-muted)] text-sm py-8">
-                        No messages yet. Send one below.
-                      </p>
-                    )}
+                        <EmptyState
+                          title="No messages yet"
+                          description="Send one below."
+                          className="py-8"
+                        />
+                      )}
                     {messages.map((message) => {
                       const isOwn = message.sender_id === currentUser?.id
                       let offerData: { type: string; session_request_id?: string; product_name?: string; amount_cents?: number; amount_display?: string } | null = null

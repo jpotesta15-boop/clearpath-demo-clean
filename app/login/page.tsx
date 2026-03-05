@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { FormField, FormLabel, FormError } from '@/components/ui/form'
 import { pageTransition } from '@/lib/theme/animation'
+import { getSafeAuthMessage } from '@/lib/safe-messages'
 
 function LoginForm() {
   const [email, setEmail] = useState('')
@@ -24,6 +25,9 @@ function LoginForm() {
     const error = searchParams.get('error')
     if (error === 'auth') {
       setLoginError('Sign-in failed. Please try again.')
+    }
+    if (error === 'rate_limit') {
+      setLoginError('Too many attempts. Please try again in a few minutes.')
     }
     const emailParam = searchParams.get('email')
     if (emailParam && typeof emailParam === 'string') {
@@ -45,7 +49,7 @@ function LoginForm() {
       },
     })
     if (error) {
-      setLoginError(error.message)
+      setLoginError(getSafeAuthMessage('login'))
     }
     setLoading(false)
   }
@@ -63,7 +67,7 @@ function LoginForm() {
       redirectTo: `${typeof window !== 'undefined' ? window.location.origin : ''}/auth/set-password`,
     })
     if (error) {
-      setLoginError(error.message)
+      setLoginError(getSafeAuthMessage('forgot'))
     } else {
       setForgotSent(true)
     }
@@ -81,7 +85,7 @@ function LoginForm() {
     })
 
     if (error) {
-      setLoginError(error.message)
+      setLoginError(getSafeAuthMessage('login'))
       setLoading(false)
       return
     }

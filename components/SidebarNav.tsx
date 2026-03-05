@@ -162,7 +162,7 @@ export default function SidebarNav({ navItems }: { navItems: NavItem[] }) {
                 key={item.href}
                 href={item.href}
                 aria-current={isActive ? 'page' : undefined}
-                className={`flex items-center gap-3 px-3 py-2.5 text-sm font-medium border-l-2 mx-2 my-0.5 rounded-r transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cp-border-focus)] ${
+                className={`flex items-center gap-3 min-h-[44px] px-3 py-2.5 text-sm font-medium border-l-2 mx-2 my-0.5 rounded-r transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cp-border-focus)] ${
                   isActive
                     ? 'bg-[var(--cp-accent-primary-soft)] border-[var(--cp-accent-primary)] text-[var(--cp-accent-primary)]'
                     : 'border-transparent text-[var(--cp-text-muted)] hover:bg-[rgba(148,163,184,0.12)] hover:border-[var(--cp-border-subtle)] hover:text-[var(--cp-text-primary)]'
@@ -178,7 +178,7 @@ export default function SidebarNav({ navItems }: { navItems: NavItem[] }) {
         <div className="border-t border-[var(--cp-border-subtle)] p-2">
           <button
             onClick={toggleSidebar}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-[var(--cp-text-muted)] hover:bg-[rgba(148,163,184,0.12)] hover:text-[var(--cp-text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cp-border-focus)]"
+            className="flex w-full items-center gap-3 min-h-[44px] rounded-lg px-3 py-2 text-sm font-medium text-[var(--cp-text-muted)] hover:bg-[rgba(148,163,184,0.12)] hover:text-[var(--cp-text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cp-border-focus)]"
             title={expanded ? 'Collapse sidebar' : 'Expand sidebar'}
             aria-label={expanded ? 'Collapse sidebar' : 'Expand sidebar'}
             aria-pressed={expanded}
@@ -198,7 +198,7 @@ export default function SidebarNav({ navItems }: { navItems: NavItem[] }) {
           </button>
           <button
             onClick={handleLogout}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-[var(--cp-text-muted)] hover:bg-[rgba(148,163,184,0.12)] hover:text-[var(--cp-text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cp-border-focus)]"
+            className="flex w-full items-center gap-3 min-h-[44px] rounded-lg px-3 py-2 text-sm font-medium text-[var(--cp-text-muted)] hover:bg-[rgba(148,163,184,0.12)] hover:text-[var(--cp-text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cp-border-focus)]"
             title={!expanded ? 'Logout' : undefined}
             aria-label="Logout"
           >

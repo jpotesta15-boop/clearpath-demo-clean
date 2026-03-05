@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { EmptyState } from '@/components/ui/empty-state'
+import { Loading } from '@/components/ui/loading'
 import { Input } from '@/components/ui/input'
 import {
   format,
@@ -463,7 +465,7 @@ export default function SchedulePage() {
     }
   }
 
-  if (loading) return <div className="p-4 text-[var(--cp-text-muted)]">Loading...</div>
+  if (loading) return <Loading />
 
   const monthStart = startOfMonth(month)
   const monthEnd = endOfMonth(month)
@@ -707,15 +709,12 @@ export default function SchedulePage() {
                 </button>
               ))}
               {clients.length === 0 && (
-                <div className="px-4 py-6 text-center">
-                  <p className="text-[var(--cp-text-muted)] text-sm mb-2">No clients yet.</p>
-                  <Link
-                    href="/coach/clients/new"
-                    className="text-sm font-medium text-[var(--cp-accent-primary)] hover:text-[var(--cp-accent-primary-strong)]"
-                  >
-                    Add client
-                  </Link>
-                </div>
+                <EmptyState
+                  title="No clients yet"
+                  description="Add a client to book sessions."
+                  action={{ label: "Add client", href: "/coach/clients/new" }}
+                  className="py-6"
+                />
               )}
             </div>
           </CardContent>

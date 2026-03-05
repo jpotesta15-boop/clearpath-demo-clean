@@ -5,6 +5,8 @@ import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { EmptyState } from '@/components/ui/empty-state'
+import { Loading } from '@/components/ui/loading'
 
 function ClientScheduleContent() {
   const [slots, setSlots] = useState<any[]>([])
@@ -158,7 +160,7 @@ function ClientScheduleContent() {
     }
   }
 
-  if (loading) return <div>Loading...</div>
+  if (loading) return <Loading />
 
   if (!client) {
     return (
@@ -311,7 +313,10 @@ function ClientScheduleContent() {
                   )
                 })
               ) : (
-                <p className="text-[var(--cp-text-muted)]">No available slots</p>
+                <EmptyState
+                  title="No available slots"
+                  description="Your coach will add availability. Check back later."
+                />
               )}
             </div>
           </CardContent>
@@ -343,7 +348,10 @@ function ClientScheduleContent() {
                   </div>
                 ))
               ) : (
-                <p className="text-[var(--cp-text-muted)]">No sessions scheduled</p>
+                <EmptyState
+                  title="No sessions scheduled"
+                  description="Sessions will appear here after you accept an offer and your coach confirms a time."
+                />
               )}
             </div>
           </CardContent>
@@ -355,7 +363,7 @@ function ClientScheduleContent() {
 
 export default function ClientSchedulePage() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={<Loading />}>
       <ClientScheduleContent />
     </Suspense>
   )

@@ -1,11 +1,18 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
+import { checkRateLimit, getClientIdentifier } from '@/lib/rate-limit'
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get('code')
   const next = requestUrl.searchParams.get('next') ?? '/'
+
+  const id = getClientIdentifier(request)
+  const { allowed } = checkRateLimit(`auth-callback:${id}`, { windowMs: 60_000, max: 15 })
+  if (!allowed) {
+    return NextResponse.redirect(new URL('/login?error=rate_limit', requestUrl.origin), { status: 429 })
+  }
 
   if (code) {
     const cookieStore = await cookies()

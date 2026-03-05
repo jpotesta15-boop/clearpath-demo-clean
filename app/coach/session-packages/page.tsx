@@ -4,8 +4,11 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { EmptyState } from '@/components/ui/empty-state'
+import { Loading } from '@/components/ui/loading'
 import { Input } from '@/components/ui/input'
 import { getClientId } from '@/lib/config'
+import { GENERIC_FAILED } from '@/lib/safe-messages'
 
 export default function SessionPackagesPage() {
   const [products, setProducts] = useState<any[]>([])
@@ -122,7 +125,7 @@ export default function SessionPackagesPage() {
       .single()
 
     if (reqErr) {
-      setError(reqErr.message)
+      setError(GENERIC_FAILED)
       setSending(false)
       return
     }
@@ -166,7 +169,7 @@ export default function SessionPackagesPage() {
     loadData()
   }
 
-  if (loading) return <div>Loading...</div>
+  if (loading) return <Loading />
 
   return (
     <div className="space-y-6">
@@ -377,7 +380,11 @@ export default function SessionPackagesPage() {
       </div>
 
       {products.filter((p) => p.is_active !== false).length === 0 && (
-        <p className="text-[var(--cp-text-muted)]">No session packages yet. Create one to start sending offers.</p>
+        <EmptyState
+          title="No session packages yet"
+          description="Create one to start sending offers."
+          action={{ label: "Create package", onClick: () => setShowForm(true) }}
+        />
       )}
 
       {sendToClientProduct && (

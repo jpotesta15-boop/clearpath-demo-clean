@@ -5,6 +5,9 @@ import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { EmptyState } from '@/components/ui/empty-state'
+import { Loading } from '@/components/ui/loading'
+import { Modal } from '@/components/ui/modal'
 import { getClientId } from '@/lib/config'
 import { format } from 'date-fns'
 
@@ -90,7 +93,7 @@ export default function CoachPaymentsPage() {
       setRecordForm({ clientId: '', amountDollars: '', provider: 'zelle', description: '' })
       loadPayments()
     } else {
-      setRecordError(error.message)
+      setRecordError('Failed to record payment. Please try again.')
     }
     setRecordSubmitting(false)
   }
@@ -115,30 +118,33 @@ export default function CoachPaymentsPage() {
     other: 'Other',
   }
 
-  if (loading) return <div>Loading...</div>
+  if (loading) return <Loading />
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-start flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Payments</h1>
-          <p className="mt-1 text-sm text-gray-500">All payments and revenue. Filter by status or provider.</p>
+          <h1 className="text-3xl font-bold text-[var(--cp-text-primary)]">Payments</h1>
+          <p className="mt-1 text-sm text-[var(--cp-text-muted)]">All payments and revenue. Filter by status or provider.</p>
         </div>
         <Button onClick={() => setShowRecordModal(true)}>Record payment</Button>
       </div>
 
-      {showRecordModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => !recordSubmitting && setShowRecordModal(false)}>
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-lg font-semibold text-gray-900">Record manual payment</h3>
-            <p className="text-sm text-gray-500 mt-1">For payments received via Zelle, PayPal, Cash App, etc.</p>
+      <Modal
+        open={showRecordModal}
+        onClose={() => setShowRecordModal(false)}
+        preventClose={recordSubmitting}
+        className="p-6"
+      >
+        <h3 className="text-lg font-semibold text-[var(--cp-text-primary)]">Record manual payment</h3>
+        <p className="text-sm text-[var(--cp-text-muted)] mt-1">For payments received via Zelle, PayPal, Cash App, etc.</p>
             <form onSubmit={handleRecordPayment} className="mt-4 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Client</label>
+                <label className="block text-sm font-medium text-[var(--cp-text-primary)]">Client</label>
                 <select
                   value={recordForm.clientId}
                   onChange={(e) => setRecordForm((f) => ({ ...f, clientId: e.target.value }))}
-                  className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2"
+                  className="mt-1 w-full rounded-md border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] px-3 py-2 text-[var(--cp-text-primary)]"
                   required
                 >
                   <option value="">Select client...</option>
@@ -148,7 +154,7 @@ export default function CoachPaymentsPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Amount ($)</label>
+                <label className="block text-sm font-medium text-[var(--cp-text-primary)]">Amount ($)</label>
                 <Input
                   type="number"
                   step="0.01"
@@ -161,11 +167,11 @@ export default function CoachPaymentsPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Provider</label>
+                <label className="block text-sm font-medium text-[var(--cp-text-primary)]">Provider</label>
                 <select
                   value={recordForm.provider}
                   onChange={(e) => setRecordForm((f) => ({ ...f, provider: e.target.value }))}
-                  className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2"
+                  className="mt-1 w-full rounded-md border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] px-3 py-2 text-[var(--cp-text-primary)]"
                 >
                   <option value="zelle">Zelle</option>
                   <option value="paypal">PayPal</option>
@@ -174,7 +180,7 @@ export default function CoachPaymentsPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Description (optional)</label>
+                <label className="block text-sm font-medium text-[var(--cp-text-primary)]">Description (optional)</label>
                 <Input
                   value={recordForm.description}
                   onChange={(e) => setRecordForm((f) => ({ ...f, description: e.target.value }))}
@@ -183,24 +189,22 @@ export default function CoachPaymentsPage() {
                 />
               </div>
               {recordError && (
-                <p className="text-sm text-red-600">{recordError}</p>
+                <p className="text-sm text-[var(--cp-accent-danger)]" role="alert">{recordError}</p>
               )}
               <div className="flex gap-2 justify-end">
                 <Button type="button" variant="outline" onClick={() => setShowRecordModal(false)} disabled={recordSubmitting}>Cancel</Button>
                 <Button type="submit" disabled={recordSubmitting}>{recordSubmitting ? 'Saving...' : 'Record'}</Button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+      </Modal>
 
       <div className="flex flex-wrap gap-4 items-center">
         <div>
-          <label className="block text-xs text-gray-500">Status</label>
+          <label className="block text-xs text-[var(--cp-text-muted)]">Status</label>
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="mt-0.5 rounded-md border border-gray-300 px-3 py-2 text-sm"
+            className="mt-0.5 rounded-md border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] px-3 py-2 text-sm text-[var(--cp-text-primary)]"
           >
             <option value="">All</option>
             <option value="succeeded">Confirmed</option>
@@ -210,11 +214,11 @@ export default function CoachPaymentsPage() {
           </select>
         </div>
         <div>
-          <label className="block text-xs text-gray-500">Provider</label>
+          <label className="block text-xs text-[var(--cp-text-muted)]">Provider</label>
           <select
             value={filterProvider}
             onChange={(e) => setFilterProvider(e.target.value)}
-            className="mt-0.5 rounded-md border border-gray-300 px-3 py-2 text-sm"
+            className="mt-0.5 rounded-md border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] px-3 py-2 text-sm text-[var(--cp-text-primary)]"
           >
             <option value="">All</option>
             <option value="stripe">Stripe</option>
@@ -259,12 +263,17 @@ export default function CoachPaymentsPage() {
               </table>
             </div>
           ) : payments.length === 0 ? (
-            <div className="py-8 text-center">
-              <p className="text-[var(--cp-text-muted)]">No payments yet. Record one when you receive payment from a client.</p>
-              <Button onClick={() => setShowRecordModal(true)} className="mt-4">Record payment</Button>
-            </div>
+            <EmptyState
+              title="No payments yet"
+              description="Record one when you receive payment from a client."
+              action={{ label: "Record payment", onClick: () => setShowRecordModal(true) }}
+            />
           ) : (
-            <p className="text-[var(--cp-text-muted)] py-4">No payments match the filters.</p>
+            <EmptyState
+              title="No payments match the filters"
+              description="Try changing or clearing the filters."
+              className="py-6"
+            />
           )}
         </CardContent>
       </Card>

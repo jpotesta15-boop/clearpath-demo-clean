@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { EmptyState } from '@/components/ui/empty-state'
 import { format, addDays, startOfDay, isSameDay } from 'date-fns'
 import { motion, animate } from 'framer-motion'
 import {
@@ -632,15 +633,12 @@ export function DashboardContent({
                     ))}
                   </ul>
                 ) : (
-                  <>
-                    <p className="text-[var(--cp-text-muted)]">No session requests waiting. New requests from clients will show up here.</p>
-                    <Link
-                      href="/coach/schedule"
-                      className="inline-flex font-medium text-[var(--cp-accent-primary)] hover:text-[var(--cp-accent-primary-strong)]"
-                    >
-                      Open schedule →
-                    </Link>
-                  </>
+                  <EmptyState
+                    title="No session requests waiting"
+                    description="When clients pay and submit availability, they'll appear here."
+                    action={{ label: "Open schedule", href: "/coach/schedule" }}
+                    className="py-6"
+                  />
                 )}
                 {pendingSessions.length > 0 && (
                   <Link

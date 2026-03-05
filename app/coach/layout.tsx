@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import SidebarNav from '@/components/SidebarNav'
 import { CoachHeader } from '@/components/layout/CoachHeader'
 import { AppLayout } from '@/components/layout/AppLayout'
-import { AnimatedPage } from '@/components/layout/AnimatedPage'
+import { AnimatedPageWithExit } from '@/components/layout/AnimatedPage'
 
 const coachNavItems = [
   { href: '/coach/dashboard', label: 'Dashboard' },
@@ -46,7 +46,7 @@ export default async function CoachLayout({
       <div className="flex-1 flex flex-col min-w-0">
         <CoachHeader />
         <AppLayout>
-          <AnimatedPage>{children}</AnimatedPage>
+          <AnimatedPageWithExit>{children}</AnimatedPageWithExit>
         </AppLayout>
       </div>
     </div>

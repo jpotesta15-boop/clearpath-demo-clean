@@ -4,8 +4,10 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Loading } from '@/components/ui/loading'
 import { Input } from '@/components/ui/input'
 import { getEmbedUrl } from '@/lib/video-embed'
+import { GENERIC_FAILED } from '@/lib/safe-messages'
 
 function getThumbnailUrl(url: string | null, thumbnailUrl: string | null): string | null {
   if (thumbnailUrl) return thumbnailUrl
@@ -191,7 +193,7 @@ export default function VideosPage() {
           .eq('video_id', selectedVideo.id)
           .in('client_id', toRemove)
         if (delError) {
-          setError(delError.message)
+          setError(GENERIC_FAILED)
           setSavingAssignments(false)
           return
         }
@@ -226,7 +228,7 @@ export default function VideosPage() {
           .eq('program_id', programId)
           .eq('video_id', selectedVideo.id)
         if (err) {
-          setError(err.message)
+          setError(GENERIC_FAILED)
         } else {
           setSelectedProgramIds((prev) => prev.filter((id) => id !== programId))
         }
@@ -247,13 +249,13 @@ export default function VideosPage() {
           sort_order: nextSort,
         })
         if (err) {
-          setError(err.message)
+          setError(GENERIC_FAILED)
         } else {
           setSelectedProgramIds((prev) => (prev.includes(programId) ? prev : [...prev, programId]))
         }
       }
     } catch (e: any) {
-      setError(e?.message ?? 'Unable to update programs for this video')
+      setError(GENERIC_FAILED)
     }
   }
 
@@ -266,7 +268,7 @@ export default function VideosPage() {
       await supabase.from('video_assignments').delete().eq('video_id', videoId)
       const { error: err } = await supabase.from('videos').delete().eq('id', videoId)
       if (err) {
-        setError(err.message)
+        setError(GENERIC_FAILED)
       } else {
         setVideos((prev) => prev.filter((v) => v.id !== videoId))
         if (selectedVideo?.id === videoId) {
@@ -298,7 +300,7 @@ export default function VideosPage() {
       setNewVideo({ title: '', description: '', url: '', category: '' })
       loadVideos()
     } else {
-      setError(err.message)
+      setError(GENERIC_FAILED)
     }
   }
 
@@ -319,12 +321,12 @@ export default function VideosPage() {
       setSelectedVideo((prev: any) => prev ? { ...prev, ...editingVideo } : null)
       loadVideos()
     } else {
-      setError(err.message)
+      setError(GENERIC_FAILED)
     }
     setSavingEdit(false)
   }
 
-  if (loading) return <div>Loading...</div>
+  if (loading) return <Loading />
 
   return (
     <div className="space-y-6">

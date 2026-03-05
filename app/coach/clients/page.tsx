@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
+import { EmptyState } from '@/components/ui/empty-state'
 import { ClientListWithActions } from './ClientListWithActions'
 
 export default async function ClientsPage() {
@@ -28,15 +29,11 @@ export default async function ClientsPage() {
       </div>
 
       {(clients ?? []).length === 0 ? (
-        <div className="rounded-2xl border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-elevated)] p-8 text-center shadow-[var(--cp-shadow-soft)]">
-          <p className="text-[var(--cp-text-muted)]">You don't have any clients yet. Add your first client to start booking sessions and tracking progress.</p>
-          <Link
-            href="/coach/clients/new"
-            className="mt-4 inline-flex items-center justify-center rounded-lg bg-[var(--cp-accent-primary)] px-4 py-2 text-sm font-medium text-[var(--cp-text-on-accent)] hover:opacity-90"
-          >
-            Add your first client
-          </Link>
-        </div>
+        <EmptyState
+          title="No clients yet"
+          description="Add your first client to start booking sessions and tracking progress."
+          action={{ label: "Add your first client", href: "/coach/clients/new" }}
+        />
       ) : (
         <ClientListWithActions clients={clients ?? []} />
       )}

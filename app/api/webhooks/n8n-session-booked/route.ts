@@ -1,5 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { n8nSessionBookedSchema } from '@/lib/validations'
+import { getSafeMessage, logServerError } from '@/lib/api-error'
 
 const N8N_URL = process.env.N8N_SESSION_BOOKED_WEBHOOK_URL
 
@@ -15,20 +17,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  let body: { session_id: string; coach_id: string; client_id: string; scheduled_time: string }
+  let body: unknown
   try {
     body = await request.json()
   } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
   }
 
-  const { session_id, coach_id, client_id, scheduled_time } = body
-  if (!session_id || !coach_id || !client_id || !scheduled_time) {
-    return NextResponse.json(
-      { error: 'session_id, coach_id, client_id, scheduled_time required' },
-      { status: 400 }
-    )
+  const parsed = n8nSessionBookedSchema.safeParse(body)
+  if (!parsed.success) {
+    const msg = parsed.error.flatten().formErrors[0] ?? parsed.error.message
+    return NextResponse.json({ error: msg }, { status: 400 })
   }
+  const { session_id, coach_id, client_id, scheduled_time } = parsed.data
 
   if (coach_id !== user.id) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
@@ -77,8 +78,7 @@ export async function POST(request: Request) {
     }
     return NextResponse.json({ ok: true, forwarded: true })
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Forward failed'
-    console.error('[n8n-session-booked]', message, err)
-    return NextResponse.json({ error: message }, { status: 500 })
+    logServerError('n8n-session-booked', err)
+    return NextResponse.json({ error: getSafeMessage(502) }, { status: 502 })
   }
 }

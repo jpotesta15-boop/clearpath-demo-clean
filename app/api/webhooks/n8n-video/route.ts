@@ -1,19 +1,10 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getClientId } from '@/lib/config'
+import { n8nVideoSchema } from '@/lib/validations'
+import { getSafeMessage, logServerError } from '@/lib/api-error'
 
 const secret = process.env.N8N_VIDEO_WEBHOOK_SECRET
-const MAX_TITLE_LENGTH = 500
-
-function isValidUrl(s: string): boolean {
-  if (!s || (!s.startsWith('http://') && !s.startsWith('https://'))) return false
-  try {
-    new URL(s)
-    return true
-  } catch {
-    return false
-  }
-}
 
 export async function POST(request: Request) {
   const authHeader = request.headers.get('authorization')
@@ -25,7 +16,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  let body: { title: string; url: string; description?: string; category?: string; coach_id?: string }
+  let body: unknown
   try {
     body = await request.json()
   } catch (e) {
@@ -33,21 +24,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
   }
 
-  const titleRaw = typeof body.title === 'string' ? body.title.trim() : ''
-  const url = typeof body.url === 'string' ? body.url.trim() : ''
-  if (!titleRaw || !url) {
-    return NextResponse.json({ error: 'title and url are required' }, { status: 400 })
+  const parsed = n8nVideoSchema.safeParse(body)
+  if (!parsed.success) {
+    const msg = parsed.error.flatten().formErrors[0] ?? parsed.error.message
+    return NextResponse.json({ error: msg }, { status: 400 })
   }
-
-  if (!isValidUrl(url)) {
-    const err = 'url must be a valid URL starting with http:// or https://'
-    console.error('[n8n-video] Validation failed:', err, { url: url.slice(0, 80) })
-    return NextResponse.json({ error: err }, { status: 400 })
-  }
-
-  const title = titleRaw.length > MAX_TITLE_LENGTH ? titleRaw.slice(0, MAX_TITLE_LENGTH) : titleRaw
-
-  const coachId = body.coach_id?.trim() || process.env.N8N_DEFAULT_COACH_ID
+  const { title, url, description, category, coach_id } = parsed.data
+  const coachId = coach_id ?? process.env.N8N_DEFAULT_COACH_ID
   const tenantId = getClientId()
   if (!coachId) {
     return NextResponse.json(
@@ -65,20 +48,19 @@ export async function POST(request: Request) {
         client_id: tenantId,
         title,
         url,
-        description: typeof body.description === 'string' ? body.description.trim() || null : null,
-        category: typeof body.category === 'string' ? body.category.trim() || null : null,
+        description: description ?? null,
+        category: category ?? null,
       })
       .select('id')
       .single()
 
     if (error) {
-      console.error('[n8n-video] Insert failed:', error.message, { title: title.slice(0, 50), coachId })
-      return NextResponse.json({ error: error.message }, { status: 400 })
+      logServerError('n8n-video', error, { title: title.slice(0, 30), coachId })
+      return NextResponse.json({ error: getSafeMessage(400) }, { status: 400 })
     }
     return NextResponse.json({ ok: true, id: data?.id })
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Insert failed'
-    console.error('[n8n-video] Error:', message, err)
-    return NextResponse.json({ error: message }, { status: 500 })
+    logServerError('n8n-video', err)
+    return NextResponse.json({ error: getSafeMessage(500) }, { status: 500 })
   }
 }

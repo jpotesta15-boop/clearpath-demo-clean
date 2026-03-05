@@ -3,8 +3,17 @@ import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getClientId } from '@/lib/config'
+import { checkRateLimit, getClientIdentifier } from '@/lib/rate-limit'
+import { inviteClientSchema } from '@/lib/validations'
+import { getSafeMessage, logServerError } from '@/lib/api-error'
 
 export async function POST(request: Request) {
+  const id = getClientIdentifier(request)
+  const { allowed } = checkRateLimit(`invite-client:${id}`, { windowMs: 60_000, max: 20 })
+  if (!allowed) {
+    return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 })
+  }
+
   const cookieStore = await cookies()
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -38,18 +47,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  let body: { email: string }
+  let body: unknown
   try {
     body = await request.json()
   } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
   }
 
-  const email = typeof body.email === 'string' ? body.email.trim() : ''
-  if (!email) {
-    return NextResponse.json({ error: 'Email is required' }, { status: 400 })
+  const parsed = inviteClientSchema.safeParse(body)
+  if (!parsed.success) {
+    const first = parsed.error.flatten().fieldErrors.email?.[0] ?? parsed.error.message
+    return NextResponse.json({ error: first }, { status: 400 })
   }
-
+  const { email } = parsed.data
   const tenantId = getClientId()
 
   try {
@@ -62,18 +72,19 @@ export async function POST(request: Request) {
       redirectTo: `${new URL(request.url).origin}/auth/set-password`,
     })
     if (error) {
+      logServerError('invite-client', error, { email: email.slice(0, 3) + '…' })
       const msg = error.message.toLowerCase()
       const userFriendly =
         msg.includes('already') || msg.includes('registered')
           ? 'This email already has an account.'
           : msg.includes('email') || msg.includes('invite') || msg.includes('send')
-            ? 'Invite could not be sent. Check Supabase email settings (Authentication → Email / SMTP).'
-            : error.message
+            ? 'Invite could not be sent. Check your email configuration.'
+            : getSafeMessage(400)
       return NextResponse.json({ error: userFriendly }, { status: 400 })
     }
     return NextResponse.json({ ok: true, user: inviteData?.user?.id })
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Invite failed'
-    return NextResponse.json({ error: message }, { status: 500 })
+    logServerError('invite-client', err)
+    return NextResponse.json({ error: getSafeMessage(500) }, { status: 500 })
   }
 }

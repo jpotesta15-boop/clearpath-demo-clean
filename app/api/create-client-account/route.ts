@@ -3,6 +3,9 @@ import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getClientId } from '@/lib/config'
+import { checkRateLimit, getClientIdentifier } from '@/lib/rate-limit'
+import { createClientAccountSchema } from '@/lib/validations'
+import { getSafeMessage, logServerError } from '@/lib/api-error'
 
 function generatePassword(length = 12): string {
   const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%^&*'
@@ -15,6 +18,12 @@ function generatePassword(length = 12): string {
 }
 
 export async function POST(request: Request) {
+  const id = getClientIdentifier(request)
+  const { allowed } = checkRateLimit(`create-client:${id}`, { windowMs: 60_000, max: 20 })
+  if (!allowed) {
+    return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 })
+  }
+
   const cookieStore = await cookies()
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -50,18 +59,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  let body: { email?: string }
+  let body: unknown
   try {
     body = await request.json()
   } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
   }
 
-  const email = typeof body.email === 'string' ? body.email.trim() : ''
-  if (!email) {
-    return NextResponse.json({ error: 'Email is required' }, { status: 400 })
+  const parsed = createClientAccountSchema.safeParse(body)
+  if (!parsed.success) {
+    const first = parsed.error.flatten().fieldErrors.email?.[0] ?? parsed.error.message
+    return NextResponse.json({ error: first }, { status: 400 })
   }
-
+  const { email } = parsed.data
   const tenantId = getClientId()
 
   try {
@@ -77,11 +87,12 @@ export async function POST(request: Request) {
       },
     })
     if (error) {
+      logServerError('create-client-account', error, { email: email.slice(0, 3) + '…' })
       const msg = error.message.toLowerCase()
       const userFriendly =
         msg.includes('already') || msg.includes('registered')
           ? 'This email already has an account.'
-          : error.message
+          : getSafeMessage(400)
       return NextResponse.json({ error: userFriendly }, { status: 400 })
     }
     if (!data?.user) {
@@ -100,8 +111,8 @@ export async function POST(request: Request) {
     }
     return NextResponse.json({ ok: true, password })
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Account creation failed'
-    return NextResponse.json({ error: message }, { status: 500 })
+    logServerError('create-client-account', err)
+    return NextResponse.json({ error: getSafeMessage(500) }, { status: 500 })
   }
 }
 

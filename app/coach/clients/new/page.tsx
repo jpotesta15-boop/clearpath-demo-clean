@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { GENERIC_FAILED } from '@/lib/safe-messages'
 
 export default function NewClientPage() {
   const router = useRouter()
@@ -52,7 +53,7 @@ export default function NewClientPage() {
       .select('id')
       .single()
     if (insertError) {
-      setError(insertError.message)
+      setError(GENERIC_FAILED)
       setSaving(false)
       return
     }

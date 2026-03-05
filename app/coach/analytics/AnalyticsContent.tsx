@@ -12,6 +12,7 @@ import {
   CartesianGrid,
 } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { EmptyState } from '@/components/ui/empty-state'
 import { format } from 'date-fns'
 
 type MonthDatum = { monthLabel: string; revenue: number; monthStart: string }
@@ -100,7 +101,11 @@ export function AnalyticsContent({
             </CardHeader>
             <CardContent>
               {clientStats.length === 0 ? (
-                <p className="text-[var(--cp-text-muted)] text-sm">No client data yet.</p>
+                <EmptyState
+                  title="No client data yet"
+                  description="Data will appear as you add clients and sessions."
+                  className="py-6"
+                />
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">

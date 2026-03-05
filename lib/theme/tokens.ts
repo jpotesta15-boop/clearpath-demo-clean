@@ -49,6 +49,9 @@ export interface AnimationTokens {
   page: AnimationTimingToken
   cardHover: AnimationTimingToken
   button: AnimationTimingToken
+  modal: AnimationTimingToken
+  listStaggerDelayMs: number
+  skeletonPulseMs: number
 }
 
 export interface ThemeTokens {
@@ -188,8 +191,8 @@ export const tokens: ThemeTokens = {
 
   /**
    * Animation system: all durations are in the requested 300–400ms range,
-   * with no bounce easing. These are used for page transitions, card hover,
-   * and button state changes.
+   * with no bounce easing. Used for page transitions, card hover, button,
+   * modal enter/exit, and list stagger.
    */
   animation: {
     page: {
@@ -204,6 +207,12 @@ export const tokens: ThemeTokens = {
       durationMs: 300,
       easing: "easeInOut",
     },
+    modal: {
+      durationMs: 250,
+      easing: "easeOut",
+    },
+    listStaggerDelayMs: 50,
+    skeletonPulseMs: 1500,
   },
 }
 

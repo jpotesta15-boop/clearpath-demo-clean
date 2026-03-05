@@ -2,35 +2,37 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-
-const MAX_BULK = 50
+import { bulkUpdateNamesSchema, bulkClientIdsSchema } from '@/lib/validations'
+import { sanitizeActionError } from '@/lib/api-error'
 
 export async function bulkUpdateClientNamesAction(
   clientIds: string[],
   fullName: string
 ): Promise<{ error?: string }> {
+  const parsed = bulkUpdateNamesSchema.safeParse({ clientIds, fullName })
+  if (!parsed.success) {
+    const msg = parsed.error.flatten().formErrors[0] ?? 'Invalid input'
+    return { error: msg }
+  }
+  const { clientIds: ids, fullName: name } = parsed.data
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
     return { error: 'Not authenticated' }
   }
 
-  const ids = clientIds.slice(0, MAX_BULK)
-  if (ids.length === 0) {
-    return { error: 'No clients selected' }
-  }
-
   const { error } = await supabase
     .from('clients')
     .update({
-      full_name: fullName.trim() || 'Unnamed',
+      full_name: name,
       updated_at: new Date().toISOString(),
     })
     .eq('coach_id', user.id)
     .in('id', ids)
 
   if (error) {
-    return { error: error.message }
+    return { error: sanitizeActionError(error) }
   }
 
   revalidatePath('/coach/clients')
@@ -40,15 +42,17 @@ export async function bulkUpdateClientNamesAction(
 export async function bulkDeleteClientsAction(
   clientIds: string[]
 ): Promise<{ error?: string }> {
+  const parsed = bulkClientIdsSchema.safeParse({ clientIds })
+  if (!parsed.success) {
+    const msg = parsed.error.flatten().formErrors[0] ?? 'Invalid input'
+    return { error: msg }
+  }
+  const { clientIds: ids } = parsed.data
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
     return { error: 'Not authenticated' }
-  }
-
-  const ids = clientIds.slice(0, MAX_BULK)
-  if (ids.length === 0) {
-    return { error: 'No clients selected' }
   }
 
   const { error } = await supabase
@@ -58,7 +62,7 @@ export async function bulkDeleteClientsAction(
     .in('id', ids)
 
   if (error) {
-    return { error: error.message }
+    return { error: sanitizeActionError(error) }
   }
 
   revalidatePath('/coach/clients')

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Loading } from '@/components/ui/loading'
 import { Input } from '@/components/ui/input'
 import Link from 'next/link'
 
@@ -90,7 +91,7 @@ export default function ProgramsPage() {
     if (!error) loadPrograms()
   }
 
-  if (loading) return <div className="text-[var(--cp-text-muted)]">Loading...</div>
+  if (loading) return <Loading />
 
   return (
     <div className="space-y-6">
