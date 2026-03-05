@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Loading } from '@/components/ui/loading'
+import { getClientId } from '@/lib/config'
 
 function ClientScheduleContent() {
   const [slots, setSlots] = useState<any[]>([])
@@ -21,6 +22,7 @@ function ClientScheduleContent() {
   const [coachTimezone, setCoachTimezone] = useState<string | null>(null)
   const searchParams = useSearchParams()
   const supabase = createClient()
+  const tenantId = getClientId()
 
   const displayTz = coachTimezone || (typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'UTC')
 
@@ -67,7 +69,7 @@ function ClientScheduleContent() {
     const [slotsRes, sessionsRes, requestsRes] = await Promise.all([
       supabase
         .from('availability_slots')
-        .select('*')
+        .select('*, session_products(name, price_cents)')
         .eq('coach_id', clientData.coach_id)
         .gte('start_time', new Date().toISOString())
         .order('start_time', { ascending: true }),
@@ -158,6 +160,61 @@ function ClientScheduleContent() {
     if (!error) {
       loadData()
     }
+  }
+
+  const handleBookAndPay = async (slotId: string) => {
+    if (!client) return
+
+    const slot = slots.find((s) => s.id === slotId)
+    if (!slot || !slot.session_product_id) return
+
+    const heldRequest = sessionRequests.find(
+      (r) =>
+        r.availability_slot_id === slotId &&
+        ['payment_pending', 'paid', 'scheduled'].includes(r.status)
+    )
+    const isBooked = sessions.some((s) => s.availability_slot_id === slotId)
+    if (heldRequest || isBooked) {
+      await loadData()
+      return
+    }
+
+    const product = slot.session_products as any
+    const amountCents = product?.price_cents ?? 0
+
+    const { data: sessionRequest, error } = await supabase
+      .from('session_requests')
+      .insert({
+        coach_id: client.coach_id,
+        client_id: client.id,
+        session_product_id: slot.session_product_id,
+        tenant_id: tenantId,
+        status: 'accepted',
+        amount_cents: amountCents,
+        availability_slot_id: slot.id,
+      })
+      .select('id')
+      .single()
+
+    if (error || !sessionRequest) return
+
+    setSubmittingRequestId(sessionRequest.id)
+    try {
+      const res = await fetch('/api/stripe/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_request_id: sessionRequest.id }),
+        credentials: 'include',
+      })
+      const data = await res.json().catch(() => ({}))
+      if (data.url) {
+        window.location.href = data.url
+        return
+      }
+    } catch {
+      // ignore
+    }
+    setSubmittingRequestId(null)
   }
 
   if (loading) return <Loading />
@@ -288,6 +345,14 @@ function ClientScheduleContent() {
               {slots.length > 0 ? (
                 slots.map((slot) => {
                   const isBooked = sessions.some((s) => s.availability_slot_id === slot.id)
+                  const product = slot.session_products as any
+                  const isPaidSlot = !!slot.session_product_id
+                  const heldRequest = sessionRequests.find(
+                    (r) =>
+                      r.availability_slot_id === slot.id &&
+                      ['payment_pending', 'paid', 'scheduled'].includes(r.status)
+                  )
+                  const isHeld = !!heldRequest
                   return (
                     <div
                       key={slot.id}
@@ -299,14 +364,25 @@ function ClientScheduleContent() {
                       <p className="text-sm text-[var(--cp-text-muted)] mb-2">
                         {slot.is_group_session ? 'Group session' : 'Private session'}
                       </p>
-                      {!isBooked && (
-                        <Button size="sm" onClick={() => handleRequestSession(slot.id)}>
-                          Request session
-                        </Button>
+                      {isPaidSlot && product && (
+                        <p className="text-sm text-[var(--cp-text-muted)] mb-1">
+                          {slot.label || product.name} – ${((product.price_cents ?? 0) / 100).toFixed(2)}
+                        </p>
                       )}
-                      {isBooked && (
+                      {!isBooked && !isHeld && (
+                        isPaidSlot ? (
+                          <Button size="sm" onClick={() => handleBookAndPay(slot.id)}>
+                            Book &amp; pay
+                          </Button>
+                        ) : (
+                          <Button size="sm" onClick={() => handleRequestSession(slot.id)}>
+                            Request session
+                          </Button>
+                        )
+                      )}
+                      {(isBooked || isHeld) && (
                         <span className="text-sm text-[var(--cp-text-muted)]">
-                          Already requested
+                          {isPaidSlot ? 'No longer available' : 'Already requested'}
                         </span>
                       )}
                     </div>

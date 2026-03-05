@@ -54,7 +54,7 @@ export async function POST(request: Request) {
 
   const { data: sessionRequest, error: fetchErr } = await supabase
     .from('session_requests')
-    .select('id, coach_id, client_id, amount_cents, tenant_id, session_products(name)')
+    .select('id, coach_id, client_id, amount_cents, tenant_id, session_product_id, availability_slot_id, session_products(name)')
     .eq('id', sessionRequestId)
     .single()
 
@@ -90,6 +90,62 @@ export async function POST(request: Request) {
 
   if (updateErr) {
     logServerError('stripe-webhook', updateErr, { sessionRequestId })
+  }
+
+  if (sessionRequest.availability_slot_id) {
+    const { data: existingSessions, error: sessionsErr } = await supabase
+      .from('sessions')
+      .select('id, status')
+      .eq('availability_slot_id', sessionRequest.availability_slot_id)
+      .in('status', ['pending', 'confirmed', 'completed'])
+
+    if (sessionsErr) {
+      logServerError('stripe-webhook', sessionsErr, { sessionRequestId })
+      return NextResponse.json({ received: true })
+    }
+
+    if (!existingSessions || existingSessions.length === 0) {
+      const { data: slot, error: slotErr } = await supabase
+        .from('availability_slots')
+        .select('start_time')
+        .eq('id', sessionRequest.availability_slot_id)
+        .single()
+
+      if (slotErr) {
+        logServerError('stripe-webhook', slotErr, { sessionRequestId })
+        return NextResponse.json({ received: true })
+      }
+
+      const { data: newSession, error: sessionInsertErr } = await supabase
+        .from('sessions')
+        .insert({
+          coach_id: sessionRequest.coach_id,
+          client_id: sessionRequest.client_id,
+          availability_slot_id: sessionRequest.availability_slot_id,
+          scheduled_time: slot.start_time,
+          status: 'confirmed',
+          tenant_id: sessionRequest.tenant_id,
+          session_request_id: sessionRequest.id,
+          session_product_id: sessionRequest.session_product_id ?? null,
+          amount_cents: sessionRequest.amount_cents ?? null,
+        })
+        .select('id')
+        .single()
+
+      if (sessionInsertErr) {
+        logServerError('stripe-webhook', sessionInsertErr, { sessionRequestId })
+        return NextResponse.json({ received: true })
+      }
+
+      const { error: markScheduledErr } = await supabase
+        .from('session_requests')
+        .update({ status: 'scheduled', updated_at: new Date().toISOString() })
+        .eq('id', sessionRequestId)
+
+      if (markScheduledErr) {
+        logServerError('stripe-webhook', markScheduledErr, { sessionRequestId })
+      }
+    }
   }
 
   return NextResponse.json({ received: true })

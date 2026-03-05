@@ -46,7 +46,7 @@ export async function POST(request: Request) {
   const supabaseAdmin = createServiceClient()
   const { data: sessionRequest, error: reqError } = await supabaseAdmin
     .from('session_requests')
-    .select('id, coach_id, client_id, amount_cents, status, session_products(name)')
+    .select('id, coach_id, client_id, amount_cents, status, availability_slot_id, tenant_id, session_products(name)')
     .eq('id', sessionRequestId)
     .single()
 
@@ -56,6 +56,29 @@ export async function POST(request: Request) {
 
   if (sessionRequest.status !== 'offered' && sessionRequest.status !== 'accepted') {
     return NextResponse.json({ error: 'Request is not available for payment' }, { status: 400 })
+  }
+
+  if (sessionRequest.availability_slot_id) {
+    const { data: existingSessions } = await supabaseAdmin
+      .from('sessions')
+      .select('id, status')
+      .eq('availability_slot_id', sessionRequest.availability_slot_id)
+      .in('status', ['pending', 'confirmed', 'completed'])
+
+    if (existingSessions && existingSessions.length > 0) {
+      return NextResponse.json({ error: 'This slot is no longer available.' }, { status: 400 })
+    }
+
+    const { data: competingRequests } = await supabaseAdmin
+      .from('session_requests')
+      .select('id, status')
+      .eq('availability_slot_id', sessionRequest.availability_slot_id)
+      .in('status', ['payment_pending', 'paid', 'scheduled'])
+      .neq('id', sessionRequestId)
+
+    if (competingRequests && competingRequests.length > 0) {
+      return NextResponse.json({ error: 'This slot is already being booked.' }, { status: 400 })
+    }
   }
 
   const { data: coachProfile } = await supabaseAdmin

@@ -9,7 +9,7 @@ type MessageContext = 'coach' | 'client'
 interface MessageThreadProps {
   messages: ChatMessage[]
   context: MessageContext
-  bottomRef?: React.RefObject<HTMLDivElement>
+  bottomRef?: React.RefObject<HTMLDivElement | null>
 }
 
 export function MessageThread({

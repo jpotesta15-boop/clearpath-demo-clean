@@ -45,12 +45,40 @@ export default async function ClientDashboard() {
     .select('*, programs(*)')
     .eq('client_id', client.id)
 
+  const { data: dailyMessages } = await supabase
+    .from('coach_daily_messages')
+    .select('*')
+    .eq('coach_id', client.coach_id)
+    .order('effective_at', { ascending: false })
+    .order('created_at', { ascending: false })
+    .limit(1)
+
+  const dailyMessage = dailyMessages && dailyMessages.length > 0 ? dailyMessages[0] : null
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-[var(--cp-text-primary)]">Dashboard</h1>
         <p className="mt-1 text-sm text-[var(--cp-text-muted)]">Welcome back, {client.full_name}</p>
       </div>
+
+      {dailyMessage && (
+        <Card className="shadow-[var(--cp-shadow-soft)] border-[var(--cp-border-subtle)] bg-[var(--cp-bg-elevated)]">
+          <CardHeader>
+            <CardTitle>Message from your coach</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-[var(--cp-text-primary)] whitespace-pre-wrap break-words">
+              {dailyMessage.content}
+            </p>
+            {dailyMessage.effective_at && (
+              <p className="mt-2 text-xs text-[var(--cp-text-muted)]">
+                For {dailyMessage.effective_at}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="shadow-[var(--cp-shadow-soft)] border-[var(--cp-border-subtle)]">
