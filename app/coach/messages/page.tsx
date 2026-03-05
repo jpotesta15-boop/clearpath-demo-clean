@@ -17,6 +17,7 @@ export default function MessagesPage() {
   const [selectedClient, setSelectedClient] = useState<string | null>(null)
   const [newMessage, setNewMessage] = useState('')
   const [currentUser, setCurrentUser] = useState<any>(null)
+  const [unreadByClient, setUnreadByClient] = useState<Record<string, number>>({})
   const [sessionProducts, setSessionProducts] = useState<any[]>([])
   const [showRequestModal, setShowRequestModal] = useState(false)
   const [selectedProductId, setSelectedProductId] = useState('')
@@ -42,6 +43,49 @@ export default function MessagesPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
+  const refreshUnreadCounts = async (userId: string, clientList: any[]) => {
+    const clientEmails = clientList.map((c: any) => c.email).filter((email: string | null) => !!email) as string[]
+
+    if (clientEmails.length === 0) {
+      setUnreadByClient({})
+      return
+    }
+
+    const [{ data: profileRows }, { data: unreadMessages }] = await Promise.all([
+      supabase.from('profiles').select('id, email').in('email', clientEmails),
+      supabase
+        .from('messages')
+        .select('id, sender_id')
+        .eq('recipient_id', userId)
+        .is('read_at', null),
+    ])
+
+    const emailToClientId = new Map<string, string>()
+    clientList.forEach((client: any) => {
+      if (client.email) {
+        emailToClientId.set(client.email, client.id)
+      }
+    })
+
+    const profileIdToClientId = new Map<string, string>()
+    ;(profileRows || []).forEach((profile: any) => {
+      const clientId = emailToClientId.get(profile.email)
+      if (clientId) {
+        profileIdToClientId.set(profile.id, clientId)
+      }
+    })
+
+    const counts: Record<string, number> = {}
+    ;(unreadMessages || []).forEach((message: any) => {
+      const clientId = profileIdToClientId.get(message.sender_id)
+      if (clientId) {
+        counts[clientId] = (counts[clientId] ?? 0) + 1
+      }
+    })
+
+    setUnreadByClient(counts)
+  }
+
   const loadClients = async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
@@ -53,13 +97,16 @@ export default function MessagesPage() {
       .eq('coach_id', user.id)
       .order('full_name', { ascending: true })
 
-    setClients(data || [])
+    const clientList = data || []
+    setClients(clientList)
     const clientFromUrl = searchParams.get('client')
-    if (clientFromUrl && data?.some((c) => c.id === clientFromUrl)) {
+    if (clientFromUrl && clientList.some((c) => c.id === clientFromUrl)) {
       setSelectedClient(clientFromUrl)
-    } else if (data && data.length > 0 && !selectedClient) {
-      setSelectedClient(data[0].id)
+    } else if (clientList.length > 0 && !selectedClient) {
+      setSelectedClient(clientList[0].id)
     }
+
+    await refreshUnreadCounts(user.id, clientList)
   }
 
   const loadMessages = async () => {
@@ -93,6 +140,8 @@ export default function MessagesPage() {
     if (unreadIds.length > 0) {
       await supabase.from('messages').update({ read_at: new Date().toISOString() }).in('id', unreadIds)
     }
+
+    await refreshUnreadCounts(currentUser.id, clients)
   }
 
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -283,7 +332,9 @@ export default function MessagesPage() {
               <h3 className="font-semibold text-[var(--cp-text-primary)]">Clients</h3>
             </div>
             <div className="divide-y divide-gray-100 max-h-[420px] overflow-y-auto">
-              {clients.map((client) => (
+              {clients.map((client) => {
+                const unreadCount = unreadByClient[client.id] ?? 0
+                return (
                 <button
                   key={client.id}
                   type="button"
@@ -294,12 +345,21 @@ export default function MessagesPage() {
                       : ''
                   }`}
                 >
-                  <p className="font-medium text-[var(--cp-text-primary)]">{client.full_name}</p>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-medium text-[var(--cp-text-primary)]">
+                      {client.full_name || 'Unnamed client'}
+                    </p>
+                    {unreadCount > 0 && (
+                      <span className="inline-flex min-w-[1.5rem] items-center justify-center rounded-full bg-[var(--cp-accent-primary)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--cp-text-on-accent)]">
+                        {unreadCount > 99 ? '99+' : unreadCount}
+                      </span>
+                    )}
+                  </div>
                   {client.email && (
                     <p className="text-xs text-[var(--cp-text-muted)] truncate">{client.email}</p>
                   )}
                 </button>
-              ))}
+              )})}
             </div>
           </CardContent>
         </Card>

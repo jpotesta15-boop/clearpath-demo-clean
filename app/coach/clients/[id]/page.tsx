@@ -8,6 +8,7 @@ import { ClientNotesEditor } from './ClientNotesEditor'
 import { SessionHistoryWithPay } from './SessionHistoryWithPay'
 import { ClientPortalAccess } from './ClientPortalAccess'
 import { ClientProfileDetails } from './ClientProfileDetails'
+import { ClientNameEditor } from './ClientNameEditor'
 import { DeleteClientButton } from './DeleteClientButton'
 
 export default async function ClientDetailPage({
@@ -86,7 +87,7 @@ export default async function ClientDetailPage({
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-3xl font-bold text-[var(--cp-text-primary)]">{client.full_name}</h1>
+        <ClientNameEditor clientId={client.id} initialName={client.full_name} />
         <Link
           href={`/coach/messages?client=${client.id}`}
           className="inline-flex items-center rounded-md bg-[var(--cp-accent-primary)] px-4 py-2 text-sm font-medium text-[var(--cp-text-on-accent)] hover:bg-[var(--cp-accent-primary-strong)]"

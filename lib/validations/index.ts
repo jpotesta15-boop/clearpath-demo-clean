@@ -40,6 +40,7 @@ export const bulkUpdateNamesSchema = z.object({
 
 export const clientIdSchema = z.string().uuid()
 export const updateClientProfileSchema = z.object({
+  full_name: z.string().max(200).transform((s) => s.trim()).nullable().optional(),
   height: z.string().max(50).nullable().optional(),
   weight_kg: z.number().nullable().optional(),
   date_of_birth: z.string().nullable().optional(),

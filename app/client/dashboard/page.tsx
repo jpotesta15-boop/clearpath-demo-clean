@@ -58,7 +58,7 @@ export default async function ClientDashboard() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-[var(--cp-text-primary)]">Dashboard</h1>
+        <h1 className="text-3xl font-bold text-[var(--cp-text-primary)]">Home</h1>
         <p className="mt-1 text-sm text-[var(--cp-text-muted)]">Welcome back, {client.full_name}</p>
       </div>
 

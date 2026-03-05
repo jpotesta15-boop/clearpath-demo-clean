@@ -44,7 +44,7 @@ export async function deleteClientAction(clientId: string): Promise<{ error?: st
 
 export async function updateClientProfileAction(
   clientId: string,
-  data: { height?: string | null; weight_kg?: number | null; date_of_birth?: string | null }
+  data: { full_name?: string | null; height?: string | null; weight_kg?: number | null; date_of_birth?: string | null }
 ): Promise<{ error?: string }> {
   if (!clientIdSchema.safeParse(clientId).success) {
     return { error: 'Invalid client' }
@@ -60,6 +60,7 @@ export async function updateClientProfileAction(
   const { error } = await supabase
     .from('clients')
     .update({
+      full_name: parsed.data.full_name?.trim() || null,
       height: parsed.data.height ?? null,
       weight_kg: parsed.data.weight_kg ?? null,
       date_of_birth: parsed.data.date_of_birth ?? null,

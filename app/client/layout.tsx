@@ -1,12 +1,12 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getClientId } from '@/lib/config'
-import SidebarNav from '@/components/SidebarNav'
+import SidebarNav, { NavItem } from '@/components/SidebarNav'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { AnimatedPageWithExit } from '@/components/layout/AnimatedPage'
 
-const clientNavItems = [
-  { href: '/client/dashboard', label: 'Dashboard' },
+const clientNavItems: NavItem[] = [
+  { href: '/client/dashboard', label: 'Home' },
   { href: '/client/programs', label: 'Programs' },
   { href: '/client/schedule', label: 'Schedule' },
   { href: '/client/videos', label: 'Videos' },
@@ -43,9 +43,22 @@ export default async function ClientLayout({
     redirect('/coach/dashboard')
   }
 
+  const { count: unseenMessagesCount } = await supabase
+    .from('messages')
+    .select('*', { count: 'exact', head: true })
+    .eq('recipient_id', user.id)
+    .is('read_at', null)
+
+  const navItems: NavItem[] = clientNavItems.map((item) => {
+    if (item.href === '/client/messages') {
+      return { ...item, badgeCount: unseenMessagesCount ?? 0 }
+    }
+    return item
+  })
+
   return (
     <div className="flex min-h-screen bg-[var(--cp-bg-page)] text-[var(--cp-text-primary)]">
-      <SidebarNav navItems={clientNavItems} />
+      <SidebarNav navItems={navItems} />
       <AppLayout>
         <AnimatedPageWithExit>{children}</AnimatedPageWithExit>
       </AppLayout>

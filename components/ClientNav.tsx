@@ -8,7 +8,7 @@ import { useEffect, useState } from 'react'
 import { getClientName } from '@/lib/branding'
 
 const navItems = [
-  { href: '/client/dashboard', label: 'Dashboard' },
+  { href: '/client/dashboard', label: 'Home' },
   { href: '/client/programs', label: 'Programs' },
   { href: '/client/schedule', label: 'Schedule' },
   { href: '/client/videos', label: 'Videos' },

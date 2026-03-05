@@ -8,11 +8,10 @@ import { getClientId } from '@/lib/config'
 import { startOfWeek } from 'date-fns'
 
 const baseCoachNavItems: NavItem[] = [
-  { href: '/coach/dashboard', label: 'Dashboard' },
+  { href: '/coach/dashboard', label: 'Home' },
   { href: '/coach/schedule', label: 'Schedule' },
   { href: '/coach/clients', label: 'Clients' },
   { href: '/coach/messages', label: 'Messages' },
-  { href: '/coach/daily-message', label: 'Client Message' },
   { href: '/coach/programs', label: 'Programs' },
   { href: '/coach/videos', label: 'Videos' },
   { href: '/coach/session-packages', label: 'Session Packages' },
