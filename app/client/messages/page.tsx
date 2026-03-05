@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { MessageThread, type ChatMessage } from '@/components/chat/MessageThread'
+import { getClientId } from '@/lib/config'
 
 export default function ClientMessagesPage() {
   const [messages, setMessages] = useState<any[]>([])
@@ -19,6 +20,7 @@ export default function ClientMessagesPage() {
   const [submittingAvailability, setSubmittingAvailability] = useState(false)
   const [payingRequestId, setPayingRequestId] = useState<string | null>(null)
   const supabase = createClient()
+  const tenantId = getClientId()
 
   useEffect(() => {
     loadData()
@@ -116,16 +118,29 @@ export default function ClientMessagesPage() {
     e.preventDefault()
     if (!newMessage.trim() || !coach || !currentUser) return
 
+    const contentToSend = newMessage.trim()
+
     const { error } = await supabase
       .from('messages')
       .insert({
         sender_id: currentUser.id,
         recipient_id: coach.id,
-        content: newMessage,
+        client_id: tenantId,
+        content: contentToSend,
       })
 
     if (!error) {
       setNewMessage('')
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `temp-${Date.now()}`,
+          sender_id: currentUser.id,
+          recipient_id: coach.id,
+          content: contentToSend,
+          created_at: new Date().toISOString(),
+        },
+      ])
       loadData()
     }
   }

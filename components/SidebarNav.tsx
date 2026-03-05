@@ -68,7 +68,7 @@ const defaultIcon = (
   </svg>
 )
 
-export type NavItem = { href: string; label: string }
+export type NavItem = { href: string; label: string; badgeCount?: number }
 
 const STORAGE_KEY = 'clearpath-sidebar-expanded'
 
@@ -157,12 +157,13 @@ export default function SidebarNav({ navItems }: { navItems: NavItem[] }) {
           {navItems.map((item) => {
             const isActive = pathname === item.href
             const icon = iconMap[item.label] ?? defaultIcon
+            const badge = item.badgeCount ?? 0
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 aria-current={isActive ? 'page' : undefined}
-                className={`flex items-center gap-3 min-h-[44px] px-3 py-2.5 text-sm font-medium border-l-2 mx-2 my-0.5 rounded-r transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cp-border-focus)] ${
+                className={`relative flex items-center gap-3 min-h-[44px] px-3 py-2.5 text-sm font-medium border-l-2 mx-2 my-0.5 rounded-r transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cp-border-focus)] ${
                   isActive
                     ? 'bg-[var(--cp-accent-primary-soft)] border-[var(--cp-accent-primary)] text-[var(--cp-accent-primary)]'
                     : 'border-transparent text-[var(--cp-text-muted)] hover:bg-[rgba(148,163,184,0.12)] hover:border-[var(--cp-border-subtle)] hover:text-[var(--cp-text-primary)]'
@@ -171,6 +172,11 @@ export default function SidebarNav({ navItems }: { navItems: NavItem[] }) {
               >
                 {icon}
                 {expanded && <span className="truncate">{item.label}</span>}
+                {badge > 0 && (
+                  <span className="absolute right-3 top-2 inline-flex min-w-[1.5rem] items-center justify-center rounded-full bg-[var(--cp-accent-primary)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--cp-text-on-accent)]">
+                    {badge > 99 ? '99+' : badge}
+                  </span>
+                )}
               </Link>
             )
           })}

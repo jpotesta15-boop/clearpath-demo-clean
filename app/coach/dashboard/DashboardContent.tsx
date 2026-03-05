@@ -14,6 +14,8 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from 'recharts'
+import { createClient } from '@/lib/supabase/client'
+import { getClientId } from '@/lib/config'
 
 function useRevenueCountUp(revenue: number, duration = 1.2) {
   const [displayValue, setDisplayValue] = useState(0)
@@ -63,6 +65,7 @@ type DashboardContentProps = {
   revenue: number
   revenueThisWeek: number
   unseenMessagesCount: number
+  initialDailyMessage: { content: string; effective_at: string | null; created_at: string } | null
   nextSession: Session | null
   upcomingSessions: Session[]
   pendingSessions: Session[]
@@ -158,6 +161,7 @@ export function DashboardContent({
   revenue,
   revenueThisWeek,
   unseenMessagesCount,
+  initialDailyMessage,
   nextSession,
   upcomingSessions,
   pendingSessions,
@@ -179,12 +183,52 @@ export function DashboardContent({
   const [connectLoading, setConnectLoading] = useState(false)
   const [dismissingOnboarding, setDismissingOnboarding] = useState(false)
   const [currentTime, setCurrentTime] = useState(initialCurrentTime)
+  const [broadcastContent, setBroadcastContent] = useState(initialDailyMessage?.content ?? '')
+  const [broadcastSaving, setBroadcastSaving] = useState(false)
+  const [broadcastError, setBroadcastError] = useState<string | null>(null)
+  const [lastBroadcast, setLastBroadcast] = useState(initialDailyMessage)
+
+  const supabase = createClient()
+  const tenantId = getClientId()
 
   useEffect(() => {
     const tick = () => setCurrentTime(format(new Date(), 'h:mm a · EEEE, MMMM d'))
     const id = setInterval(tick, 60 * 1000)
     return () => clearInterval(id)
   }, [])
+
+  async function handleBroadcastSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!broadcastContent.trim() || broadcastSaving) return
+    setBroadcastSaving(true)
+    setBroadcastError(null)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        setBroadcastError('You need to be signed in.')
+        setBroadcastSaving(false)
+        return
+      }
+      const payload: any = {
+        coach_id: user.id,
+        client_id: tenantId,
+        content: broadcastContent.trim(),
+      }
+      const { data, error } = await supabase
+        .from('coach_daily_messages')
+        .insert(payload)
+        .select('content, effective_at, created_at')
+        .single()
+      if (error) {
+        setBroadcastError('Could not post message. Please try again.')
+      } else if (data) {
+        setLastBroadcast(data as typeof initialDailyMessage)
+      }
+    } catch {
+      setBroadcastError('Could not post message. Please try again.')
+    }
+    setBroadcastSaving(false)
+  }
 
   async function handleConnectStripe() {
     setConnectLoading(true)
@@ -293,6 +337,60 @@ export function DashboardContent({
             </ul>
           </motion.div>
         )}
+
+        <motion.div
+          variants={item}
+          className="mt-4 rounded-2xl border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-elevated)] p-5 sm:p-6 shadow-[var(--cp-shadow-card)]"
+        >
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="flex-1 min-w-0">
+              <h3 className="text-sm font-medium text-[var(--cp-text-primary)]">
+                Share a message with all your students
+              </h3>
+              <p className="text-xs text-[var(--cp-text-muted)] mt-0.5">
+                This appears on each client&apos;s dashboard under &quot;Message from your coach&quot;.
+              </p>
+              <form onSubmit={handleBroadcastSubmit} className="mt-3 space-y-2">
+                <textarea
+                  value={broadcastContent}
+                  onChange={(e) => setBroadcastContent(e.target.value)}
+                  rows={2}
+                  maxLength={300}
+                  className="w-full rounded-md border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] px-3 py-2 text-sm text-[var(--cp-text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cp-border-focus)]"
+                  placeholder="e.g. This week, focus on breathing and pacing during your rounds."
+                />
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[10px] text-[var(--cp-text-muted)]">
+                    {broadcastContent.length}/300 characters
+                  </p>
+                  <button
+                    type="submit"
+                    disabled={broadcastSaving || !broadcastContent.trim()}
+                    className="inline-flex items-center rounded-md bg-[var(--cp-accent-primary)] px-3 py-1.5 text-xs font-medium text-[var(--cp-text-on-accent)] hover:opacity-90 disabled:opacity-50"
+                  >
+                    {broadcastSaving ? 'Posting…' : 'Post to dashboards'}
+                  </button>
+                </div>
+                {broadcastError && (
+                  <p className="text-xs text-[var(--cp-accent-danger)] mt-1">{broadcastError}</p>
+                )}
+              </form>
+            </div>
+            {lastBroadcast && (
+              <div className="w-full sm:w-64 border border-dashed border-[var(--cp-border-subtle)] rounded-xl p-3 text-xs text-[var(--cp-text-muted)] bg-[var(--cp-bg-surface)]">
+                <p className="font-medium text-[var(--cp-text-primary)] mb-1">Latest message</p>
+                <p className="whitespace-pre-wrap break-words">
+                  {lastBroadcast.content}
+                </p>
+                {lastBroadcast.effective_at && (
+                  <p className="mt-1 text-[10px]">
+                    For {lastBroadcast.effective_at}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        </motion.div>
 
         {/* Revenue hero: chart at top with count-up summary */}
         <motion.div
@@ -433,19 +531,42 @@ export function DashboardContent({
         )}
       </motion.div>
 
-      <motion.div variants={item} className="rounded-2xl border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-elevated)] p-5 sm:p-6 shadow-[var(--cp-shadow-soft)]">
-        <h3 className="text-sm font-medium text-[var(--cp-text-muted)] mb-3">Ready to schedule</h3>
-        <p className="text-sm text-[var(--cp-text-muted)] mb-3">Clients have submitted their availability. Confirm a time on Schedule to book.</p>
+      <motion.div
+        variants={item}
+        className={`rounded-2xl border p-5 sm:p-6 shadow-[var(--cp-shadow-card)] ${
+          availabilityRequests.length > 0
+            ? 'border-[var(--cp-accent-warning)] bg-[var(--cp-accent-warning)]/5'
+            : 'border-[var(--cp-border-subtle)] bg-[var(--cp-bg-elevated)]'
+        }`}
+      >
+        <div className="flex items-baseline justify-between gap-3 mb-2">
+          <h3 className="text-sm font-medium text-[var(--cp-text-primary)]">
+            Ready to schedule
+          </h3>
+          {availabilityRequests.length > 0 && (
+            <span className="inline-flex min-w-[1.5rem] items-center justify-center rounded-full bg-[var(--cp-accent-warning)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--cp-text-on-accent)]">
+              {availabilityRequests.length > 99 ? '99+' : availabilityRequests.length}
+            </span>
+          )}
+        </div>
+        <p className="text-sm text-[var(--cp-text-muted)] mb-3">
+          {availabilityRequests.length > 0
+            ? 'You have sessions waiting for you to pick a time. Open Schedule and confirm them.'
+            : 'Clients will appear here after they pay and submit availability.'}
+        </p>
         {availabilityRequests.length > 0 ? (
           <ul className="space-y-3">
             {availabilityRequests.map((req) => (
-              <li key={req.id} className="flex flex-wrap items-center justify-between gap-2 py-2 border-b border-[var(--cp-border-subtle)] last:border-0 last:pb-0">
+              <li
+                key={req.id}
+                className="flex flex-wrap items-center justify-between gap-2 py-2 border-b border-[var(--cp-border-subtle)] last:border-0 last:pb-0"
+              >
                 <div className="min-w-0">
                   <p className="font-medium text-[var(--cp-text-primary)]">
                     {req.clients?.[0]?.full_name ?? 'Client'}
                   </p>
                   <p className="text-sm text-[var(--cp-text-muted)]">
-                    {req.session_products?.[0]?.name ?? 'Session'} — waiting for you to pick a time
+                    {req.session_products?.[0]?.name ?? 'Session'} — needs a time confirmed
                   </p>
                 </div>
                 <Link
@@ -458,7 +579,9 @@ export function DashboardContent({
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-[var(--cp-text-muted)] py-1">No availability requests right now.</p>
+          <p className="text-sm text-[var(--cp-text-muted)] py-1">
+            No availability requests right now.
+          </p>
         )}
         <Link
           href="/coach/schedule"
@@ -476,13 +599,13 @@ export function DashboardContent({
             variants={item}
             type="button"
             onClick={() => setExpandedPanel(id)}
-            className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] p-6 shadow-[var(--cp-shadow-soft)] hover:border-[var(--cp-accent-primary)] hover:bg-[var(--cp-accent-primary-soft)] hover:shadow-[var(--cp-shadow-card)] transition-all min-h-[140px] sm:min-h-[160px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cp-border-focus)]"
+            className="relative flex flex-col items-center justify-center gap-3 rounded-2xl border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] p-6 shadow-[var(--cp-shadow-soft)] hover:border-[var(--cp-accent-primary)] hover:bg-[var(--cp-accent-primary-soft)] hover:shadow-[var(--cp-shadow-card)] transition-all min-h-[140px] sm:min-h-[160px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cp-border-focus)]"
           >
             <span className="text-[var(--cp-text-muted)]">{iconSvg[id]}</span>
             <span className="text-sm font-medium text-[var(--cp-text-primary)] text-center">{label}</span>
             {badge != null && badge > 0 && (
-              <span className="rounded-full bg-[var(--cp-accent-primary-soft)] px-2 py-0.5 text-xs font-medium text-[var(--cp-accent-primary)]">
-                {badge}
+              <span className="absolute right-3 top-2 inline-flex min-w-[1.5rem] items-center justify-center rounded-full bg-[var(--cp-accent-primary)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--cp-text-on-accent)]">
+                {badge > 99 ? '99+' : badge}
               </span>
             )}
           </motion.button>

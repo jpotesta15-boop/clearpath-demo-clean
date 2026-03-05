@@ -144,6 +144,17 @@ export default async function CoachDashboard() {
 
   const currentTime = format(now, 'h:mm a · EEEE, MMMM d')
 
+  const { data: latestDailyMessages } = await supabase
+    .from('coach_daily_messages')
+    .select('content, effective_at, created_at')
+    .eq('coach_id', user!.id)
+    .eq('client_id', tenantId)
+    .order('effective_at', { ascending: false })
+    .order('created_at', { ascending: false })
+    .limit(1)
+
+  const latestDailyMessage = latestDailyMessages && latestDailyMessages.length > 0 ? latestDailyMessages[0] : null
+
   return (
     <DashboardContent
       tagline={coachProfile?.tagline ?? null}
@@ -154,6 +165,7 @@ export default async function CoachDashboard() {
       revenue={revenue}
       revenueThisWeek={revenueThisWeek}
       unseenMessagesCount={unseenMessagesCount ?? 0}
+      initialDailyMessage={latestDailyMessage}
       nextSession={nextSessionRow ?? null}
       upcomingSessions={upcomingSessions ?? []}
       pendingSessions={pendingSessions ?? []}
