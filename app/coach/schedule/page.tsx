@@ -29,6 +29,8 @@ type Slot = {
   end_time: string
   is_group_session: boolean
   max_participants: number
+  session_product_id?: string | null
+  label?: string | null
 }
 
 type Session = {
@@ -98,6 +100,7 @@ export default function SchedulePage() {
   const [slots, setSlots] = useState<Slot[]>([])
   const [sessions, setSessions] = useState<Session[]>([])
   const [clients, setClients] = useState<Client[]>([])
+  const [sessionProducts, setSessionProducts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [month, setMonth] = useState(() => new Date())
@@ -109,6 +112,9 @@ export default function SchedulePage() {
     repeat: 'none' as 'none' | 'daily' | 'weekly',
     repeatEndDate: '',
     repeatCount: 4,
+    is_paid_slot: false,
+    session_product_id: '',
+    label: '',
   })
   const [bookClient, setBookClient] = useState<Client | null>(null)
   const [bookForm, setBookForm] = useState({ date: '', startTime: '', endTime: '' })
@@ -166,6 +172,14 @@ export default function SchedulePage() {
       .eq('coach_id', user.id)
       .order('full_name', { ascending: true })
 
+    const { data: productsData } = await supabase
+      .from('session_products')
+      .select('*')
+      .eq('coach_id', user.id)
+      .eq('client_id', tenantId)
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+
     const { data: requestsData } = await supabase
       .from('session_requests')
       .select('*, clients(*), session_products(name)')
@@ -176,6 +190,7 @@ export default function SchedulePage() {
     setSlots(slotsData || [])
     setSessions(sessionsData || [])
     setClients(clientsData || [])
+    setSessionProducts(productsData || [])
     setSessionRequests(requestsData || [])
     setLoading(false)
   }
@@ -190,6 +205,10 @@ export default function SchedulePage() {
     const start = new Date(newSlot.start_time)
     const end = new Date(newSlot.end_time)
     if (isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) return
+
+    if (newSlot.is_paid_slot && !newSlot.session_product_id) {
+      return
+    }
 
     const durationMs = end.getTime() - start.getTime()
     const occurrences: { start_time: string; end_time: string }[] = []
@@ -232,6 +251,8 @@ export default function SchedulePage() {
         end_time: occ.end_time,
         is_group_session: newSlot.is_group_session,
         max_participants: newSlot.max_participants,
+        session_product_id: newSlot.is_paid_slot ? newSlot.session_product_id : null,
+        label: newSlot.is_paid_slot ? newSlot.label.trim() || null : null,
       })
       if (error) {
         loadData()
@@ -248,6 +269,9 @@ export default function SchedulePage() {
       repeat: 'none',
       repeatEndDate: '',
       repeatCount: 4,
+      is_paid_slot: false,
+      session_product_id: '',
+      label: '',
     })
     loadData()
   }
@@ -595,6 +619,77 @@ export default function SchedulePage() {
                   </div>
                 </>
               )}
+              <div className="border-t border-[var(--cp-border-subtle)] pt-4 mt-2 space-y-3">
+                <label className="flex items-center gap-2 text-sm font-medium text-[var(--cp-text-primary)]">
+                  <input
+                    type="checkbox"
+                    checked={newSlot.is_paid_slot}
+                    onChange={(e) =>
+                      setNewSlot((prev) => ({
+                        ...prev,
+                        is_paid_slot: e.target.checked,
+                      }))
+                    }
+                    className="h-4 w-4 rounded border-[var(--cp-border-subtle)]"
+                  />
+                  Make this a paid bookable slot
+                </label>
+                <p className="text-xs text-[var(--cp-text-muted)]">
+                  Use one of your session packages so clients can book and pay for this time directly.
+                </p>
+                {newSlot.is_paid_slot && (
+                  <>
+                    {sessionProducts.length === 0 ? (
+                      <p className="text-xs text-[var(--cp-text-muted)]">
+                        You don&apos;t have any session types yet. Create one under Session Packages, then come
+                        back to make specific times bookable.
+                      </p>
+                    ) : (
+                      <>
+                        <div>
+                          <label className="block text-xs font-medium text-[var(--cp-text-muted)]">
+                            Session type
+                          </label>
+                          <select
+                            value={newSlot.session_product_id}
+                            onChange={(e) =>
+                              setNewSlot((prev) => ({
+                                ...prev,
+                                session_product_id: e.target.value,
+                              }))
+                            }
+                            required
+                            className="mt-1 w-full max-w-xs h-10 rounded-md border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] px-3 py-2 text-sm text-[var(--cp-text-primary)]"
+                          >
+                            <option value="">Select a session type…</option>
+                            {sessionProducts.map((p) => (
+                              <option key={p.id} value={p.id}>
+                                {p.name} – ${((p.price_cents ?? 0) / 100).toFixed(2)}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-[var(--cp-text-muted)]">
+                            Optional label shown to clients
+                          </label>
+                          <Input
+                            type="text"
+                            value={newSlot.label}
+                            onChange={(e) =>
+                              setNewSlot((prev) => ({
+                                ...prev,
+                                label: e.target.value,
+                              }))
+                            }
+                            placeholder="e.g. Friday open mat, 60-min 1:1"
+                            className="mt-1 max-w-md bg-[var(--cp-bg-surface)] border-[var(--cp-border-subtle)]"
+                          />
+                        </div>
+                      </>
+                    )}
+                  </>
+                )}
               <Button type="submit">Create slot{newSlot.repeat !== 'none' ? 's' : ''}</Button>
             </form>
           </CardContent>

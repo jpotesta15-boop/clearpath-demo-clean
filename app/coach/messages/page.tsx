@@ -8,8 +8,8 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Input } from '@/components/ui/input'
-import { format } from 'date-fns'
 import { getClientId } from '@/lib/config'
+import { MessageThread, type ChatMessage } from '@/components/chat/MessageThread'
 
 export default function MessagesPage() {
   const [messages, setMessages] = useState<any[]>([])
@@ -239,6 +239,25 @@ export default function MessagesPage() {
 
   const selectedClientData = clients.find((c) => c.id === selectedClient)
 
+  const chatMessages: ChatMessage[] = messages.map((message) => {
+    const isOwn = message.sender_id === currentUser?.id
+    let offer: any = null
+    try {
+      const parsed = JSON.parse(message.content)
+      if (parsed?.type === 'session_offer') offer = parsed
+    } catch {
+      // not JSON
+    }
+    return {
+      id: String(message.id),
+      content: message.content,
+      createdAt: message.created_at,
+      isOwn,
+      senderLabel: !isOwn ? selectedClientData?.full_name ?? 'Client' : undefined,
+      offer,
+    }
+  })
+
   return (
     <div className="space-y-6">
       <div>
@@ -312,80 +331,20 @@ export default function MessagesPage() {
                 </div>
                 <div className="flex-1 overflow-y-auto p-4 min-h-0">
                   <div className="space-y-3">
-                      {messages.length === 0 && (
-                        <EmptyState
-                          title="No messages yet"
-                          description="Send one below."
-                          className="py-8"
-                        />
-                      )}
-                    {messages.map((message) => {
-                      const isOwn = message.sender_id === currentUser?.id
-                      let offerData: { type: string; session_request_id?: string; product_name?: string; amount_cents?: number; amount_display?: string } | null = null
-                      try {
-                        const parsed = JSON.parse(message.content)
-                        if (parsed?.type === 'session_offer') offerData = parsed
-                      } catch {
-                        // not JSON
-                      }
-                      return (
-                        <div
-                          key={message.id}
-                          className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
-                        >
-                          <div
-                            className={`max-w-[85%] lg:max-w-md ${
-                              isOwn ? 'items-end' : 'items-start'
-                            }`}
-                          >
-                            {!isOwn && (
-                              <p className="text-xs font-medium text-[var(--cp-text-muted)] mb-0.5">
-                                {selectedClientData?.full_name ?? 'Client'}
-                              </p>
-                            )}
-                            {offerData ? (
-                              <div
-                                className={`rounded-lg px-4 py-3 border ${
-                                  isOwn
-                                    ? 'bg-[var(--cp-accent-primary-soft)] border-[var(--cp-accent-primary)] text-[var(--cp-text-primary)]'
-                                    : 'bg-[var(--cp-bg-elevated)] border-[var(--cp-border-subtle)] text-[var(--cp-text-primary)]'
-                                }`}
-                              >
-                                <p className="text-xs font-medium text-[var(--cp-text-muted)] mb-1">Session offer</p>
-                                <p className="text-sm font-semibold">{offerData.product_name ?? 'Session'}</p>
-                                <p className="text-sm">${offerData.amount_display ?? ((offerData.amount_cents ?? 0) / 100).toFixed(2)}</p>
-                                <p className="text-xs text-[var(--cp-text-muted)] mt-2">
-                                  Client can respond in Messages or Schedule.
-                                </p>
-                                <p className="text-xs mt-1 opacity-80">
-                                  {format(new Date(message.created_at), 'MMM d, h:mm a')}
-                                </p>
-                              </div>
-                            ) : (
-                              <div
-                                className={`rounded-lg px-4 py-2.5 ${
-                                  isOwn
-                                    ? 'bg-[var(--cp-accent-primary)] text-[var(--cp-text-on-accent)]'
-                                    : 'bg-[rgba(15,23,42,0.8)] text-[var(--cp-text-primary)] border border-[var(--cp-border-subtle)]'
-                                }`}
-                              >
-                                <p className="text-sm whitespace-pre-wrap break-words">
-                                  {message.content}
-                                </p>
-                                <p
-                                  className={`text-xs mt-1 ${
-                                    isOwn ? 'text-[rgba(226,232,240,0.8)]' : 'text-[var(--cp-text-subtle)]'
-                                  }`}
-                                >
-                                  {format(new Date(message.created_at), 'MMM d, h:mm a')}
-                                </p>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )
-                    })}
-                    <div ref={messagesEndRef} />
+                    {messages.length === 0 && (
+                      <EmptyState
+                        title="No messages yet"
+                        description="Send one below."
+                        className="py-8"
+                      />
+                    )}
+                    {messages.length > 0 && (
+                      <MessageThread
+                        messages={chatMessages}
+                        context="coach"
+                        bottomRef={messagesEndRef}
+                      />
+                    )}
                   </div>
                 </div>
                 {sendError && (
