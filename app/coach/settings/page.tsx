@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -46,8 +46,11 @@ export default function CoachSettingsPage() {
   const [tagline, setTagline] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [logoUploading, setLogoUploading] = useState(false)
+  const [logoError, setLogoError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const supabase = createClient()
+  const logoInputRef = useRef<HTMLInputElement>(null)
   const variants: ThemeVariant[] = ['blue', 'orange', 'purple', 'red', 'green', 'neutral']
 
   useEffect(() => {
@@ -80,6 +83,40 @@ export default function CoachSettingsPage() {
     }
     load()
   }, [])
+
+  const handleLogoFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      setLogoError('Please choose an image (JPEG, PNG, GIF, or WebP).')
+      return
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setLogoError('Image must be under 2 MB.')
+      return
+    }
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    setLogoError(null)
+    setLogoUploading(true)
+    const ext = file.name.split('.').pop()?.toLowerCase() || 'png'
+    const path = `${user.id}/logo.${ext}`
+    const { error } = await supabase.storage.from('avatars').upload(path, file, { upsert: true })
+    setLogoUploading(false)
+    if (error) {
+      setLogoError(error.message)
+      return
+    }
+    const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path)
+    setLogoUrl(publicUrl)
+    if (logoInputRef.current) logoInputRef.current.value = ''
+  }
+
+  const handleRemoveLogo = () => {
+    setLogoUrl('')
+    setLogoError(null)
+    if (logoInputRef.current) logoInputRef.current.value = ''
+  }
 
   const handleSavePreferences = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -277,17 +314,42 @@ export default function CoachSettingsPage() {
             </p>
             <div>
               <label className="flex items-center gap-2 text-sm font-medium text-[var(--cp-text-primary)] mb-1">
-                Logo URL
+                Profile picture / logo
                 <span className="text-[10px] font-normal uppercase tracking-wider text-[var(--cp-accent-primary)]">Recommended</span>
               </label>
-              <Input
-                value={logoUrl}
-                onChange={(e) => setLogoUrl(e.target.value)}
-                placeholder="https://..."
-                className="max-w-md bg-[var(--cp-bg-surface)] border-[var(--cp-border-subtle)]"
-              />
+              <div className="flex flex-wrap items-center gap-3">
+                {logoUrl && (
+                  <div className="relative">
+                    <img
+                      src={logoUrl}
+                      alt="Logo"
+                      className="h-16 w-16 rounded-lg border border-[var(--cp-border-subtle)] object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleRemoveLogo}
+                      className="absolute -top-1 -right-1 h-5 w-5 rounded-full border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] text-[var(--cp-text-muted)] hover:bg-[var(--cp-accent-danger-soft)] hover:text-[var(--cp-accent-danger)] text-xs leading-none"
+                      aria-label="Remove logo"
+                    >
+                      ×
+                    </button>
+                  </div>
+                )}
+                <div className="flex flex-col gap-1">
+                  <input
+                    ref={logoInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif,image/webp"
+                    onChange={handleLogoFile}
+                    disabled={logoUploading}
+                    className="text-sm text-[var(--cp-text-primary)] file:mr-2 file:rounded-md file:border-0 file:bg-[var(--cp-accent-primary-soft)] file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-[var(--cp-accent-primary)]"
+                  />
+                  {logoUploading && <span className="text-xs text-[var(--cp-text-muted)]">Uploading…</span>}
+                  {logoError && <span className="text-xs text-[var(--cp-accent-danger)]">{logoError}</span>}
+                </div>
+              </div>
               <p className="text-xs text-[var(--cp-text-muted)] mt-1">
-                Shown in the sidebar and client portal header. Use a direct image URL.
+                Shown in the sidebar and client portal header. Import an image (JPEG, PNG, GIF, or WebP, max 2 MB).
               </p>
             </div>
             <div>

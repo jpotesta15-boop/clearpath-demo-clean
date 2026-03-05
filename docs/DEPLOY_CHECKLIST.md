@@ -30,6 +30,9 @@ Set these in `.env.local` (local) or your host’s environment (e.g. Vercel, Rai
 3. **Invite emails**
    - **Authentication → Email** (or Project Settings → Auth → SMTP): Configure so invite emails can be sent. Without this, “Send portal invite” will fail or appear to do nothing. Use Supabase’s built-in email or custom SMTP.
 
+4. **Storage (avatars)**
+   - Coach profile picture / logo uploads use the **avatars** bucket. It is created by migration `20240114000000_storage_avatars.sql`. Run all migrations (e.g. `supabase db push`) so the bucket and RLS policies exist.
+
 ## Production
 
 - Add your production base URL to Supabase **Redirect URLs** and set **Site URL** to the production URL.
