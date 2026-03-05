@@ -131,6 +131,7 @@ const iconSvg = {
 }
 
 export function DashboardContent({
+  tagline,
   stripeConnectAccountId,
   totalClients,
   upcomingCount,

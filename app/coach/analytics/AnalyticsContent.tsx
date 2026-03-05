@@ -75,7 +75,7 @@ export function AnalyticsContent({
                         borderRadius: '8px',
                       }}
                       labelStyle={{ color: 'var(--cp-text-muted)' }}
-                      formatter={(value: number) => [`$${value.toFixed(2)}`, 'Revenue']}
+                      formatter={(value: number | undefined) => [value != null ? `$${value.toFixed(2)}` : '—', 'Revenue']}
                       labelFormatter={(label) => label}
                     />
                     <Bar
