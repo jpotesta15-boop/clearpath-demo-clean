@@ -690,6 +690,7 @@ export default function SchedulePage() {
                     )}
                   </>
                 )}
+              </div>
               <Button type="submit">Create slot{newSlot.repeat !== 'none' ? 's' : ''}</Button>
             </form>
           </CardContent>
