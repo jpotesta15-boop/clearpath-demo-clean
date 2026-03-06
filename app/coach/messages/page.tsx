@@ -187,6 +187,7 @@ export default function MessagesPage() {
     const unreadIds = (data || []).filter((m: any) => m.recipient_id === currentUser.id && !m.read_at).map((m: any) => m.id)
     if (unreadIds.length > 0) {
       await supabase.from('messages').update({ read_at: new Date().toISOString() }).in('id', unreadIds)
+      await new Promise((r) => setTimeout(r, 150))
     }
 
     await refreshUnreadCounts(currentUser.id, clients)

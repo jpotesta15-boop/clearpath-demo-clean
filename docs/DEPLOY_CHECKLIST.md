@@ -52,6 +52,13 @@ Set these in `.env.local` (local) or your host’s environment (e.g. Vercel, Rai
 - Use **HTTPS** in production.
 - **Run all migrations** on the production DB in order. Apply every file in `supabase/migrations/` in alphabetical order (oldest first). See [SQL_AND_MIGRATIONS.md](SQL_AND_MIGRATIONS.md) for the full list. If using Supabase CLI: `supabase db push`. Do not skip migrations.
 
+## Stripe Checkout
+
+- **Coach must connect Stripe** in the coach Dashboard before clients can pay. If the coach has not connected Stripe, "Accept & pay" will show an error to the client.
+- **Stripe Checkout is hosted by Stripe** – no custom checkout page is required. The app creates a Checkout session and redirects the client to Stripe’s payment page.
+- Set **STRIPE_SECRET_KEY** and **STRIPE_WEBHOOK_SECRET** in your environment.
+- **Webhook URL:** `https://your-app.com/api/webhooks/stripe` – register this in the Stripe Dashboard (Developers → Webhooks) and subscribe to `checkout.session.completed`.
+
 ## References
 
 - [auth-google.md](auth-google.md) – Google OAuth setup

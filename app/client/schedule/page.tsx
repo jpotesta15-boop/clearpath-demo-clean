@@ -16,6 +16,7 @@ function ClientScheduleContent() {
   const [loading, setLoading] = useState(true)
   const [client, setClient] = useState<any>(null)
   const [submittingRequestId, setSubmittingRequestId] = useState<string | null>(null)
+  const [payError, setPayError] = useState<string | null>(null)
   const [decliningRequestId, setDecliningRequestId] = useState<string | null>(null)
   const [availabilityText, setAvailabilityText] = useState('')
   const [submittingAvailability, setSubmittingAvailability] = useState(false)
@@ -102,6 +103,7 @@ function ClientScheduleContent() {
   }
 
   const handleAcceptOffer = async (requestId: string) => {
+    setPayError(null)
     setSubmittingRequestId(requestId)
     try {
       const res = await fetch('/api/stripe/create-checkout-session', {
@@ -115,8 +117,10 @@ function ClientScheduleContent() {
         window.location.href = data.url
         return
       }
+      setPayError(data?.error ?? 'Could not start payment. Please try again.')
       setSubmittingRequestId(null)
     } catch {
+      setPayError('Could not start payment. Please try again.')
       setSubmittingRequestId(null)
     }
   }
@@ -225,6 +229,7 @@ function ClientScheduleContent() {
 
     if (error || !sessionRequest) return
 
+    setPayError(null)
     setSubmittingRequestId(sessionRequest.id)
     try {
       const res = await fetch('/api/stripe/create-checkout-session', {
@@ -238,8 +243,9 @@ function ClientScheduleContent() {
         window.location.href = data.url
         return
       }
+      setPayError(data?.error ?? 'Could not start payment. Please try again.')
     } catch {
-      // ignore
+      setPayError('Could not start payment. Please try again.')
     }
     setSubmittingRequestId(null)
   }
@@ -386,8 +392,15 @@ function ClientScheduleContent() {
                   </div>
                 )
               })}
+            {payError && (
+              <p className="text-sm text-[var(--cp-accent-danger)] mt-3">{payError}</p>
+            )}
           </CardContent>
         </Card>
+      )}
+
+      {payError && !sessionRequests.filter((r) => ['offered', 'accepted', 'payment_pending', 'paid', 'availability_submitted'].includes(r.status)).length && (
+        <p className="text-sm text-[var(--cp-accent-danger)]">{payError}</p>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

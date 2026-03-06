@@ -19,6 +19,7 @@ export default function ClientMessagesPage() {
   const [availabilityText, setAvailabilityText] = useState('')
   const [submittingAvailability, setSubmittingAvailability] = useState(false)
   const [payingRequestId, setPayingRequestId] = useState<string | null>(null)
+  const [payError, setPayError] = useState<string | null>(null)
   const realtimeChannelRef = useRef<ReturnType<ReturnType<typeof createClient>['channel']> | null>(null)
   const supabase = createClient()
   const tenantId = getClientId()
@@ -120,6 +121,7 @@ export default function ClientMessagesPage() {
       const unreadIds = msgs.filter((m: any) => m.recipient_id === user.id && !m.read_at).map((m: any) => m.id)
       if (unreadIds.length > 0) {
         await supabase.from('messages').update({ read_at: new Date().toISOString() }).in('id', unreadIds)
+        await new Promise((r) => setTimeout(r, 150))
       }
 
       await updateUnreadBadge(user.id)
@@ -127,6 +129,7 @@ export default function ClientMessagesPage() {
   }
 
   const handleAcceptOffer = async (requestId: string) => {
+    setPayError(null)
     setPayingRequestId(requestId)
     try {
       const res = await fetch('/api/stripe/create-checkout-session', {
@@ -140,8 +143,10 @@ export default function ClientMessagesPage() {
         window.location.href = data.url
         return
       }
+      setPayError(data?.error ?? 'Could not start payment. Please try again.')
       setPayingRequestId(null)
     } catch {
+      setPayError('Could not start payment. Please try again.')
       setPayingRequestId(null)
     }
   }
@@ -316,6 +321,9 @@ export default function ClientMessagesPage() {
                   )
                 })}
               </div>
+            )}
+            {payError && (
+              <p className="text-sm text-[var(--cp-accent-danger)] mt-3">{payError}</p>
             )}
             <div className="space-y-4">
               <MessageThread messages={chatMessages} context="client" />
