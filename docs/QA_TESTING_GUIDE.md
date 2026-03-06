@@ -18,6 +18,7 @@ Use this guide to verify coach and client flows before launch or after major cha
 | **Book session** | Schedule → pick client, slot, submit | Session appears; client sees it on their Schedule |
 | **Offer session** | Messages → pick client → Offer session | Client sees offer on Schedule |
 | **Confirm paid request** | Schedule → Ready to schedule → pick slot, confirm | Session created; n8n fires if configured |
+| **Manual remind** | Schedule → Sessions list → Remind on confirmed future session | Client receives reminder (SMS or email via n8n) |
 | **Programs** | Programs → Create → add lessons from videos → Assign to client | Client sees program on their Programs page |
 | **Program video progress** | Client marks videos done; Programs → Who has access | Shows "X/Y videos done" per client |
 | **Videos** | Videos → Add by URL or n8n | Video in library; assignable to clients |
@@ -52,6 +53,7 @@ Use this guide to verify coach and client flows before launch or after major cha
 | **Rate limit** | 30+ login attempts from same IP | "Too many attempts. Please try again in a few minutes." |
 | **Stripe webhook** | Complete checkout for session offer | `session_request` → paid; session created if slot pre-selected |
 | **n8n session-booked** | Confirm session from Ready to schedule | Check n8n Executions for workflow run; coach and client emails sent |
+| **Manual remind** | Schedule → Remind on confirmed future session | n8n runs; client receives reminder (SMS or email) |
 | **Balance owed** | Client has unpaid session offers | Coach sees "Balance owed $X"; client sees "You owe $X" on dashboard |
 | **Payment link** | Coach → Client detail → Copy payment link | Link copied; client can pay via Stripe |
 | **Demo credentials** | Set `NEXT_PUBLIC_DEMO_MODE=true` | Demo credentials visible on login |

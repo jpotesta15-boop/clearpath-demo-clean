@@ -12,7 +12,8 @@
       "type": "n8n-nodes-base.googleDriveTrigger",
       "typeVersion": 1,
       "position": [240, 300],
-      "webhookId": ""
+      "webhookId": "",
+      "notes": "Add Google Drive credentials. Select folder to watch (e.g. YOUR_GOOGLE_DRIVE_FOLDER_ID)."
     },
     {
       "parameters": {
@@ -60,7 +61,8 @@
       "name": "POST to ClearPath",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [680, 300]
+      "position": [680, 300],
+      "notes": "Replace YOUR_APP_URL (e.g. https://your-app.vercel.app) and YOUR_N8N_VIDEO_WEBHOOK_SECRET. Set N8N_VIDEO_WEBHOOK_SECRET and N8N_DEFAULT_COACH_ID in app env."
     }
   ],
   "connections": {

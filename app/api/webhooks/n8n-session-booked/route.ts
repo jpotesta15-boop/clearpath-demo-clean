@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { n8nSessionBookedSchema } from '@/lib/validations'
 import { getSafeMessage, logServerError } from '@/lib/api-error'
+import { normalizePhone } from '@/lib/phone'
 
 const N8N_URL = process.env.N8N_SESSION_BOOKED_WEBHOOK_URL
 
@@ -37,13 +38,13 @@ export async function POST(request: Request) {
 
   const { data: clientRow } = await supabase
     .from('clients')
-    .select('email, full_name')
+    .select('email, full_name, phone')
     .eq('id', client_id)
     .single()
 
   const { data: coachRow } = await supabase
     .from('profiles')
-    .select('full_name, email')
+    .select('full_name, email, phone')
     .eq('id', coach_id)
     .single()
 
@@ -52,10 +53,13 @@ export async function POST(request: Request) {
     coach_id,
     client_id,
     scheduled_time,
+    type: 'booked',
     client_email: clientRow?.email ?? null,
     client_name: clientRow?.full_name ?? null,
+    client_phone: normalizePhone(clientRow?.phone) ?? null,
     coach_name: coachRow?.full_name ?? null,
     coach_email: coachRow?.email ?? null,
+    coach_phone: normalizePhone((coachRow as { phone?: string })?.phone) ?? null,
   }
 
   if (!N8N_URL) {

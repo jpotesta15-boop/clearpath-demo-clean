@@ -9,6 +9,7 @@ import { SessionHistoryWithPay } from './SessionHistoryWithPay'
 import { ClientPortalAccess } from './ClientPortalAccess'
 import { ClientProfileDetails } from './ClientProfileDetails'
 import { ClientNameEditor } from './ClientNameEditor'
+import { ClientPhoneEditor } from './ClientPhoneEditor'
 import { DeleteClientButton } from './DeleteClientButton'
 import { RequestPaymentButton } from './RequestPaymentButton'
 
@@ -143,7 +144,7 @@ export default async function ClientDetailPage({
           </CardHeader>
           <CardContent className="space-y-2">
             <p><span className="font-medium">Email:</span> {client.email || 'N/A'}</p>
-            <p><span className="font-medium">Phone:</span> {client.phone || 'N/A'}</p>
+            <ClientPhoneEditor clientId={client.id} initialPhone={client.phone ?? null} />
           </CardContent>
         </Card>
         <ClientProfileDetails

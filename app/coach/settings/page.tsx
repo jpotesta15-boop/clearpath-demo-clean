@@ -40,6 +40,7 @@ export default function CoachSettingsPage() {
   const { variant, setVariant, mode, setMode } = useThemeVariant()
   const [displayName, setDisplayName] = useState('')
   const [businessName, setBusinessName] = useState('')
+  const [phone, setPhone] = useState('')
   const [timezone, setTimezone] = useState('')
   const [defaultSessionMinutes, setDefaultSessionMinutes] = useState(45)
   const [notifySessionBooked, setNotifySessionBooked] = useState(false)
@@ -63,11 +64,12 @@ export default function CoachSettingsPage() {
       }
       const { data: profile } = await supabase
         .from('profiles')
-        .select('display_name, timezone, preferences, logo_url, tagline')
+        .select('display_name, timezone, preferences, logo_url, tagline, phone')
         .eq('id', user.id)
         .single()
       if (profile) {
         setDisplayName(profile.display_name ?? '')
+        setPhone((profile as { phone?: string }).phone ?? '')
         setTimezone(profile.timezone ?? '')
         const prefs = (profile.preferences as Record<string, unknown>) ?? {}
         setBusinessName((prefs.business_name as string) ?? '')
@@ -129,6 +131,7 @@ export default function CoachSettingsPage() {
       .from('profiles')
       .update({
         display_name: displayName.trim() || null,
+        phone: phone.trim() || null,
         timezone: timezone || null,
         preferences: {
           default_session_duration_minutes: defaultSessionMinutes,
@@ -261,6 +264,20 @@ export default function CoachSettingsPage() {
               />
               <p className="text-xs text-[var(--cp-text-muted)] mt-1">
                 Shown in the client portal and on invoices.
+              </p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[var(--cp-text-primary)] mb-1">
+                Phone (for SMS alerts)
+              </label>
+              <Input
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="e.g. +15551234567"
+                className="max-w-xs bg-[var(--cp-bg-surface)] border-[var(--cp-border-subtle)]"
+              />
+              <p className="text-xs text-[var(--cp-text-muted)] mt-1">
+                Used for session notifications. E.164 format (e.g. +1 for US).
               </p>
             </div>
             <div>

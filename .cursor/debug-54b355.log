@@ -1,0 +1,8 @@
+{"sessionId":"54b355","runId":"pre-fix","hypothesisId":"H2","location":"middleware.ts:/login","message":"Login middleware rate check","data":{"ip":"::1","allowed":true},"timestamp":1772693471513}
+{"sessionId":"54b355","runId":"pre-fix","hypothesisId":"H2","location":"middleware.ts:/login","message":"Login middleware rate check","data":{"ip":"::1","allowed":true},"timestamp":1772693601462}
+{"sessionId":"54b355","runId":"pre-fix","hypothesisId":"H2","location":"middleware.ts:/login","message":"Login middleware rate check","data":{"ip":"::1","allowed":true},"timestamp":1772693620129}
+{"sessionId":"54b355","runId":"pre-fix","hypothesisId":"H2","location":"middleware.ts:/login","message":"Login middleware rate check","data":{"ip":"::1","allowed":true},"timestamp":1772693770761}
+{"sessionId":"54b355","runId":"pre-fix","hypothesisId":"H2","location":"middleware.ts:/login","message":"Login middleware rate check","data":{"ip":"::1","allowed":true},"timestamp":1772693914724}
+{"sessionId":"54b355","runId":"pre-fix","hypothesisId":"H1","location":"app/login/page.tsx:useEffect","message":"LoginForm mounted and search params processed","data":{"hasErrorParam":false,"hasEmailParam":false},"timestamp":1772693919151}
+{"sessionId":"54b355","runId":"pre-fix","hypothesisId":"H3","location":"app/login/page.tsx:handleLogin:start","message":"handleLogin started","data":{"emailFilled":true},"timestamp":1772693943113}
+{"sessionId":"54b355","runId":"pre-fix","hypothesisId":"H3","location":"app/login/page.tsx:handleLogin:coach","message":"handleLogin redirecting coach","data":{},"timestamp":1772693944164}

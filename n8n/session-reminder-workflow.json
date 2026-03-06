@@ -1,16 +1,15 @@
 {
-  "name": "ClearPath session reminder – email coach and client",
+  "name": "ClearPath session reminder – SMS or email coach and client",
   "nodes": [
     {
       "parameters": {
         "rule": {
           "interval": [
             {
-              "field": "hours",
-              "hoursInterval": 24
+              "field": "cronExpression",
+              "expression": "0 6 * * *"
             }
-          ],
-          "triggerAtHour": 6
+          ]
         }
       },
       "id": "schedule-trigger",
@@ -23,7 +22,7 @@
     {
       "parameters": {
         "method": "GET",
-        "url": "=https://YOUR_APP_URL/api/sessions/upcoming",
+        "url": "https://YOUR_APP_URL/api/sessions/upcoming",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -83,7 +82,99 @@
     },
     {
       "parameters": {
-        "fromEmail": "notifications@yourdomain.com",
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "coach-phone",
+              "leftValue": "={{ $json.coach_phone }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-coach-phone",
+      "name": "Coach has phone?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1120, 80],
+      "notes": "True: send SMS. False: send email."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "client-phone",
+              "leftValue": "={{ $json.client_phone }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-client-phone",
+      "name": "Client has phone?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1120, 260],
+      "notes": "True: send SMS. False: send email."
+    },
+    {
+      "parameters": {
+        "resource": "sms",
+        "operation": "send",
+        "to": "={{ $json.coach_phone }}",
+        "message": "Reminder: Session with {{ $json.client_name }} at {{ $json.scheduled_time }}",
+        "from": "YOUR_TWILIO_NUMBER",
+        "options": {}
+      },
+      "id": "sms-coach",
+      "name": "SMS coach",
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [1360, 0],
+      "notes": "Replace YOUR_TWILIO_NUMBER. Add Twilio credentials."
+    },
+    {
+      "parameters": {
+        "resource": "sms",
+        "operation": "send",
+        "to": "={{ $json.client_phone }}",
+        "message": "Reminder: Your session with {{ $json.coach_name }} at {{ $json.scheduled_time }}",
+        "from": "YOUR_TWILIO_NUMBER",
+        "options": {}
+      },
+      "id": "sms-client",
+      "name": "SMS client",
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [1360, 180],
+      "notes": "Replace YOUR_TWILIO_NUMBER. Add Twilio credentials."
+    },
+    {
+      "parameters": {
+        "fromEmail": "YOUR_SMTP_FROM_EMAIL",
         "toEmail": "={{ $json.coach_email }}",
         "subject": "Reminder: Session with {{ $json.client_name }} in 24h",
         "text": "Session reminder.\n\nClient: {{ $json.client_name }}\nTime: {{ $json.scheduled_time }}\n\nSession ID: {{ $json.session_id }}",
@@ -93,12 +184,12 @@
       "name": "Email coach",
       "type": "n8n-nodes-base.sendEmail",
       "typeVersion": 2,
-      "position": [1120, 120],
-      "notes": "Configure SMTP. coach_email from API response."
+      "position": [1360, 80],
+      "notes": "Fallback when coach has no phone. Replace YOUR_SMTP_FROM_EMAIL. Configure SMTP credentials."
     },
     {
       "parameters": {
-        "fromEmail": "notifications@yourdomain.com",
+        "fromEmail": "YOUR_SMTP_FROM_EMAIL",
         "toEmail": "={{ $json.client_email }}",
         "subject": "Reminder: Your session with {{ $json.coach_name }} is tomorrow",
         "text": "Your session is coming up.\n\nCoach: {{ $json.coach_name }}\nTime: {{ $json.scheduled_time }}\n\nSession ID: {{ $json.session_id }}",
@@ -108,8 +199,8 @@
       "name": "Email client",
       "type": "n8n-nodes-base.sendEmail",
       "typeVersion": 2,
-      "position": [1120, 320],
-      "notes": "Configure SMTP. client_email from API response."
+      "position": [1360, 260],
+      "notes": "Fallback when client has no phone. Replace YOUR_SMTP_FROM_EMAIL. Configure SMTP credentials."
     }
   ],
   "connections": {
@@ -151,10 +242,46 @@
       "main": [
         [
           {
-            "node": "Email coach",
+            "node": "Coach has phone?",
             "type": "main",
             "index": 0
           },
+          {
+            "node": "Client has phone?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Coach has phone?": {
+      "main": [
+        [
+          {
+            "node": "SMS coach",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Email coach",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Client has phone?": {
+      "main": [
+        [
+          {
+            "node": "SMS client",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
           {
             "node": "Email client",
             "type": "main",

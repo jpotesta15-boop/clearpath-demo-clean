@@ -2,6 +2,23 @@
 
 This folder contains ready-to-import n8n workflows for ClearPath automations. Import these into your n8n instance (cloud or self-hosted) to enable session confirmation emails and auto-add videos from Google Drive.
 
+## Replace Placeholders (After Import)
+
+After importing each workflow, use **Find & Replace** in n8n (or edit each node) to replace these placeholders:
+
+| Placeholder | Replace With | Used In |
+|-------------|--------------|---------|
+| `YOUR_APP_URL` | Your app URL (e.g. `https://your-app.vercel.app`) | Session reminder, Google Drive video workflows |
+| `YOUR_TWILIO_NUMBER` | Your Twilio phone number (e.g. `+15551234567`) | Session booked, Session reminder |
+| `YOUR_SMTP_FROM_EMAIL` | Sender email (e.g. `notifications@yourdomain.com`) | Session booked, Session reminder (Email nodes) |
+| `YOUR_N8N_VIDEO_WEBHOOK_SECRET` | Same value as `N8N_VIDEO_WEBHOOK_SECRET` in app env | Google Drive video workflows |
+| `YOUR_N8N_SESSION_REMINDER_SECRET` | Same value as `N8N_SESSION_REMINDER_SECRET` in app env | Session reminder |
+| `YOUR_CLOUDCONVERT_API_KEY` | API key from [cloudconvert.com](https://cloudconvert.com) | Google Drive + CloudConvert workflow |
+
+**Credentials to add in n8n:** Twilio (SMS), SMTP (email), Google Drive, CloudConvert (if using).
+
+---
+
 ## Environment Variables (App)
 
 Set these in your app environment (e.g. Vercel, `.env.local`):

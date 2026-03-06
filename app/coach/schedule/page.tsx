@@ -132,6 +132,8 @@ export default function SchedulePage() {
   const [offerFromTimeRequest, setOfferFromTimeRequest] = useState<any>(null)
   const [offerProductId, setOfferProductId] = useState('')
   const [offerSubmitting, setOfferSubmitting] = useState(false)
+  const [reminderSendingId, setReminderSendingId] = useState<string | null>(null)
+  const [reminderError, setReminderError] = useState<string | null>(null)
   const supabase = createClient()
   const tenantId = process.env.NEXT_PUBLIC_CLIENT_ID ?? 'demo'
 
@@ -349,6 +351,27 @@ export default function SchedulePage() {
       .update({ paid_at: new Date().toISOString() })
       .eq('id', sessionId)
     if (!error) loadData()
+  }
+
+  const handleSendReminder = async (sessionId: string) => {
+    setReminderError(null)
+    setReminderSendingId(sessionId)
+    try {
+      const res = await fetch(`/api/sessions/${sessionId}/send-reminder`, {
+        method: 'POST',
+        credentials: 'include',
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setReminderError(data?.error ?? 'Could not send reminder')
+        return
+      }
+      setReminderError(null)
+    } catch {
+      setReminderError('Could not send reminder')
+    } finally {
+      setReminderSendingId(null)
+    }
   }
 
   const snapToTimeOption = (date: Date): string => {
@@ -1203,9 +1226,23 @@ export default function SchedulePage() {
                         >
                           Edit
                         </Button>
+                        {session.status === 'confirmed' &&
+                          new Date(session.scheduled_time) > new Date() && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleSendReminder(session.id)}
+                              disabled={reminderSendingId === session.id}
+                            >
+                              {reminderSendingId === session.id ? 'Sending…' : 'Remind'}
+                            </Button>
+                          )}
                       </div>
                     </div>
                   ))}
+                {reminderError && (
+                  <p className="text-sm text-[var(--cp-accent-danger)] py-1">{reminderError}</p>
+                )}
                 {sessions.filter((s) =>
                   isSameMonth(parseISO(s.scheduled_time), month)
                 ).length === 0 && (
@@ -1432,6 +1469,18 @@ export default function SchedulePage() {
                       </Button>
                     </div>
                   )}
+                  {editingSession.status === 'confirmed' &&
+                    new Date(editingSession.scheduled_time) > new Date() && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => handleSendReminder(editingSession.id)}
+                        disabled={savingEdit || reminderSendingId === editingSession.id}
+                      >
+                        {reminderSendingId === editingSession.id ? 'Sending…' : 'Remind client'}
+                      </Button>
+                    )}
                   <div className="space-y-2 pt-2">
                     <Button
                       type="submit"

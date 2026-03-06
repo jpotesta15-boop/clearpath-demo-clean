@@ -195,7 +195,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [2220, 400],
-      "notes": "Replace YOUR_APP_URL and YOUR_N8N_VIDEO_WEBHOOK_SECRET. url = new Drive MP4 link (from Google Drive Upload MP4 output)."
+      "notes": "Replace YOUR_APP_URL (e.g. https://your-app.vercel.app), YOUR_N8N_VIDEO_WEBHOOK_SECRET. Set same values in app env. url = new Drive MP4 link."
     }
   ],
   "connections": {

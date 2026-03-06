@@ -4,6 +4,7 @@
  */
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
+import { normalizePhone } from '@/lib/phone'
 
 const secret =
   process.env.N8N_SESSION_REMINDER_SECRET || process.env.N8N_VIDEO_WEBHOOK_SECRET
@@ -41,10 +42,10 @@ export async function GET(request: Request) {
 
   const [coachRows, clientRows] = await Promise.all([
     coachIds.length > 0
-      ? supabase.from('profiles').select('id, full_name, email').in('id', coachIds)
+      ? supabase.from('profiles').select('id, full_name, email, phone').in('id', coachIds)
       : { data: [] },
     clientIds.length > 0
-      ? supabase.from('clients').select('id, full_name, email').in('id', clientIds)
+      ? supabase.from('clients').select('id, full_name, email, phone').in('id', clientIds)
       : { data: [] },
   ])
 
@@ -61,8 +62,10 @@ export async function GET(request: Request) {
       client_id: s.client_id,
       coach_name: coach?.full_name ?? null,
       coach_email: coach?.email ?? null,
+      coach_phone: normalizePhone((coach as { phone?: string })?.phone) ?? null,
       client_name: client?.full_name ?? null,
       client_email: client?.email ?? null,
+      client_phone: normalizePhone((client as { phone?: string })?.phone) ?? null,
     }
   })
 

@@ -1,7 +1,12 @@
 'use client'
 
+import { useEffect, useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { useThemeVariant, type ThemeVariant, type ThemeMode, VARIANT_SWATCH_COLORS } from '@/components/providers/ThemeVariantProvider'
+import { updateClientPhoneAction } from './actions'
 
 const VARIANT_LABELS: Record<ThemeVariant, string> = {
   blue: 'Blue',
@@ -19,8 +24,41 @@ const THEME_MODE_LABELS: Record<ThemeMode, string> = {
 
 export default function ClientSettingsPage() {
   const { variant, setVariant, mode, setMode } = useThemeVariant()
+  const [phone, setPhone] = useState('')
+  const [phoneLoading, setPhoneLoading] = useState(true)
+  const [phoneSaving, setPhoneSaving] = useState(false)
+  const [phoneMessage, setPhoneMessage] = useState<string | null>(null)
+  const supabase = createClient()
 
   const variants: ThemeVariant[] = ['blue', 'orange', 'purple', 'red', 'green', 'neutral']
+
+  useEffect(() => {
+    const load = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user?.email) {
+        setPhoneLoading(false)
+        return
+      }
+      const { data: client } = await supabase
+        .from('clients')
+        .select('phone')
+        .eq('email', user.email)
+        .limit(1)
+        .maybeSingle()
+      setPhone(client?.phone ?? '')
+      setPhoneLoading(false)
+    }
+    load()
+  }, [])
+
+  const handleSavePhone = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setPhoneSaving(true)
+    setPhoneMessage(null)
+    const res = await updateClientPhoneAction(phone.trim() || null)
+    setPhoneSaving(false)
+    setPhoneMessage(res.error ?? 'Saved.')
+  }
 
   return (
     <div className="max-w-3xl space-y-6">
@@ -30,6 +68,41 @@ export default function ClientSettingsPage() {
           Personalize how your client dashboard looks. This only affects your view.
         </p>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Contact information</CardTitle>
+          <p className="text-sm font-normal text-[var(--cp-text-muted)]">
+            Your phone number is used for session reminders.
+          </p>
+        </CardHeader>
+        <CardContent>
+          {phoneLoading ? (
+            <p className="text-sm text-[var(--cp-text-muted)]">Loading…</p>
+          ) : (
+            <form onSubmit={handleSavePhone} className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-[var(--cp-text-primary)] mb-1">Phone</label>
+                <Input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="e.g. +1 555 123 4567"
+                  className="max-w-xs bg-[var(--cp-bg-surface)] border-[var(--cp-border-subtle)]"
+                />
+              </div>
+              <Button type="submit" size="sm" disabled={phoneSaving}>
+                {phoneSaving ? 'Saving…' : 'Save'}
+              </Button>
+              {phoneMessage && (
+                <p className={`text-sm ${phoneMessage === 'Saved.' ? 'text-[var(--cp-text-muted)]' : 'text-[var(--cp-accent-danger)]'}`}>
+                  {phoneMessage}
+                </p>
+              )}
+            </form>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
