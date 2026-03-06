@@ -1,0 +1,259 @@
+{
+  "name": "Google Drive video to ClearPath (MOV→MP4 via CloudConvert)",
+  "nodes": [
+    {
+      "parameters": {
+        "triggerOn": "folder",
+        "folderId": {"__rl": true, "value": "", "mode": "id"},
+        "pollTimes": {"item": [{"mode": "everyMinute"}]}
+      },
+      "id": "drive-trigger",
+      "name": "Google Drive trigger",
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [240, 400],
+      "webhookId": ""
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": true, "leftValue": "", "typeValidation": "strict"},
+          "conditions": [
+            {
+              "id": "mime-video",
+              "leftValue": "={{ $json.mimeType }}",
+              "rightValue": "video/",
+              "operator": {"type": "string", "operation": "contains"}
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "filter-video",
+      "name": "Only videos",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [460, 400],
+      "notes": "Includes MOV (video/quicktime), MP4, etc. Enable to only process videos."
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {"__rl": true, "value": "={{ $json.id }}", "mode": "id"}
+      },
+      "id": "drive-download",
+      "name": "Google Drive Download",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [680, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.cloudconvert.com/v2/jobs",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_CLOUDCONVERT_API_KEY"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"tasks\": {\n    \"import-upload\": {\n      \"operation\": \"import/upload\"\n    },\n    \"convert-mp4\": {\n      \"operation\": \"convert\",\n      \"input\": \"import-upload\",\n      \"output_format\": \"mp4\"\n    },\n    \"export-url\": {\n      \"operation\": \"export/url\",\n      \"input\": \"convert-mp4\"\n    }\n  }\n}",
+        "options": {}
+      },
+      "id": "cc-create-job",
+      "name": "CloudConvert Create Job",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 400],
+      "notes": "Create job with import/upload, convert to mp4, export/url. Replace YOUR_CLOUDCONVERT_API_KEY with your API key or credential."
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "combineByPosition",
+        "options": {}
+      },
+      "id": "merge",
+      "name": "Merge",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [1120, 400],
+      "notes": "Combine by position: Input 1 = Google Drive Download (keeps binary), Input 2 = CloudConvert Create Job (has form URL). In UI set mode 'Combine', 'By Position'. Ensure binary is passed through (e.g. options to include binary from input 1)."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('CloudConvert Create Job').item.json.data.tasks.find(t => t.operation === 'import/upload').result.form.url }}",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "inputDataFieldName": "data",
+              "parameterName": "file"
+            }
+          ]
+        },
+        "options": {
+          "allowUnauthorizedCerts": false
+        }
+      },
+      "id": "cc-upload",
+      "name": "CloudConvert Upload",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1340, 400],
+      "notes": "POST file to CloudConvert upload form. Add form fields from result.form.parameters (expires, signature, etc.) as body parameters. Binary: use 'data' from Merge (from Download). Follow redirects."
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://sync.api.cloudconvert.com/v2/jobs/{{ $('CloudConvert Create Job').item.json.data.id }}/wait",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_CLOUDCONVERT_API_KEY"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "cc-wait",
+      "name": "CloudConvert Wait",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1560, 400],
+      "notes": "Blocks until job finishes. Replace YOUR_CLOUDCONVERT_API_KEY. Response has data.tasks; find export/url task for result.files[0].url."
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.data.tasks.find(t => t.operation === 'export/url').result.files[0].url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "download-mp4",
+      "name": "Download MP4",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1780, 400],
+      "notes": "GET the export URL from CloudConvert; receive binary (MP4). Response format: File."
+    },
+    {
+      "parameters": {
+        "operation": "upload",
+        "name": "={{ $('Google Drive trigger').item.json.name.replace(/\\.(mov|MOV|avi|AVI)$/, '') + '_converted.mp4' }}",
+        "parentId": {"__rl": true, "value": "={{ $('Google Drive trigger').item.json.parents?.[0] || $('Google Drive trigger').item.json.driveId }}", "mode": "id"},
+        "binaryData": true,
+        "binaryPropertyName": "data"
+      },
+      "id": "drive-upload",
+      "name": "Google Drive Upload MP4",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [2000, 400],
+      "notes": "Upload converted MP4 to same folder (or set parentId to a 'Converted' folder). Share the new file 'Anyone with the link' for embed."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://YOUR_APP_URL/api/webhooks/n8n-video",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_N8N_VIDEO_WEBHOOK_SECRET"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ title: $('Google Drive trigger').item.json.name.replace(/\\.(mov|MOV|avi|AVI)$/, '') + ' (MP4)', url: 'https://drive.google.com/file/d/' + $json.id + '/view', description: 'Converted from Drive via CloudConvert', category: 'Drive' }) }}",
+        "options": {}
+      },
+      "id": "http-post",
+      "name": "POST to ClearPath",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2220, 400],
+      "notes": "Replace YOUR_APP_URL and YOUR_N8N_VIDEO_WEBHOOK_SECRET. url = new Drive MP4 link (from Google Drive Upload MP4 output)."
+    }
+  ],
+  "connections": {
+    "Google Drive trigger": {
+      "main": [
+        [{"node": "Only videos", "type": "main", "index": 0}]
+      ]
+    },
+    "Only videos": {
+      "main": [
+        [{"node": "Google Drive Download", "type": "main", "index": 0}]
+      ]
+    },
+    "Google Drive Download": {
+      "main": [
+        [
+          {"node": "Merge", "type": "main", "index": 0},
+          {"node": "CloudConvert Create Job", "type": "main", "index": 0}
+        ]
+      ]
+    },
+    "CloudConvert Create Job": {
+      "main": [
+        [{"node": "Merge", "type": "main", "index": 1}]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [{"node": "CloudConvert Upload", "type": "main", "index": 0}]
+      ]
+    },
+    "CloudConvert Upload": {
+      "main": [
+        [{"node": "CloudConvert Wait", "type": "main", "index": 0}]
+      ]
+    },
+    "CloudConvert Wait": {
+      "main": [
+        [{"node": "Download MP4", "type": "main", "index": 0}]
+      ]
+    },
+    "Download MP4": {
+      "main": [
+        [{"node": "Google Drive Upload MP4", "type": "main", "index": 0}]
+      ]
+    },
+    "Google Drive Upload MP4": {
+      "main": [
+        [{"node": "POST to ClearPath", "type": "main", "index": 0}]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "pinData": {}
+}

@@ -128,6 +128,10 @@ export default function SchedulePage() {
   const [schedulingSlotId, setSchedulingSlotId] = useState<string | null>(null)
   const [schedulingSubmitting, setSchedulingSubmitting] = useState(false)
   const [coachTimezone, setCoachTimezone] = useState<string | null>(null)
+  const [clientTimeRequests, setClientTimeRequests] = useState<any[]>([])
+  const [offerFromTimeRequest, setOfferFromTimeRequest] = useState<any>(null)
+  const [offerProductId, setOfferProductId] = useState('')
+  const [offerSubmitting, setOfferSubmitting] = useState(false)
   const supabase = createClient()
   const tenantId = process.env.NEXT_PUBLIC_CLIENT_ID ?? 'demo'
 
@@ -187,11 +191,19 @@ export default function SchedulePage() {
       .eq('status', 'availability_submitted')
       .order('created_at', { ascending: false })
 
+    const { data: timeRequestsData } = await supabase
+      .from('client_time_requests')
+      .select('*, clients(full_name, email)')
+      .eq('coach_id', user.id)
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false })
+
     setSlots(slotsData || [])
     setSessions(sessionsData || [])
     setClients(clientsData || [])
     setSessionProducts(productsData || [])
     setSessionRequests(requestsData || [])
+    setClientTimeRequests(timeRequestsData || [])
     setLoading(false)
   }
 
@@ -431,6 +443,65 @@ export default function SchedulePage() {
     await supabase.from('sessions').update({ status: 'cancelled' }).eq('id', editingSession.id)
     setSavingEdit(false)
     setEditingSession(null)
+    loadData()
+  }
+
+  const handleOfferFromTimeRequest = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!offerFromTimeRequest || !offerProductId || offerSubmitting) return
+    const product = sessionProducts.find((p) => p.id === offerProductId)
+    if (!product) return
+    const client = offerFromTimeRequest.clients as any
+    if (!client) return
+
+    setOfferSubmitting(true)
+    const { data: sessionRequest, error: reqError } = await supabase
+      .from('session_requests')
+      .insert({
+        coach_id: (await supabase.auth.getUser()).data.user!.id,
+        client_id: offerFromTimeRequest.client_id,
+        session_product_id: product.id,
+        tenant_id: tenantId,
+        status: 'offered',
+        amount_cents: product.price_cents ?? 0,
+      })
+      .select('id')
+      .single()
+
+    if (!reqError && sessionRequest?.id) {
+      await supabase
+        .from('client_time_requests')
+        .update({ status: 'offered', session_request_id: sessionRequest.id, updated_at: new Date().toISOString() })
+        .eq('id', offerFromTimeRequest.id)
+
+      const { data: clientProfile } = await supabase.from('profiles').select('id').eq('email', client.email).single()
+      if (clientProfile?.id) {
+        const amount = ((product.price_cents ?? 0) / 100).toFixed(2)
+        await supabase.from('messages').insert({
+          sender_id: (await supabase.auth.getUser()).data.user!.id,
+          recipient_id: clientProfile.id,
+          client_id: tenantId,
+          content: JSON.stringify({
+            type: 'session_offer',
+            session_request_id: sessionRequest.id,
+            product_name: product.name,
+            amount_cents: product.price_cents ?? 0,
+            amount_display: amount,
+          }),
+        })
+      }
+      setOfferFromTimeRequest(null)
+      setOfferProductId('')
+      loadData()
+    }
+    setOfferSubmitting(false)
+  }
+
+  const handleDeclineTimeRequest = async (requestId: string) => {
+    await supabase
+      .from('client_time_requests')
+      .update({ status: 'declined', updated_at: new Date().toISOString() })
+      .eq('id', requestId)
     loadData()
   }
 
@@ -697,12 +768,88 @@ export default function SchedulePage() {
         </Card>
       )}
 
+      {clientTimeRequests.length > 0 && (
+        <Card className="border-[var(--cp-accent-primary)]/30">
+          <CardHeader>
+            <CardTitle>Client time requests</CardTitle>
+            <p className="text-sm font-normal text-[var(--cp-text-muted)]">
+              Clients said when they&apos;re free. Offer a session to send them a payment link.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {clientTimeRequests.map((req) => {
+              const client = req.clients as any
+              return (
+                <div
+                  key={req.id}
+                  className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--cp-border-subtle)] pb-3 last:border-0 last:pb-0"
+                >
+                  <div>
+                    <p className="font-medium">{client?.full_name ?? 'Client'}</p>
+                    <p className="text-sm text-[var(--cp-text-muted)]">{req.preferred_times}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={() => { setOfferFromTimeRequest(req); setOfferProductId(sessionProducts[0]?.id ?? '') }}>
+                      Offer session
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => handleDeclineTimeRequest(req.id)}>
+                      Decline
+                    </Button>
+                  </div>
+                </div>
+              )
+            })}
+          </CardContent>
+        </Card>
+      )}
+
+      {offerFromTimeRequest && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--cp-bg-backdrop)] p-4"
+          onClick={() => !offerSubmitting && setOfferFromTimeRequest(null)}
+        >
+          <div
+            className="bg-[var(--cp-bg-elevated)] text-[var(--cp-text-primary)] border border-[var(--cp-border-subtle)] rounded-lg shadow-[var(--cp-shadow-card)] max-w-md w-full p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-semibold">Offer session</h3>
+            <p className="text-sm text-[var(--cp-text-muted)] mt-1">
+              Pick a session type to send a payment offer.
+            </p>
+            <form onSubmit={handleOfferFromTimeRequest} className="mt-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-[var(--cp-text-primary)]">Session type</label>
+                <select
+                  value={offerProductId}
+                  onChange={(e) => setOfferProductId(e.target.value)}
+                  required
+                  className="mt-1 w-full h-10 rounded-md border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] px-3 py-2 text-sm text-[var(--cp-text-primary)]"
+                >
+                  <option value="">Select…</option>
+                  {sessionProducts.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} – ${((p.price_cents ?? 0) / 100).toFixed(2)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button type="button" variant="outline" onClick={() => setOfferFromTimeRequest(null)} disabled={offerSubmitting}>Cancel</Button>
+                <Button type="submit" disabled={!offerProductId || offerSubmitting}>
+                  {offerSubmitting ? 'Sending...' : 'Send offer'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {sessionRequests.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Pending session requests</CardTitle>
+            <CardTitle>Ready to schedule</CardTitle>
             <p className="text-sm font-normal text-[var(--cp-text-muted)]">
-              Client has paid and submitted availability. Pick a time slot to confirm.
+              Client paid and submitted availability. Pick a time slot to confirm.
             </p>
           </CardHeader>
           <CardContent className="space-y-3">

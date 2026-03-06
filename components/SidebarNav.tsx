@@ -84,6 +84,7 @@ export default function SidebarNav({ navItems }: { navItems: NavItem[] }) {
   const [brandLabel, setBrandLabel] = useState('ClearPath')
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
   const [expanded, setExpanded] = useState(true)
+  const [navState, setNavState] = useState<NavItem[]>(navItems)
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY)
@@ -114,6 +115,38 @@ export default function SidebarNav({ navItems }: { navItems: NavItem[] }) {
       getClientName().then(setBrandLabel).catch(() => {})
     }
     load()
+  }, [])
+
+  useEffect(() => {
+    setNavState(navItems)
+  }, [navItems])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const handleUnreadUpdate = (event: Event) => {
+      const customEvent = event as CustomEvent<{ totalUnread?: number }>
+      const totalUnread =
+        typeof customEvent.detail?.totalUnread === 'number' ? customEvent.detail.totalUnread : 0
+
+      setNavState((current) =>
+        current.map((item) =>
+          item.href.endsWith('/messages') ? { ...item, badgeCount: totalUnread } : item
+        )
+      )
+    }
+
+    window.addEventListener(
+      'clearpath:unread-messages-updated',
+      handleUnreadUpdate as EventListener
+    )
+
+    return () => {
+      window.removeEventListener(
+        'clearpath:unread-messages-updated',
+        handleUnreadUpdate as EventListener
+      )
+    }
   }, [])
 
   const toggleSidebar = () => {
@@ -159,7 +192,7 @@ export default function SidebarNav({ navItems }: { navItems: NavItem[] }) {
           )}
         </div>
         <nav className="flex-1 overflow-y-auto py-3" aria-label="Primary">
-          {navItems.map((item) => {
+          {navState.map((item) => {
             const isActive = pathname === item.href
             const icon = iconMap[item.label] ?? defaultIcon
             const badge = item.badgeCount ?? 0

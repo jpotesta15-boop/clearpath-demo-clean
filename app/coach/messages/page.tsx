@@ -25,6 +25,7 @@ export default function MessagesPage() {
   const [requestError, setRequestError] = useState<string | null>(null)
   const [sendError, setSendError] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const realtimeChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
   const searchParams = useSearchParams()
   const supabase = createClient()
   const tenantId = getClientId()
@@ -42,6 +43,44 @@ export default function MessagesPage() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  useEffect(() => {
+    if (!selectedClient || !currentUser || clients.length === 0) return
+    const client = clients.find((c) => c.id === selectedClient)
+    if (!client?.email) return
+
+    supabase.from('profiles').select('id').eq('email', client.email).single().then(({ data }) => {
+      const clientProfileId = data?.id
+      if (!clientProfileId) return
+
+      realtimeChannelRef.current = supabase
+        .channel(`messages:${currentUser.id}:${selectedClient}`)
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'messages' },
+          (payload) => {
+            const msg = payload.new as any
+            if (msg.sender_id === clientProfileId || msg.recipient_id === clientProfileId) {
+              setMessages((prev) => {
+                if (prev.some((m) => m.id === msg.id)) return prev
+                return [...prev, msg].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+              })
+              if (msg.recipient_id === currentUser.id) {
+                refreshUnreadCounts(currentUser.id, clients)
+              }
+            }
+          }
+        )
+        .subscribe()
+    })
+
+    return () => {
+      if (realtimeChannelRef.current) {
+        supabase.removeChannel(realtimeChannelRef.current)
+        realtimeChannelRef.current = null
+      }
+    }
+  }, [selectedClient, currentUser, clients])
 
   const refreshUnreadCounts = async (userId: string, clientList: any[]) => {
     const clientEmails = clientList.map((c: any) => c.email).filter((email: string | null) => !!email) as string[]
@@ -84,6 +123,15 @@ export default function MessagesPage() {
     })
 
     setUnreadByClient(counts)
+
+    const totalUnread = (unreadMessages || []).length
+    if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+      window.dispatchEvent(
+        new CustomEvent('clearpath:unread-messages-updated', {
+          detail: { totalUnread },
+        })
+      )
+    }
   }
 
   const loadClients = async () => {

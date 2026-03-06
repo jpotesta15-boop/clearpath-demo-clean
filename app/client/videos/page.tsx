@@ -33,6 +33,19 @@ export default async function ClientVideosPage() {
     .select('*, videos(*)')
     .eq('client_id', client.id)
 
-  return <ClientVideosContent assignments={assignments ?? []} />
+  const { data: completions } = await supabase
+    .from('video_completions')
+    .select('video_id')
+    .eq('client_id', client.id)
+
+  const completedVideoIds = (completions ?? []).map((c: { video_id: string }) => c.video_id)
+
+  return (
+    <ClientVideosContent
+      clientId={client.id}
+      assignments={assignments ?? []}
+      completedVideoIds={completedVideoIds}
+    />
+  )
 }
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -19,12 +19,61 @@ export default function ClientMessagesPage() {
   const [availabilityText, setAvailabilityText] = useState('')
   const [submittingAvailability, setSubmittingAvailability] = useState(false)
   const [payingRequestId, setPayingRequestId] = useState<string | null>(null)
+  const realtimeChannelRef = useRef<ReturnType<ReturnType<typeof createClient>['channel']> | null>(null)
   const supabase = createClient()
   const tenantId = getClientId()
 
   useEffect(() => {
     loadData()
   }, [])
+
+  useEffect(() => {
+    if (!coach || !currentUser) return
+
+    realtimeChannelRef.current = supabase
+      .channel(`client-messages:${currentUser.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'messages' },
+        (payload) => {
+          const msg = payload.new as any
+          if (msg.sender_id === coach.id || msg.recipient_id === coach.id) {
+            setMessages((prev) => {
+              if (prev.some((m) => m.id === msg.id)) return prev
+              return [...prev, msg].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+            })
+            if (msg.recipient_id === currentUser.id) {
+              updateUnreadBadge(currentUser.id)
+            }
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      if (realtimeChannelRef.current) {
+        supabase.removeChannel(realtimeChannelRef.current)
+        realtimeChannelRef.current = null
+      }
+    }
+  }, [coach?.id, currentUser?.id])
+
+  const updateUnreadBadge = async (userId: string) => {
+    const { count } = await supabase
+      .from('messages')
+      .select('*', { count: 'exact', head: true })
+      .eq('recipient_id', userId)
+      .is('read_at', null)
+
+    const totalUnread = count ?? 0
+    if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+      window.dispatchEvent(
+        new CustomEvent('clearpath:unread-messages-updated', {
+          detail: { totalUnread },
+        })
+      )
+    }
+  }
 
   const loadData = async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -72,6 +121,8 @@ export default function ClientMessagesPage() {
       if (unreadIds.length > 0) {
         await supabase.from('messages').update({ read_at: new Date().toISOString() }).in('id', unreadIds)
       }
+
+      await updateUnreadBadge(user.id)
     }
   }
 

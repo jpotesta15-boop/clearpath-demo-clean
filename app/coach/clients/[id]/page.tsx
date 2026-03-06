@@ -10,6 +10,7 @@ import { ClientPortalAccess } from './ClientPortalAccess'
 import { ClientProfileDetails } from './ClientProfileDetails'
 import { ClientNameEditor } from './ClientNameEditor'
 import { DeleteClientButton } from './DeleteClientButton'
+import { RequestPaymentButton } from './RequestPaymentButton'
 
 export default async function ClientDetailPage({
   params,
@@ -49,6 +50,11 @@ export default async function ClientDetailPage({
     .eq('client_id', id)
     .order('created_at', { ascending: false })
 
+  const balanceOwedCents =
+    (sessionRequests ?? [])
+      .filter((r: any) => ['offered', 'accepted', 'payment_pending'].includes(r.status))
+      .reduce((sum: number, r: any) => sum + (r.amount_cents ?? 0), 0) ?? 0
+
   const { count: completedCount } = await supabase
     .from('sessions')
     .select('*', { count: 'exact', head: true })
@@ -61,6 +67,11 @@ export default async function ClientDetailPage({
     .eq('client_id', id)
     .eq('status', 'confirmed')
     .gte('scheduled_time', new Date().toISOString())
+
+  const { count: videosCompletedCount } = await supabase
+    .from('video_completions')
+    .select('*', { count: 'exact', head: true })
+    .eq('client_id', id)
 
   const { data: lastSession } = await supabase
     .from('sessions')
@@ -111,8 +122,8 @@ export default async function ClientDetailPage({
               <p className="text-lg font-semibold">{upcomingCount ?? 0}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-500">Sessions left</p>
-              <p className="text-lg font-semibold">—</p>
+              <p className="text-sm text-gray-500">Videos completed</p>
+              <p className="text-lg font-semibold">{videosCompletedCount ?? 0}</p>
             </div>
             <div>
               <p className="text-sm text-gray-500">Last active</p>
@@ -169,6 +180,23 @@ export default async function ClientDetailPage({
           )}
         </CardContent>
       </Card>
+
+      {balanceOwedCents > 0 && (
+        <Card className="border-[var(--cp-accent-primary)]/30 bg-[var(--cp-accent-primary)]/5">
+          <CardHeader>
+            <CardTitle>Balance owed</CardTitle>
+            <p className="text-2xl font-bold text-[var(--cp-accent-primary)]">
+              ${(balanceOwedCents / 100).toFixed(2)}
+            </p>
+            <p className="text-sm text-[var(--cp-text-muted)]">
+              Client can pay from their Schedule page, or copy a payment link to send them.
+            </p>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <RequestPaymentButton clientId={id} />
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

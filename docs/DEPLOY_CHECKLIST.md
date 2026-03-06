@@ -12,8 +12,17 @@ Set these in `.env.local` (local) or your host’s environment (e.g. Vercel, Rai
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase anon/public key |
 | `SUPABASE_SERVICE_ROLE_KEY` | Yes | Server-only; used for invite and webhooks. Never expose to the client. |
 | `NEXT_PUBLIC_CLIENT_ID` | Yes | Tenant ID (e.g. `demo` or your production tenant) |
-| `N8N_VIDEO_WEBHOOK_SECRET` | If using n8n | Shared secret for `/api/webhooks/n8n-video` |
+| `STRIPE_SECRET_KEY` | Yes (for payments) | Stripe API key; used for Checkout and Connect |
+| `STRIPE_WEBHOOK_SECRET` | Yes (for payments) | Stripe webhook signing secret; verifies `checkout.session.completed` |
+| `N8N_VIDEO_WEBHOOK_SECRET` | If using n8n video | Shared secret for `/api/webhooks/n8n-video` |
 | `N8N_DEFAULT_COACH_ID` | Optional | Default coach UUID when n8n sends a video without `coach_id` |
+| `N8N_SESSION_BOOKED_WEBHOOK_URL` | Optional | n8n webhook URL for session confirmation emails (e.g. `https://your-n8n.com/webhook/session-booked`) |
+| `N8N_SESSION_REMINDER_SECRET` | Optional | Bearer secret for `GET /api/sessions/upcoming` (session reminder workflow) |
+| `NEXT_PUBLIC_BRAND_PRIMARY` | Optional (whitelabel) | Primary brand color (hex, e.g. `#0284c7`) |
+| `NEXT_PUBLIC_BRAND_SECONDARY` | Optional (whitelabel) | Secondary brand color (hex, e.g. `#0369a1`) |
+| `NEXT_PUBLIC_DEMO_MODE` | Optional | Set to `true` to show demo credentials on login; omit for production |
+| `UPSTASH_REDIS_REST_URL` | Optional (scale) | Upstash Redis URL for rate limiting; omit to use in-memory (single-instance only) |
+| `UPSTASH_REDIS_REST_TOKEN` | Optional (scale) | Upstash Redis token; required if using UPSTASH_REDIS_REST_URL |
 
 ## Supabase configuration
 
@@ -33,6 +42,9 @@ Set these in `.env.local` (local) or your host’s environment (e.g. Vercel, Rai
 4. **Storage (avatars)**
    - Coach profile picture / logo uploads use the **avatars** bucket. It is created by migration `20240114000000_storage_avatars.sql`. Run all migrations (e.g. `supabase db push`) so the bucket and RLS policies exist.
 
+5. **Favicon (whitelabel)**
+   - Default favicon is `public/favicon.svg`. Replace with your own favicon for whitelabel deployments.
+
 ## Production
 
 - Add your production base URL to Supabase **Redirect URLs** and set **Site URL** to the production URL.
@@ -44,3 +56,4 @@ Set these in `.env.local` (local) or your host’s environment (e.g. Vercel, Rai
 
 - [auth-google.md](auth-google.md) – Google OAuth setup
 - [PRODUCTION_READINESS_REVIEW.md](PRODUCTION_READINESS_REVIEW.md) – Gaps and hardening
+- [n8n/README.md](../n8n/README.md) – n8n workflow setup (session-booked emails, Google Drive videos)

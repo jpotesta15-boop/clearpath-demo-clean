@@ -1,0 +1,87 @@
+{
+  "name": "Google Drive video to ClearPath library",
+  "nodes": [
+    {
+      "parameters": {
+        "triggerOn": "folder",
+        "folderId": {"__rl": true, "value": "", "mode": "id"},
+        "pollTimes": {"item": [{"mode": "everyMinute"}]}
+      },
+      "id": "drive-trigger",
+      "name": "Google Drive trigger",
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": ""
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": true, "leftValue": "", "typeValidation": "strict"},
+          "conditions": [
+            {
+              "id": "mime-type",
+              "leftValue": "={{ $json.mimeType }}",
+              "rightValue": "video/mp4",
+              "operator": {"type": "string", "operation": "contains"}
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "filter-video",
+      "name": "Only videos",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [460, 300],
+      "disabled": true,
+      "notes": "Optional: enable to only process video mime types. Or remove to add all new files."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://YOUR_APP_URL/api/webhooks/n8n-video",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_N8N_VIDEO_WEBHOOK_SECRET"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ title: $json.name, url: 'https://drive.google.com/file/d/' + $json.id + '/view', description: 'Uploaded from Google Drive', category: 'Drive' }) }}",
+        "options": {}
+      },
+      "id": "http-post",
+      "name": "POST to ClearPath",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, 300]
+    }
+  ],
+  "connections": {
+    "Google Drive trigger": {
+      "main": [
+        [
+          {
+            "node": "POST to ClearPath",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "pinData": {}
+}

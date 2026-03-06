@@ -1,0 +1,67 @@
+{
+  "name": "ClearPath session booked – email coach and client",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "session-booked",
+        "responseMode": "immediately",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 320],
+      "webhookId": ""
+    },
+    {
+      "parameters": {
+        "fromEmail": "notifications@yourdomain.com",
+        "toEmail": "={{ $json.coach_email }}",
+        "subject": "Session booked with {{ $json.client_name }}",
+        "text": "A session has been booked.\n\nClient: {{ $json.client_name }}\nTime: {{ $json.scheduled_time }}\n\nSession ID: {{ $json.session_id }}",
+        "options": {}
+      },
+      "id": "email-coach",
+      "name": "Email coach",
+      "type": "n8n-nodes-base.sendEmail",
+      "typeVersion": 2,
+      "position": [520, 200],
+      "notes": "Configure SMTP (or other) credentials. Set fromEmail to your sender address. coach_email is from the webhook payload."
+    },
+    {
+      "parameters": {
+        "fromEmail": "notifications@yourdomain.com",
+        "toEmail": "={{ $json.client_email }}",
+        "subject": "Your session with {{ $json.coach_name }} is confirmed",
+        "text": "Your session is confirmed.\n\nCoach: {{ $json.coach_name }}\nTime: {{ $json.scheduled_time }}\n\nSession ID: {{ $json.session_id }}",
+        "options": {}
+      },
+      "id": "email-client",
+      "name": "Email client",
+      "type": "n8n-nodes-base.sendEmail",
+      "typeVersion": 2,
+      "position": [520, 440],
+      "notes": "Configure SMTP (or other) credentials. Set fromEmail to your sender address. client_email is from the webhook payload."
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          { "node": "Email coach", "type": "main", "index": 0 },
+          { "node": "Email client", "type": "main", "index": 0 }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "pinData": {}
+}

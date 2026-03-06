@@ -5,9 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
 import { getEmbedUrl } from '@/lib/video-embed'
+import { createClient } from '@/lib/supabase/client'
 
 type VideoAssignment = {
   id: string
+  video_id?: string
   videos: {
     id: string
     title: string | null
@@ -17,8 +19,30 @@ type VideoAssignment = {
   } | null
 }
 
-export function ClientVideosContent({ assignments }: { assignments: VideoAssignment[] }) {
+export function ClientVideosContent({
+  clientId,
+  assignments,
+  completedVideoIds: initialCompleted,
+}: {
+  clientId: string
+  assignments: VideoAssignment[]
+  completedVideoIds: string[]
+}) {
   const [selectedAssignment, setSelectedAssignment] = useState<VideoAssignment | null>(null)
+  const [completedVideoIds, setCompletedVideoIds] = useState<Set<string>>(new Set(initialCompleted))
+  const [markingId, setMarkingId] = useState<string | null>(null)
+  const supabase = createClient()
+
+  const handleMarkDone = async (videoId: string) => {
+    if (markingId) return
+    setMarkingId(videoId)
+    const { error } = await supabase.from('video_completions').upsert(
+      { client_id: clientId, video_id: videoId },
+      { onConflict: 'client_id,video_id' }
+    )
+    if (!error) setCompletedVideoIds((s) => new Set([...s, videoId]))
+    setMarkingId(null)
+  }
 
   const videos = assignments?.filter((a: VideoAssignment) => a.videos) ?? []
 
@@ -40,8 +64,13 @@ export function ClientVideosContent({ assignments }: { assignments: VideoAssignm
                 className="cursor-pointer hover:shadow-[var(--cp-shadow-card)] transition-shadow border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)]"
                 onClick={() => setSelectedAssignment(assignment)}
               >
-                <CardHeader>
-                  <CardTitle className="text-[var(--cp-text-primary)]">{video?.title ?? 'Video'}</CardTitle>
+                <CardHeader className="relative">
+                  {video?.id && completedVideoIds.has(video.id) && (
+                    <span className="absolute top-3 right-3 inline-flex items-center rounded-full bg-[var(--cp-accent-success)]/20 px-2 py-0.5 text-xs font-medium text-[var(--cp-accent-success)]">
+                      Done
+                    </span>
+                  )}
+                  <CardTitle className="text-[var(--cp-text-primary)] pr-16">{video?.title ?? 'Video'}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {embedSrc ? (
@@ -136,9 +165,32 @@ export function ClientVideosContent({ assignments }: { assignments: VideoAssignm
                   {selectedAssignment.videos.description}
                 </p>
               )}
+              {selectedAssignment.videos.id && (
+                <div className="pt-2">
+                  {completedVideoIds.has(selectedAssignment.videos.id) ? (
+                    <span className="inline-flex items-center gap-1.5 text-sm text-[var(--cp-accent-success)] font-medium">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      Done
+                    </span>
+                  ) : (
+                    <Button
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleMarkDone(selectedAssignment.videos!.id)
+                      }}
+                      disabled={!!markingId}
+                    >
+                      {markingId === selectedAssignment.videos.id ? 'Saving...' : 'Mark done'}
+                    </Button>
+                  )}
+                </div>
+              )}
             </div>
-            <div className="px-4 py-3 border-t border-[var(--cp-border-subtle)] shrink-0">
-              <Button variant="outline" className="w-full" onClick={() => setSelectedAssignment(null)}>
+            <div className="px-4 py-3 border-t border-[var(--cp-border-subtle)] shrink-0 flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setSelectedAssignment(null)}>
                 Back to library
               </Button>
             </div>

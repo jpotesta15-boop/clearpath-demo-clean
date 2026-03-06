@@ -138,6 +138,7 @@ export default function ProgramDetailPage() {
   const [reordering, setReordering] = useState(false)
   const [selectedVideoIds, setSelectedVideoIds] = useState<string[]>([])
   const [bulkAdding, setBulkAdding] = useState(false)
+  const [completionByClient, setCompletionByClient] = useState<Record<string, number>>({})
   const supabase = createClient()
 
   const sensors = useSensors(
@@ -189,8 +190,27 @@ export default function ProgramDetailPage() {
       .select('*')
       .eq('coach_id', user.id)
 
+    const videoIdsInProgram = (lessonsData || [])
+      .map((l: any) => l.video_id)
+      .filter(Boolean) as string[]
+    const clientIds = (assignedClients || []).map((ac: any) => ac.client_id).filter(Boolean) as string[]
+
+    let completionByClient: Record<string, number> = {}
+    if (videoIdsInProgram.length > 0 && clientIds.length > 0) {
+      const { data: completions } = await supabase
+        .from('video_completions')
+        .select('client_id, video_id')
+        .in('client_id', clientIds)
+        .in('video_id', videoIdsInProgram)
+      const set = new Set((completions || []).map((c: any) => `${c.client_id}:${c.video_id}`))
+      for (const cid of clientIds) {
+        completionByClient[cid] = videoIdsInProgram.filter((vid) => set.has(`${cid}:${vid}`)).length
+      }
+    }
+
     setProgram(programData)
     setLessons(lessonsData || [])
+    setCompletionByClient(completionByClient)
     setLibraryVideos(videosData || [])
     setClients(assignedClients || [])
     setAllClients(allClientsData || [])
@@ -621,14 +641,25 @@ export default function ProgramDetailPage() {
             <div className="space-y-2">
               <p className="text-xs font-medium text-[var(--cp-text-muted)]">Has access</p>
               <ul className="space-y-1">
-                {clients.map((assignment: any) => (
+                {clients.map((assignment: any) => {
+                  const cid = assignment.client_id
+                  const total = videoIdsInProgram.size
+                  const done = completionByClient[cid] ?? 0
+                  return (
                   <li
                     key={assignment.id}
                     className="flex justify-between items-center gap-2 py-2 border-b border-[var(--cp-border-subtle)] last:border-0 last:pb-0"
                   >
-                    <span className="font-medium text-[var(--cp-text-primary)]">
-                      {assignment.clients?.full_name?.trim() || assignment.clients?.email || 'Unnamed'}
-                    </span>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="font-medium text-[var(--cp-text-primary)] truncate">
+                        {assignment.clients?.full_name?.trim() || assignment.clients?.email || 'Unnamed'}
+                      </span>
+                      {total > 0 && (
+                        <span className="text-xs text-[var(--cp-text-muted)] shrink-0">
+                          {done}/{total} videos done
+                        </span>
+                      )}
+                    </div>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -641,7 +672,8 @@ export default function ProgramDetailPage() {
                       Remove
                     </Button>
                   </li>
-                ))}
+                  )
+                })}
               </ul>
             </div>
           ) : (

@@ -1,25 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
-
-const loginRateLimit = new Map<string, number[]>()
-const LOGIN_WINDOW_MS = 60_000
-const LOGIN_MAX = 30
-
-function checkLoginRateLimit(ip: string): boolean {
-  const now = Date.now()
-  const timestamps = loginRateLimit.get(ip) ?? []
-  const cutoff = now - LOGIN_WINDOW_MS
-  const kept = timestamps.filter((t) => t > cutoff)
-  if (kept.length >= LOGIN_MAX) return false
-  kept.push(now)
-  loginRateLimit.set(ip, kept)
-  return true
-}
-
-function getIp(request: NextRequest): string {
-  const forwarded = request.headers.get('x-forwarded-for')
-  return forwarded ? forwarded.split(',')[0].trim() : request.headers.get('x-real-ip') ?? 'unknown'
-}
+import { checkRateLimitAsync, getClientIdentifier } from '@/lib/rate-limit'
 
 const allowedOrigins = (process.env.NEXT_PUBLIC_APP_URL || '').split(',').map((o) => o.trim()).filter(Boolean)
 
@@ -77,8 +58,9 @@ export async function middleware(request: NextRequest) {
   }
 
   if (pathname === '/login' || pathname === '/forgot-password') {
-    const ip = getIp(request)
-    if (!checkLoginRateLimit(ip)) {
+    const ip = getClientIdentifier(request)
+    const { allowed } = await checkRateLimitAsync(`login:${ip}`, { windowMs: 60_000, max: 30 })
+    if (!allowed) {
       return new NextResponse('Too Many Requests', { status: 429 })
     }
     return response

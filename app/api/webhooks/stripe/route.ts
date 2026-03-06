@@ -46,6 +46,45 @@ export async function POST(request: Request) {
   }
 
   const session = event.data.object as Stripe.Checkout.Session
+  const paymentType = session.metadata?.type
+
+  if (paymentType === 'balance') {
+    const clientId = session.metadata?.client_id
+    const coachId = session.metadata?.coach_id
+    const tenantId = session.metadata?.tenant_id ?? 'default'
+    const idsStr = session.metadata?.session_request_ids
+    if (!clientId || !coachId || !idsStr) {
+      logServerError('stripe-webhook', new Error('balance payment missing metadata'))
+      return NextResponse.json({ error: 'Invalid balance payment metadata' }, { status: 400 })
+    }
+    const sessionRequestIds = idsStr.split(',').filter(Boolean)
+    const amountCents = session.amount_total ?? 0
+
+    const { error: paymentErr } = await supabase.from('payments').insert({
+      coach_id: coachId,
+      client_id: tenantId,
+      amount_cents: amountCents,
+      currency: 'usd',
+      status: 'succeeded',
+      provider: 'stripe',
+      stripe_payment_intent_id: session.payment_intent as string ?? null,
+      payer_client_id: clientId,
+      description: 'Balance payment',
+    })
+    if (paymentErr) {
+      logServerError('stripe-webhook', paymentErr, { context: 'balance payment' })
+      return NextResponse.json({ error: 'Failed to record payment' }, { status: 500 })
+    }
+
+    for (const rid of sessionRequestIds) {
+      await supabase
+        .from('session_requests')
+        .update({ status: 'paid', updated_at: new Date().toISOString() })
+        .eq('id', rid)
+    }
+    return NextResponse.json({ received: true })
+  }
+
   const sessionRequestId = session.metadata?.session_request_id ?? session.client_reference_id
   if (!sessionRequestId) {
     logServerError('stripe-webhook', new Error('no session_request_id in metadata'))

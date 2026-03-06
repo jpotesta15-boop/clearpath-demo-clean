@@ -3,18 +3,25 @@ import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
 import { createServiceClient } from '@/lib/supabase/service'
 import Stripe from 'stripe'
+import { z } from 'zod'
 
 const stripeSecret = process.env.STRIPE_SECRET_KEY
 if (!stripeSecret) {
   console.warn('STRIPE_SECRET_KEY is not set; Stripe checkout will fail.')
 }
 
+const createCheckoutSchema = z.object({
+  session_request_id: z.string().trim().min(1, 'session_request_id is required').uuid('session_request_id must be a valid UUID'),
+})
+
 export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}))
-  const sessionRequestId = typeof body.session_request_id === 'string' ? body.session_request_id.trim() : null
-  if (!sessionRequestId) {
-    return NextResponse.json({ error: 'session_request_id is required' }, { status: 400 })
+  const parsed = createCheckoutSchema.safeParse({ session_request_id: body.session_request_id })
+  if (!parsed.success) {
+    const msg = parsed.error.issues[0]?.message ?? 'Invalid request'
+    return NextResponse.json({ error: msg }, { status: 400 })
   }
+  const sessionRequestId = parsed.data.session_request_id
 
   const cookieStore = await cookies()
   const supabase = createServerClient(

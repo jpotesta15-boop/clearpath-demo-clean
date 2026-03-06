@@ -1,0 +1,175 @@
+{
+  "name": "ClearPath session reminder – email coach and client",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 24
+            }
+          ],
+          "triggerAtHour": 6
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Daily 6am",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 320],
+      "notes": "Runs daily at 6am. Adjust timezone in n8n settings."
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://YOUR_APP_URL/api/sessions/upcoming",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_N8N_SESSION_REMINDER_SECRET"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "fetch-upcoming",
+      "name": "Fetch upcoming sessions",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 320],
+      "notes": "Replace YOUR_APP_URL. Add env var N8N_SESSION_REMINDER_SECRET or use Header Auth credential."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-sessions",
+              "leftValue": "={{ $json.sessions && Array.isArray($json.sessions) && $json.sessions.length > 0 }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "has-sessions",
+      "name": "Has sessions?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [680, 320]
+    },
+    {
+      "parameters": {
+        "jsCode": "const sessions = $input.first().json.sessions || [];\nreturn sessions.map(s => ({ json: s }));"
+      },
+      "id": "expand-sessions",
+      "name": "Expand sessions",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 220]
+    },
+    {
+      "parameters": {
+        "fromEmail": "notifications@yourdomain.com",
+        "toEmail": "={{ $json.coach_email }}",
+        "subject": "Reminder: Session with {{ $json.client_name }} in 24h",
+        "text": "Session reminder.\n\nClient: {{ $json.client_name }}\nTime: {{ $json.scheduled_time }}\n\nSession ID: {{ $json.session_id }}",
+        "options": {}
+      },
+      "id": "email-coach",
+      "name": "Email coach",
+      "type": "n8n-nodes-base.sendEmail",
+      "typeVersion": 2,
+      "position": [1120, 120],
+      "notes": "Configure SMTP. coach_email from API response."
+    },
+    {
+      "parameters": {
+        "fromEmail": "notifications@yourdomain.com",
+        "toEmail": "={{ $json.client_email }}",
+        "subject": "Reminder: Your session with {{ $json.coach_name }} is tomorrow",
+        "text": "Your session is coming up.\n\nCoach: {{ $json.coach_name }}\nTime: {{ $json.scheduled_time }}\n\nSession ID: {{ $json.session_id }}",
+        "options": {}
+      },
+      "id": "email-client",
+      "name": "Email client",
+      "type": "n8n-nodes-base.sendEmail",
+      "typeVersion": 2,
+      "position": [1120, 320],
+      "notes": "Configure SMTP. client_email from API response."
+    }
+  ],
+  "connections": {
+    "Daily 6am": {
+      "main": [
+        [
+          {
+            "node": "Fetch upcoming sessions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch upcoming sessions": {
+      "main": [
+        [
+          {
+            "node": "Has sessions?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has sessions?": {
+      "main": [
+        [
+          {
+            "node": "Expand sessions",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Expand sessions": {
+      "main": [
+        [
+          {
+            "node": "Email coach",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Email client",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "pinData": {}
+}

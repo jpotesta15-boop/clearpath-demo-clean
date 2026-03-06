@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import { Plus_Jakarta_Sans } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/providers/ThemeProvider"
-import { getBrandColors } from "@/lib/branding"
+import { getBrandColors, getClientName } from "@/lib/branding"
 import { ThemeVariantProvider } from "@/components/providers/ThemeVariantProvider"
 import { headers } from "next/headers"
 
@@ -11,9 +11,15 @@ const fontSans = Plus_Jakarta_Sans({
   variable: "--font-sans",
 })
 
-export const metadata: Metadata = {
-  title: "ClearPath Coach OS",
-  description: "Coaching management system",
+export async function generateMetadata(): Promise<Metadata> {
+  const clientName = await getClientName()
+  return {
+    title: `${clientName} Coach OS`,
+    description: "Coaching management system",
+    icons: {
+      icon: "/favicon.svg",
+    },
+  }
 }
 
 export default async function RootLayout({

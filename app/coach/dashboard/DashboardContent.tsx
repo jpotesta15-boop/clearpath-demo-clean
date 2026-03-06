@@ -187,6 +187,7 @@ export function DashboardContent({
   const [broadcastSaving, setBroadcastSaving] = useState(false)
   const [broadcastError, setBroadcastError] = useState<string | null>(null)
   const [lastBroadcast, setLastBroadcast] = useState(initialDailyMessage)
+  const [stripeConnectError, setStripeConnectError] = useState<string | null>(null)
 
   const supabase = createClient()
   const tenantId = getClientId()
@@ -232,11 +233,12 @@ export function DashboardContent({
 
   async function handleConnectStripe() {
     setConnectLoading(true)
+    setStripeConnectError(null)
     try {
       const res = await fetch('/api/stripe/connect/account-link', { method: 'POST' })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
-        alert(data.error ?? 'Failed to start Stripe Connect')
+        setStripeConnectError(data.error ?? 'Failed to start Stripe Connect')
         return
       }
       if (data.url) window.location.href = data.url
@@ -453,28 +455,38 @@ export function DashboardContent({
           </div>
           <div className="shrink-0">
             {stripeConnectAccountId ? (
-              <div className="flex items-center gap-2">
-                <span className="inline-flex items-center rounded-full bg-[var(--cp-accent-success)]/20 px-3 py-1 text-sm font-medium text-[var(--cp-accent-success)]">
-                  Stripe connected
-                </span>
+              <div className="flex flex-col items-end gap-1">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center rounded-full bg-[var(--cp-accent-success)]/20 px-3 py-1 text-sm font-medium text-[var(--cp-accent-success)]">
+                    Stripe connected
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleConnectStripe}
+                    disabled={connectLoading}
+                    className="text-sm font-medium text-[var(--cp-accent-primary)] hover:text-[var(--cp-accent-primary-strong)] disabled:opacity-50"
+                  >
+                    {connectLoading ? 'Opening…' : 'Reconnect'}
+                  </button>
+                </div>
+                {stripeConnectError && (
+                  <p className="text-xs text-[var(--cp-accent-danger)]">{stripeConnectError}</p>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-2">
                 <button
                   type="button"
                   onClick={handleConnectStripe}
                   disabled={connectLoading}
-                  className="text-sm font-medium text-[var(--cp-accent-primary)] hover:text-[var(--cp-accent-primary-strong)] disabled:opacity-50"
+                  className="inline-flex items-center rounded-lg bg-[var(--cp-accent-primary)] px-4 py-2 text-sm font-medium text-[var(--cp-text-on-accent)] hover:opacity-90 disabled:opacity-50"
                 >
-                  {connectLoading ? 'Opening…' : 'Reconnect'}
+                  {connectLoading ? 'Opening…' : 'Connect Stripe'}
                 </button>
+                {stripeConnectError && (
+                  <p className="text-xs text-[var(--cp-accent-danger)]">{stripeConnectError}</p>
+                )}
               </div>
-            ) : (
-              <button
-                type="button"
-                onClick={handleConnectStripe}
-                disabled={connectLoading}
-                className="inline-flex items-center rounded-lg bg-[var(--cp-accent-primary)] px-4 py-2 text-sm font-medium text-[var(--cp-text-on-accent)] hover:opacity-90 disabled:opacity-50"
-              >
-                {connectLoading ? 'Opening…' : 'Connect Stripe'}
-              </button>
             )}
           </div>
         </div>

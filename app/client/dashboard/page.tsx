@@ -55,12 +55,61 @@ export default async function ClientDashboard() {
 
   const dailyMessage = dailyMessages && dailyMessages.length > 0 ? dailyMessages[0] : null
 
+  const { data: unpaidRequests } = await supabase
+    .from('session_requests')
+    .select('id, amount_cents')
+    .eq('client_id', client.id)
+    .in('status', ['offered', 'accepted', 'payment_pending'])
+
+  const balanceOwedCents = (unpaidRequests ?? []).reduce((sum: number, r: any) => sum + (r.amount_cents ?? 0), 0)
+
+  const hasContent = (upcomingSessions && upcomingSessions.length > 0) || (programs && programs.length > 0) || dailyMessage
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-[var(--cp-text-primary)]">Home</h1>
         <p className="mt-1 text-sm text-[var(--cp-text-muted)]">Welcome back, {client.full_name}</p>
       </div>
+
+      {balanceOwedCents > 0 && (
+        <Card className="border-[var(--cp-accent-primary)]/30 bg-[var(--cp-accent-primary)]/5">
+          <CardContent className="pt-6">
+            <p className="font-medium text-[var(--cp-text-primary)]">You owe ${(balanceOwedCents / 100).toFixed(2)}</p>
+            <p className="text-sm text-[var(--cp-text-muted)] mt-1">Pay for your session offers on the Schedule page.</p>
+            <a
+              href="/client/schedule"
+              className="mt-3 inline-flex items-center rounded-md font-medium px-4 py-2 bg-[var(--cp-accent-primary)] text-[var(--cp-text-on-accent)] hover:bg-[var(--cp-accent-primary-strong)] text-sm"
+            >
+              Pay now
+            </a>
+          </CardContent>
+        </Card>
+      )}
+
+      {!hasContent && (
+        <Card className="shadow-[var(--cp-shadow-soft)] border-[var(--cp-border-subtle)] bg-[var(--cp-bg-elevated)]">
+          <CardContent className="pt-6">
+            <p className="text-[var(--cp-text-muted)]">
+              Nothing scheduled yet. Your coach may send you an offer — check Schedule or Messages to get started.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-3">
+              <a
+                href="/client/schedule"
+                className="inline-flex items-center rounded-md font-medium px-4 py-2 bg-[var(--cp-accent-primary)] text-[var(--cp-text-on-accent)] hover:bg-[var(--cp-accent-primary-strong)] text-sm"
+              >
+                View schedule
+              </a>
+              <a
+                href="/client/messages"
+                className="inline-flex items-center rounded-md font-medium px-4 py-2 border border-[var(--cp-border-subtle)] text-[var(--cp-text-primary)] hover:bg-[var(--cp-bg-subtle)] text-sm"
+              >
+                Messages
+              </a>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {dailyMessage && (
         <Card className="shadow-[var(--cp-shadow-soft)] border-[var(--cp-border-subtle)] bg-[var(--cp-bg-elevated)]">

@@ -20,6 +20,9 @@ function ClientScheduleContent() {
   const [availabilityText, setAvailabilityText] = useState('')
   const [submittingAvailability, setSubmittingAvailability] = useState(false)
   const [coachTimezone, setCoachTimezone] = useState<string | null>(null)
+  const [timeRequestText, setTimeRequestText] = useState('')
+  const [submittingTimeRequest, setSubmittingTimeRequest] = useState(false)
+  const [timeRequests, setTimeRequests] = useState<any[]>([])
   const searchParams = useSearchParams()
   const supabase = createClient()
   const tenantId = getClientId()
@@ -66,7 +69,7 @@ function ClientScheduleContent() {
       .single()
     if (coachProfile?.timezone) setCoachTimezone(coachProfile.timezone)
 
-    const [slotsRes, sessionsRes, requestsRes] = await Promise.all([
+    const [slotsRes, sessionsRes, requestsRes, timeRequestsRes] = await Promise.all([
       supabase
         .from('availability_slots')
         .select('*, session_products(name, price_cents)')
@@ -84,11 +87,17 @@ function ClientScheduleContent() {
         .eq('client_id', clientData.id)
         .in('status', ['offered', 'accepted', 'payment_pending', 'paid', 'availability_submitted', 'scheduled'])
         .order('created_at', { ascending: false }),
+      supabase
+        .from('client_time_requests')
+        .select('*')
+        .eq('client_id', clientData.id)
+        .order('created_at', { ascending: false }),
     ])
 
     setSlots(slotsRes.data || [])
     setSessions(sessionsRes.data || [])
     setSessionRequests(requestsRes.data || [])
+    setTimeRequests(timeRequestsRes.data || [])
     setLoading(false)
   }
 
@@ -139,6 +148,24 @@ function ClientScheduleContent() {
       loadData()
     }
     setSubmittingAvailability(false)
+  }
+
+  const handleSubmitTimeRequest = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!client || !timeRequestText.trim() || submittingTimeRequest) return
+    setSubmittingTimeRequest(true)
+    const { error } = await supabase.from('client_time_requests').insert({
+      client_id: client.id,
+      coach_id: client.coach_id,
+      tenant_id: tenantId,
+      preferred_times: timeRequestText.trim(),
+      status: 'pending',
+    })
+    if (!error) {
+      setTimeRequestText('')
+      loadData()
+    }
+    setSubmittingTimeRequest(false)
   }
 
   const handleRequestSession = async (slotId: string) => {
@@ -249,6 +276,34 @@ function ClientScheduleContent() {
           Times in {displayTz}
         </p>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Request a session</CardTitle>
+          <p className="text-sm font-normal text-[var(--cp-text-muted)]">
+            Tell your coach when you&apos;re free. They&apos;ll send you an offer to book.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmitTimeRequest} className="space-y-2">
+            <textarea
+              value={timeRequestText}
+              onChange={(e) => setTimeRequestText(e.target.value)}
+              placeholder="e.g. I'm free Tue 5–7pm, Thu mornings, or next week after 3pm"
+              className="w-full rounded-md border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cp-border-focus)]"
+              rows={2}
+            />
+            <Button type="submit" size="sm" disabled={!timeRequestText.trim() || submittingTimeRequest}>
+              {submittingTimeRequest ? 'Sending...' : 'Send request'}
+            </Button>
+          </form>
+          {timeRequests.filter((r) => r.status === 'pending').length > 0 && (
+            <p className="mt-3 text-xs text-[var(--cp-text-muted)]">
+              Pending: {timeRequests.filter((r) => r.status === 'pending').length} request(s) waiting for coach
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
       {sessionRequests.filter((r) => ['offered', 'accepted', 'payment_pending', 'paid', 'availability_submitted'].includes(r.status)).length > 0 && (
         <Card>

@@ -125,7 +125,7 @@ function LoginForm() {
       >
         <div className="rounded-2xl border border-[var(--cp-border-subtle)] border-t-4 border-t-[var(--cp-accent-primary)] bg-[var(--cp-bg-elevated)] shadow-[var(--cp-shadow-card)] p-6 sm:p-8">
           <div className="mb-8 text-center">
-            <h1 className="text-2xl font-semibold tracking-tight text-[var(--cp-text-primary)]">ClearPath Coach OS</h1>
+            <h1 className="text-2xl font-semibold tracking-tight text-[var(--cp-text-primary)]">{process.env.NEXT_PUBLIC_CLIENT_NAME || 'ClearPath'} Coach OS</h1>
             <p className="mt-1 text-[11px] uppercase tracking-wider text-[var(--cp-text-subtle)]">Coach & client portal</p>
             <h2 className="mt-6 text-xl font-semibold tracking-tight text-[var(--cp-text-primary)]">Welcome back</h2>
             <p className="mt-2 text-sm text-[var(--cp-text-muted)]">Sign in to your coach or client portal.</p>
@@ -204,20 +204,22 @@ function LoginForm() {
                 Sign in with Google
               </Button>
             </form>
-            <div className="mt-6 pt-4 border-t border-[var(--cp-border-subtle)]">
-              <button
-                type="button"
-                onClick={() => setShowDemo((s) => !s)}
-                className="text-xs text-[var(--cp-text-subtle)] hover:text-[var(--cp-text-muted)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cp-border-focus)] rounded"
-              >
-                {showDemo ? 'Hide demo credentials' : 'Demo credentials'}
-              </button>
-              {showDemo && (
-                <p className="mt-2 text-xs text-[var(--cp-text-muted)] font-mono">
-                  coach@demo.com / demo123
-                </p>
-              )}
-            </div>
+            {process.env.NEXT_PUBLIC_DEMO_MODE === 'true' && (
+              <div className="mt-6 pt-4 border-t border-[var(--cp-border-subtle)]">
+                <button
+                  type="button"
+                  onClick={() => setShowDemo((s) => !s)}
+                  className="text-xs text-[var(--cp-text-subtle)] hover:text-[var(--cp-text-muted)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cp-border-focus)] rounded"
+                >
+                  {showDemo ? 'Hide demo credentials' : 'Demo credentials'}
+                </button>
+                {showDemo && (
+                  <p className="mt-2 text-xs text-[var(--cp-text-muted)] font-mono">
+                    coach@demo.com / demo123
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         </motion.div>
     </div>
