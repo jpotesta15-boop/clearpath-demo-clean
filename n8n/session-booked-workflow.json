@@ -80,7 +80,7 @@
         "resource": "sms",
         "operation": "send",
         "to": "={{ $json.coach_phone }}",
-        "message": "={{ ($json.type === 'reminder' ? 'Reminder: Session with ' : 'Session booked with ') + ($json.client_name || 'client') + ' at ' + $json.scheduled_time }}",
+        "message": "={{ ($json.type === 'reminder' ? 'Reminder: Session with ' : ($json.type === 'payment_confirmed' ? 'Payment received from ' : 'Session booked with ')) + ($json.client_name || 'client') + ($json.type === 'payment_confirmed' ? ' – session at ' : ' at ') + $json.scheduled_time }}",
         "from": "YOUR_TWILIO_NUMBER",
         "options": {}
       },
@@ -96,7 +96,7 @@
         "resource": "sms",
         "operation": "send",
         "to": "={{ $json.client_phone }}",
-        "message": "={{ ($json.type === 'reminder' ? 'Reminder: Your session with ' : 'Your session with ') + ($json.coach_name || 'coach') + ($json.type === 'reminder' ? ' at ' : ' is confirmed at ') + $json.scheduled_time }}",
+        "message": "={{ ($json.type === 'reminder' ? 'Reminder: Your session with ' : ($json.type === 'payment_confirmed' ? 'Payment successful! Your session with ' : 'Your session with ')) + ($json.coach_name || 'coach') + ($json.type === 'reminder' ? ' at ' : ' is confirmed at ') + $json.scheduled_time }}",
         "from": "YOUR_TWILIO_NUMBER",
         "options": {}
       },
@@ -126,8 +126,8 @@
       "parameters": {
         "fromEmail": "YOUR_SMTP_FROM_EMAIL",
         "toEmail": "={{ $json.client_email }}",
-        "subject": "={{ ($json.type === 'reminder' ? 'Reminder: Your session with ' : 'Your session with ') + ($json.coach_name || 'coach') + ($json.type === 'reminder' ? ' is tomorrow' : ' is confirmed') }}",
-        "text": "={{ ($json.type === 'reminder' ? 'Your session is coming up.' : 'Your session is confirmed.') + '\\n\\nCoach: ' + ($json.coach_name || 'coach') + '\\nTime: ' + $json.scheduled_time + '\\n\\nSession ID: ' + $json.session_id }}",
+        "subject": "={{ $json.type === 'reminder' ? 'Reminder: Your session with ' + ($json.coach_name || 'coach') + ' is tomorrow' : ($json.type === 'payment_confirmed' ? 'Payment successful – Your session with ' + ($json.coach_name || 'coach') : 'Your session with ' + ($json.coach_name || 'coach') + ' is confirmed') }}",
+        "text": "={{ $json.type === 'reminder' ? 'Your session is coming up.\\n\\nCoach: ' + ($json.coach_name || 'coach') + '\\nTime: ' + $json.scheduled_time + '\\n\\nSession ID: ' + $json.session_id : ($json.type === 'payment_confirmed' ? 'Payment successful! Your session is confirmed.\\n\\nCoach: ' + ($json.coach_name || 'coach') + '\\nTime: ' + $json.scheduled_time + '\\n\\nSession ID: ' + $json.session_id : 'Your session is confirmed.\\n\\nCoach: ' + ($json.coach_name || 'coach') + '\\nTime: ' + $json.scheduled_time + '\\n\\nSession ID: ' + $json.session_id) }}",
         "options": {}
       },
       "id": "email-client",

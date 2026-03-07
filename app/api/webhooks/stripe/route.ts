@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getSafeMessage, logServerError } from '@/lib/api-error'
 import { validateStripeEnv } from '@/lib/env'
+import { notifySessionBooked } from '@/lib/notify-session-booked'
 import Stripe from 'stripe'
 
 export async function POST(request: Request) {
@@ -184,6 +185,14 @@ export async function POST(request: Request) {
       if (markScheduledErr) {
         logServerError('stripe-webhook', markScheduledErr, { sessionRequestId })
       }
+
+      void notifySessionBooked(
+        newSession.id,
+        sessionRequest.coach_id,
+        sessionRequest.client_id,
+        slot.start_time,
+        'payment_confirmed'
+      )
     }
   }
 

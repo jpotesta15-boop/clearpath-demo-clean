@@ -1,10 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { n8nSessionBookedSchema } from '@/lib/validations'
-import { getSafeMessage, logServerError } from '@/lib/api-error'
-import { normalizePhone } from '@/lib/phone'
-
-const N8N_URL = process.env.N8N_SESSION_BOOKED_WEBHOOK_URL
+import { notifySessionBooked } from '@/lib/notify-session-booked'
 
 /**
  * Called by the app when a session is confirmed (booked).
@@ -36,53 +33,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  const { data: clientRow } = await supabase
-    .from('clients')
-    .select('email, full_name, phone')
-    .eq('id', client_id)
-    .single()
-
-  const { data: coachRow } = await supabase
-    .from('profiles')
-    .select('full_name, email, phone')
-    .eq('id', coach_id)
-    .single()
-
-  const payload = {
+  const forwarded = await notifySessionBooked(
     session_id,
     coach_id,
     client_id,
     scheduled_time,
-    type: 'booked',
-    client_email: clientRow?.email ?? null,
-    client_name: clientRow?.full_name ?? null,
-    client_phone: normalizePhone(clientRow?.phone) ?? null,
-    coach_name: coachRow?.full_name ?? null,
-    coach_email: coachRow?.email ?? null,
-    coach_phone: normalizePhone((coachRow as { phone?: string })?.phone) ?? null,
-  }
+    'booked'
+  )
 
-  if (!N8N_URL) {
-    return NextResponse.json({ ok: true, forwarded: false })
-  }
-
-  try {
-    const res = await fetch(N8N_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    })
-    if (!res.ok) {
-      const text = await res.text()
-      console.error('[n8n-session-booked] Forward failed:', res.status, text)
-      return NextResponse.json(
-        { error: 'Webhook forward failed', status: res.status },
-        { status: 502 }
-      )
-    }
-    return NextResponse.json({ ok: true, forwarded: true })
-  } catch (err) {
-    logServerError('n8n-session-booked', err)
-    return NextResponse.json({ error: getSafeMessage(502) }, { status: 502 })
-  }
+  return NextResponse.json({ ok: true, forwarded })
 }

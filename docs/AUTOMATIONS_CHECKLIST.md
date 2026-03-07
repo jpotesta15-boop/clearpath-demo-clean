@@ -16,9 +16,9 @@ Use this checklist to connect ClearPath to n8n and verify automations are live.
 
 ## 1. Session Booked & Manual Remind (SMS or Email Coach + Client)
 
-When a session is confirmed, the app forwards the event to n8n. This workflow sends **SMS** (Twilio) when phone is available, otherwise **email** to both coach and client. The same webhook also handles **manual reminders** when the coach clicks "Remind" on a confirmed future session in Schedule.
+When a session is confirmed, the app forwards the event to n8n. This workflow sends **SMS** (Twilio) when phone is available, otherwise **email** to both coach and client. The same webhook also handles **manual reminders** when the coach clicks "Remind" on a confirmed future session in Schedule. When a **client pays via Stripe** and the slot was pre-selected, the app immediately sends `type: 'payment_confirmed'` so coach and client get instant payment + session details (no need to wait for the 6am reminder).
 
-**Payload `type`:** `booked` (session confirmed) or `reminder` (manual remind). The workflow uses different message templates for each.
+**Payload `type`:** `booked` (coach confirms from Schedule), `reminder` (manual remind), or `payment_confirmed` (client paid via Stripe; session auto-created). The workflow uses different message templates for each.
 
 ### Setup Steps
 
@@ -39,6 +39,7 @@ When a session is confirmed, the app forwards the event to n8n. This workflow se
 3. Check n8n → Executions: workflow should have run
 4. Coach and client should receive SMS (or email if no phone)
 5. **Manual remind:** Schedule → Sessions list: click "Remind" on a confirmed future session. Check n8n Executions; coach and client receive reminder (SMS or email)
+6. **Payment confirmed:** Client pays via Stripe checkout (slot pre-selected). Coach gets "Payment received from [client]"; client gets "Payment successful" + session details. Session reminder (6am) still runs separately for the reminder before the session.
 
 ### Troubleshooting
 
