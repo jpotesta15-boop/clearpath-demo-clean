@@ -156,13 +156,13 @@ function applyMode(mode: ThemeMode) {
 
 export function ThemeVariantProvider({ children }: { children: React.ReactNode }) {
   const [variant, setVariantState] = React.useState<ThemeVariant>("blue")
-  const [mode, setModeState] = React.useState<ThemeMode>("dark")
+  const [mode, setModeState] = React.useState<ThemeMode>("light")
 
   // Load persisted variant and mode on mount (mode first so applyVariant can read data-theme for tinted neutrals)
   React.useEffect(() => {
     if (typeof window === "undefined") return
     const storedMode = window.localStorage.getItem(THEME_MODE_STORAGE_KEY) as string | null
-    const initialMode = storedMode === "light" ? "light" : "dark"
+    const initialMode = storedMode === "dark" ? "dark" : "light"
     setModeState(initialMode)
     applyMode(initialMode)
 

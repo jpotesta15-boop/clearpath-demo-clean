@@ -63,8 +63,10 @@ export default async function ClientProgramsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">My Programs</h1>
-        <p className="mt-1 text-sm text-gray-500">Your assigned training programs and lessons</p>
+        <h1 className="text-3xl font-bold text-[var(--cp-text-primary)]">My Programs</h1>
+        <p className="mt-1 text-sm text-[var(--cp-text-muted)]">
+          Your assigned training programs and lessons
+        </p>
       </div>
 
       <div className="space-y-6">
@@ -77,11 +79,15 @@ export default async function ClientProgramsPage() {
                 <CardHeader>
                   <CardTitle>{program?.name}</CardTitle>
                   {program?.description && (
-                    <p className="text-sm text-gray-600 font-normal">{program.description}</p>
+                    <p className="text-sm text-[var(--cp-text-muted)] font-normal">
+                      {program.description}
+                    </p>
                   )}
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm font-medium text-gray-700 mb-2">Lessons</p>
+                  <p className="text-sm font-medium text-[var(--cp-text-primary)] mb-2">
+                    Lessons
+                  </p>
                   {lessons.length > 0 ? (
                     <ol className="list-decimal list-inside space-y-2">
                       {lessons.map((lesson: any) => {
@@ -89,7 +95,10 @@ export default async function ClientProgramsPage() {
                         if (type === 'video') {
                           return (
                             <li key={lesson.id}>
-                              <Link href="/client/videos" className="text-blue-600 hover:underline">
+                              <Link
+                                href="/client/videos"
+                                className="text-[var(--cp-accent-primary)] hover:text-[var(--cp-accent-primary-strong)]"
+                              >
                                 {lesson.videos?.title ?? 'Video'}
                               </Link>
                             </li>
@@ -102,7 +111,7 @@ export default async function ClientProgramsPage() {
                                 href={lesson.url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-blue-600 hover:underline"
+                                className="text-[var(--cp-accent-primary)] hover:text-[var(--cp-accent-primary-strong)]"
                               >
                                 {lesson.title || lesson.url}
                               </a>
@@ -112,7 +121,7 @@ export default async function ClientProgramsPage() {
                         if (type === 'note') {
                           return (
                             <li key={lesson.id} className="list-item">
-                              <span className="text-gray-700">{lesson.content}</span>
+                              <span className="text-[var(--cp-text-primary)]">{lesson.content}</span>
                             </li>
                           )
                         }
@@ -120,7 +129,12 @@ export default async function ClientProgramsPage() {
                           return (
                             <li key={lesson.id}>
                               {lesson.url ? (
-                                <a href={lesson.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                                <a
+                                  href={lesson.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-[var(--cp-accent-primary)] hover:text-[var(--cp-accent-primary-strong)]"
+                                >
                                   {lesson.title || 'Image'}
                                 </a>
                               ) : (

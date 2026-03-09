@@ -23,37 +23,62 @@ export async function getClientConfig(): Promise<ClientConfig> {
     return cachedConfig
   }
 
-  // In server components, read from filesystem
+  // In server components, prefer client-config.json when present
   if (typeof window === 'undefined') {
     try {
       const fs = await import('fs/promises')
       const path = await import('path')
       const configPath = path.join(process.cwd(), 'client-config.json')
       const configData = await fs.readFile(configPath, 'utf-8')
-      cachedConfig = JSON.parse(configData) as ClientConfig
+      const fileConfig = JSON.parse(configData) as Partial<ClientConfig>
+      cachedConfig = normalizeConfig(fileConfig)
       return cachedConfig
     } catch (error) {
-      // Fallback to environment variables if config file doesn't exist
-      return getDefaultConfig()
+      // File missing or invalid → fall back to env-only config
+      const envConfig = normalizeConfig({})
+      cachedConfig = envConfig
+      return envConfig
     }
   }
 
-  // In client components, use environment variables
-  return getDefaultConfig()
+  // In client components, we only have env vars; normalize for consistency
+  const envConfig = normalizeConfig({})
+  cachedConfig = envConfig
+  return envConfig
 }
 
-function getDefaultConfig(): ClientConfig {
+function normalizeConfig(partial: Partial<ClientConfig>): ClientConfig {
+  const envClientName = process.env.NEXT_PUBLIC_CLIENT_NAME
+  const envClientId = process.env.NEXT_PUBLIC_CLIENT_ID
+  const envPrimary = process.env.NEXT_PUBLIC_BRAND_PRIMARY
+  const envSecondary = process.env.NEXT_PUBLIC_BRAND_SECONDARY
+
+  const clientName = envClientName || partial.clientName || 'ClearPath'
+  const businessName = envClientName || partial.businessName || clientName
+  const supabaseClientId = partial.supabaseClientId || envClientId || 'default'
+
+  // Safety: ensure supabaseClientId and NEXT_PUBLIC_CLIENT_ID stay aligned in logs
+  if (envClientId && partial.supabaseClientId && envClientId !== partial.supabaseClientId) {
+    console.warn(
+      '[client-config] Mismatch between NEXT_PUBLIC_CLIENT_ID and client-config.json.supabaseClientId. ' +
+        `Using "${partial.supabaseClientId}" from client-config.json.`
+    )
+  }
+
   return {
-    clientName: process.env.NEXT_PUBLIC_CLIENT_NAME || 'ClearPath',
-    businessName: process.env.NEXT_PUBLIC_CLIENT_NAME || 'ClearPath',
+    clientName,
+    businessName,
+    supabaseClientId,
     brandColors: {
-      primary: process.env.NEXT_PUBLIC_BRAND_PRIMARY || '#0284c7',
-      secondary: process.env.NEXT_PUBLIC_BRAND_SECONDARY || '#0369a1',
+      primary: envPrimary || partial.brandColors?.primary || '#0284c7',
+      secondary: envSecondary || partial.brandColors?.secondary || '#0369a1',
     },
-    supabaseClientId: process.env.NEXT_PUBLIC_CLIENT_ID || 'default',
+    logo: partial.logo,
     features: {
-      groupSessions: true,
-      videoLibrary: true,
+      groupSessions:
+        typeof partial.features?.groupSessions === 'boolean' ? partial.features.groupSessions : true,
+      videoLibrary:
+        typeof partial.features?.videoLibrary === 'boolean' ? partial.features.videoLibrary : true,
     },
   }
 }

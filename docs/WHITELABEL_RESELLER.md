@@ -14,7 +14,14 @@ This guide explains how to deploy ClearPath for multiple coaches (resellers or a
 
 ## client-config.json Schema
 
-Place `client-config.json` in the project root. It overrides environment variables when present.
+Place `client-config.json` in the project root. When present, it is the **source of truth** for:
+
+- Display name and business name
+- Supabase tenant id (`supabaseClientId`)
+- Primary/secondary brand colors
+- Optional logo URL and feature flags
+
+Environment variables still control **runtime secrets** (Supabase, Stripe, etc.), and may provide **default values** for colors and names when the file is missing.
 
 ```json
 {
@@ -37,7 +44,7 @@ Place `client-config.json` in the project root. It overrides environment variabl
 |-------|------|----------|-------|
 | `clientName` | string | Yes | Display name (login header, metadata) |
 | `businessName` | string | Yes | Business name (often same as clientName) |
-| `supabaseClientId` | string | Yes | Tenant ID; must match `NEXT_PUBLIC_CLIENT_ID` |
+| `supabaseClientId` | string | Yes | Tenant ID used by Supabase RLS; should match `NEXT_PUBLIC_CLIENT_ID` |
 | `brandColors.primary` | string | Yes | Hex color (e.g. `#0284c7`) |
 | `brandColors.secondary` | string | Yes | Hex color (e.g. `#0369a1`) |
 | `logo` | string | No | URL to logo image |
@@ -46,16 +53,24 @@ Place `client-config.json` in the project root. It overrides environment variabl
 
 ---
 
-## Environment Variables (Alternative to client-config.json)
+## Environment Variables (when client-config.json is missing)
 
-If `client-config.json` is not present, the app uses env vars:
+If `client-config.json` is **not present**, the app falls back to environment variables for branding:
 
-| Variable | Maps to | Example |
-|----------|---------|---------|
-| `NEXT_PUBLIC_CLIENT_ID` | `supabaseClientId` | `coach-jane` |
+| Variable | Used for | Example |
+|----------|----------|---------|
+| `NEXT_PUBLIC_CLIENT_ID` | Tenant id (`supabaseClientId`) | `coach-jane` |
 | `NEXT_PUBLIC_CLIENT_NAME` | `clientName`, `businessName` | `Coach Jane Fitness` |
 | `NEXT_PUBLIC_BRAND_PRIMARY` | `brandColors.primary` | `#0284c7` |
 | `NEXT_PUBLIC_BRAND_SECONDARY` | `brandColors.secondary` | `#0369a1` |
+
+**Priority rules (summary):**
+
+- If `client-config.json` exists:
+  - Names and `supabaseClientId` come from the file.
+  - Brand colors come from `NEXT_PUBLIC_BRAND_*` if set; otherwise from the file.
+- If `client-config.json` is missing:
+  - All branding and `supabaseClientId` come from env vars (with sensible defaults).
 
 ---
 

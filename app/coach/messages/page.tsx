@@ -365,7 +365,10 @@ export default function MessagesPage() {
 
       {clients.length === 0 ? (
         <div className="rounded-2xl border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-elevated)] p-8 text-center shadow-[var(--cp-shadow-soft)]">
-          <p className="text-[var(--cp-text-muted)]">Add clients to start messaging. Once you have clients, you can send and receive messages here.</p>
+          <p className="text-[var(--cp-text-muted)]">
+            Add clients to start messaging. Once you have clients, you can send and receive messages
+            here.
+          </p>
           <Link
             href="/coach/clients/new"
             className="mt-4 inline-flex items-center justify-center rounded-lg bg-[var(--cp-accent-primary)] px-4 py-2 text-sm font-medium text-[var(--cp-text-on-accent)] hover:opacity-90"
@@ -374,13 +377,13 @@ export default function MessagesPage() {
           </Link>
         </div>
       ) : (
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <Card className="border border-[var(--cp-border-subtle)] shadow-[var(--cp-shadow-soft)]">
-          <CardContent className="p-0">
-            <div className="p-4 border-b border-[var(--cp-border-subtle)] bg-[rgba(15,23,42,0.6)]">
-              <h3 className="font-semibold text-[var(--cp-text-primary)]">Clients</h3>
-            </div>
-            <div className="divide-y divide-gray-100 max-h-[420px] overflow-y-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          <Card className="border border-[var(--cp-border-subtle)] shadow-[var(--cp-shadow-soft)]">
+            <CardContent className="p-0">
+              <div className="p-4 border-b border-[var(--cp-border-subtle)] bg-[var(--cp-bg-subtle)]">
+                <h3 className="font-semibold text-[var(--cp-text-primary)]">Clients</h3>
+              </div>
+              <div className="divide-y divide-[var(--cp-border-subtle)] max-h-[420px] overflow-y-auto">
               {clients.map((client) => {
                 const unreadCount = unreadByClient[client.id] ?? 0
                 return (
@@ -405,19 +408,21 @@ export default function MessagesPage() {
                     )}
                   </div>
                   {client.email && (
-                    <p className="text-xs text-[var(--cp-text-muted)] truncate">{client.email}</p>
+                    <p className="text-xs text-[var(--cp-text-muted)] truncate">
+                      {client.email}
+                    </p>
                   )}
                 </button>
               )})}
-            </div>
-          </CardContent>
-        </Card>
+              </div>
+            </CardContent>
+          </Card>
 
-        <div className="lg:col-span-3 flex flex-col min-h-[480px]">
-          <Card className="border border-[var(--cp-border-subtle)] shadow-[var(--cp-shadow-soft)] flex-1 flex flex-col overflow-hidden">
+          <div className="lg:col-span-3 flex flex-col min-h-[480px]">
+            <Card className="border border-[var(--cp-border-subtle)] shadow-[var(--cp-shadow-soft)] flex-1 flex flex-col overflow-hidden">
             {selectedClient ? (
               <>
-                <div className="px-4 py-3 border-b border-[var(--cp-border-subtle)] bg-[rgba(15,23,42,0.6)] flex flex-wrap items-center justify-between gap-3">
+                <div className="px-4 py-3 border-b border-[var(--cp-border-subtle)] bg-[var(--cp-bg-subtle)] flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <p className="font-semibold text-[var(--cp-text-primary)]">
                       {selectedClientData?.full_name ?? 'Client'}
@@ -481,7 +486,7 @@ export default function MessagesPage() {
               </>
             ) : (
               <div className="flex-1 flex items-center justify-center p-8">
-                <p className="text-gray-500 text-center">
+                <p className="text-[var(--cp-text-muted)] text-center">
                   Select a client from the list to view and send messages.
                 </p>
               </div>
@@ -493,7 +498,7 @@ export default function MessagesPage() {
 
       {showRequestModal && selectedClient && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--cp-bg-backdrop)] p-4"
           onClick={() => !requestLoading && setShowRequestModal(false)}
         >
           <div

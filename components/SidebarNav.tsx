@@ -163,8 +163,8 @@ export default function SidebarNav({ navItems }: { navItems: NavItem[] }) {
   return (
     <>
       <aside
-        className={`fixed left-0 top-0 z-30 h-full bg-[var(--cp-bg-surface)] border-r border-[var(--cp-border-subtle)] shadow-[var(--cp-shadow-soft)] flex flex-col transition-[width] duration-200 ${
-          expanded ? 'w-60' : 'w-16'
+        className={`hidden md:flex md:flex-col fixed left-0 top-0 z-30 h-full bg-[var(--cp-bg-surface)] border-r border-[var(--cp-border-subtle)] shadow-[var(--cp-shadow-soft)] transition-[width] duration-200 ${
+          expanded ? 'md:w-60' : 'md:w-16'
         }`}
         aria-label="Primary navigation"
       >
@@ -253,7 +253,12 @@ export default function SidebarNav({ navItems }: { navItems: NavItem[] }) {
           </button>
         </div>
       </aside>
-      <div className={`flex-shrink-0 ${expanded ? 'w-60' : 'w-16'}`} aria-hidden />
+      <div
+        className={`hidden md:block flex-shrink-0 ${
+          expanded ? 'md:w-60' : 'md:w-16'
+        }`}
+        aria-hidden
+      />
     </>
   )
 }

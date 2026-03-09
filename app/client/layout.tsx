@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getClientId } from '@/lib/config'
 import SidebarNav, { NavItem } from '@/components/SidebarNav'
+import { MobileBottomNav } from '@/components/MobileBottomNav'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { AnimatedPageWithExit } from '@/components/layout/AnimatedPage'
 
@@ -62,6 +63,7 @@ export default async function ClientLayout({
       <AppLayout>
         <AnimatedPageWithExit>{children}</AnimatedPageWithExit>
       </AppLayout>
+      <MobileBottomNav navItems={navItems} />
     </div>
   )
 }

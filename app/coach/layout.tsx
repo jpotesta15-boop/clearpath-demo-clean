@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import SidebarNav, { NavItem } from '@/components/SidebarNav'
+import { MobileBottomNav } from '@/components/MobileBottomNav'
 import { CoachHeader } from '@/components/layout/CoachHeader'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { AnimatedPageWithExit } from '@/components/layout/AnimatedPage'
@@ -79,6 +80,7 @@ export default async function CoachLayout({
           <AnimatedPageWithExit>{children}</AnimatedPageWithExit>
         </AppLayout>
       </div>
+      <MobileBottomNav navItems={coachNavItems} />
     </div>
   )
 }

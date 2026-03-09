@@ -36,7 +36,7 @@ export default async function RootLayout({
         <script
           nonce={nonce}
           dangerouslySetInnerHTML={{
-            __html: `(function(){var m=localStorage.getItem("cp-theme-mode");document.documentElement.setAttribute("data-theme",m==="light"?"light":"dark");})();`,
+            __html: `(function(){var m=localStorage.getItem("cp-theme-mode");document.documentElement.setAttribute("data-theme",m==="dark"?"dark":"light");})();`,
           }}
         />
       </head>

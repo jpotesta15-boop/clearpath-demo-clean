@@ -133,15 +133,11 @@ export const tokens: ThemeTokens = {
     pill: 9999,
   },
 
-  /**
-   * Shadow tokens unify elevation across the app. Values are tuned
-   * for a dark athletic dashboard aesthetic.
-   */
   shadows: {
     none: "none",
-    soft: "0 1px 2px rgba(15, 23, 42, 0.45)",
-    card: "0 6px 18px rgba(15, 23, 42, 0.55)",
-    elevated: "0 18px 45px rgba(15, 23, 42, 0.6)",
+    soft: "0 1px 2px rgba(15, 23, 42, 0.08)",
+    card: "0 4px 12px rgba(15, 23, 42, 0.10)",
+    elevated: "0 10px 30px rgba(15, 23, 42, 0.14)",
   },
 
   /**
