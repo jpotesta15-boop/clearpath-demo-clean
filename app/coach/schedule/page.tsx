@@ -105,6 +105,9 @@ export default function SchedulePage() {
   const [showForm, setShowForm] = useState(false)
   const [month, setMonth] = useState(() => new Date())
   const [newSlot, setNewSlot] = useState({
+    slotDate: '',
+    slotStartTime: '',
+    slotEndTime: '',
     start_time: '',
     end_time: '',
     is_group_session: false,
@@ -134,8 +137,19 @@ export default function SchedulePage() {
   const [offerSubmitting, setOfferSubmitting] = useState(false)
   const [reminderSendingId, setReminderSendingId] = useState<string | null>(null)
   const [reminderError, setReminderError] = useState<string | null>(null)
+  const [slotError, setSlotError] = useState<string | null>(null)
   const supabase = createClient()
   const tenantId = process.env.NEXT_PUBLIC_CLIENT_ID ?? 'demo'
+
+  // Time options for availability: 6:00 AM–8:00 PM, 30-min steps (HH:mm)
+  const TIME_OPTIONS = (() => {
+    const opts: string[] = []
+    for (let h = 6; h <= 20; h++) {
+      opts.push(`${h.toString().padStart(2, '0')}:00`)
+      if (h < 20) opts.push(`${h.toString().padStart(2, '0')}:30`)
+    }
+    return opts
+  })()
 
   const displayTz = coachTimezone || (typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'UTC')
 
@@ -211,14 +225,20 @@ export default function SchedulePage() {
 
   const handleCreateSlot = async (e: React.FormEvent) => {
     e.preventDefault()
+    setSlotError(null)
     const {
       data: { user },
     } = await supabase.auth.getUser()
     if (!user) return
 
-    const start = new Date(newSlot.start_time)
-    const end = new Date(newSlot.end_time)
-    if (isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) return
+    const start_time = newSlot.slotDate && newSlot.slotStartTime ? `${newSlot.slotDate}T${newSlot.slotStartTime}` : newSlot.start_time
+    const end_time = newSlot.slotDate && newSlot.slotEndTime ? `${newSlot.slotDate}T${newSlot.slotEndTime}` : newSlot.end_time
+    const start = new Date(start_time)
+    const end = new Date(end_time)
+    if (isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) {
+      setSlotError('Please choose a valid date and start/end time.')
+      return
+    }
 
     if (newSlot.is_paid_slot && !newSlot.session_product_id) {
       return
@@ -228,7 +248,7 @@ export default function SchedulePage() {
     const occurrences: { start_time: string; end_time: string }[] = []
 
     if (newSlot.repeat === 'none') {
-      occurrences.push({ start_time: newSlot.start_time, end_time: newSlot.end_time })
+      occurrences.push({ start_time, end_time })
     } else {
       const maxCount = 100
       let count = 0
@@ -269,13 +289,17 @@ export default function SchedulePage() {
         label: newSlot.is_paid_slot ? newSlot.label.trim() || null : null,
       })
       if (error) {
-        loadData()
+        setSlotError('Failed to create slot. Try again.')
+        await loadData()
         return
       }
     }
 
     setShowForm(false)
     setNewSlot({
+      slotDate: '',
+      slotStartTime: '',
+      slotEndTime: '',
       start_time: '',
       end_time: '',
       is_group_session: false,
@@ -287,7 +311,7 @@ export default function SchedulePage() {
       session_product_id: '',
       label: '',
     })
-    loadData()
+    await loadData()
   }
 
   const handleApproveSession = async (sessionId: string) => {
@@ -614,7 +638,7 @@ export default function SchedulePage() {
           >
             Export calendar
           </a>
-          <Button onClick={() => setShowForm(!showForm)}>
+          <Button onClick={() => { setShowForm(!showForm); if (!showForm) setSlotError(null) }}>
             {showForm ? 'Cancel' : 'Add Availability'}
           </Button>
         </div>
@@ -628,27 +652,48 @@ export default function SchedulePage() {
           <CardContent>
             <form onSubmit={handleCreateSlot} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-[var(--cp-text-primary)]">
-                  Start time
-                </label>
+                <label className="block text-sm font-medium text-[var(--cp-text-primary)]">Date</label>
                 <Input
-                  type="datetime-local"
-                  value={newSlot.start_time}
-                  onChange={(e) => setNewSlot({ ...newSlot, start_time: e.target.value })}
+                  type="date"
+                  value={newSlot.slotDate}
+                  onChange={(e) => setNewSlot({ ...newSlot, slotDate: e.target.value })}
                   required
+                  className="max-w-xs bg-[var(--cp-bg-surface)] border-[var(--cp-border-subtle)]"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-[var(--cp-text-primary)]">
-                  End time
-                </label>
-                <Input
-                  type="datetime-local"
-                  value={newSlot.end_time}
-                  onChange={(e) => setNewSlot({ ...newSlot, end_time: e.target.value })}
+                <label className="block text-sm font-medium text-[var(--cp-text-primary)]">Start time</label>
+                <select
+                  value={newSlot.slotStartTime}
+                  onChange={(e) => setNewSlot({ ...newSlot, slotStartTime: e.target.value })}
                   required
-                />
+                  className="mt-1 w-full max-w-xs h-10 rounded-md border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] px-3 py-2 text-sm text-[var(--cp-text-primary)]"
+                >
+                  <option value="">Select start time</option>
+                  {TIME_OPTIONS.map((t) => (
+                    <option key={t} value={t}>
+                      {new Date(`2000-01-01T${t}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                    </option>
+                  ))}
+                </select>
               </div>
+              <div>
+                <label className="block text-sm font-medium text-[var(--cp-text-primary)]">End time</label>
+                <select
+                  value={newSlot.slotEndTime}
+                  onChange={(e) => setNewSlot({ ...newSlot, slotEndTime: e.target.value })}
+                  required
+                  className="mt-1 w-full max-w-xs h-10 rounded-md border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] px-3 py-2 text-sm text-[var(--cp-text-primary)]"
+                >
+                  <option value="">Select end time</option>
+                  {TIME_OPTIONS.map((t) => (
+                    <option key={t} value={t}>
+                      {new Date(`2000-01-01T${t}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {slotError && <p className="text-sm text-[var(--cp-accent-danger)]">{slotError}</p>}
               <div className="flex items-center">
                 <input
                   type="checkbox"
@@ -892,7 +937,14 @@ export default function SchedulePage() {
                       </p>
                     )}
                   </div>
-                  <Button size="sm" onClick={() => { setSchedulingRequest(req); setSchedulingSlotId(null) }}>
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      const available = slots.filter((slot) => new Date(slot.start_time) > new Date() && !sessions.some((s) => s.availability_slot_id === slot.id))
+                      setSchedulingSlotId(available[0]?.id ?? null)
+                      setSchedulingRequest(req)
+                    }}
+                  >
                     Schedule
                   </Button>
                 </div>
@@ -913,36 +965,35 @@ export default function SchedulePage() {
           >
             <h3 className="text-lg font-semibold">Pick a time slot</h3>
             <p className="text-sm text-[var(--cp-text-muted)] mt-1">
-              Choose an available slot to confirm this session.
+              Choose an available slot to add this session to your calendar.
             </p>
-            <div className="mt-4 space-y-2">
-              {slots
-                .filter((slot) => new Date(slot.start_time) > new Date() && !sessions.some((s) => s.availability_slot_id === slot.id))
-                .slice(0, 20)
-                .map((slot) => (
-                  <button
-                    key={slot.id}
-                    type="button"
-                    onClick={() => setSchedulingSlotId(slot.id)}
-                    className={`w-full text-left px-3 py-2 rounded-md border text-sm transition-colors ${
-                      schedulingSlotId === slot.id
-                        ? 'border-[var(--cp-accent-primary)] bg-[var(--cp-accent-primary-soft)]'
-                        : 'border-[var(--cp-border-subtle)] hover:bg-[rgba(148,163,184,0.16)]'
-                    }`}
+            <div className="mt-4">
+              {(() => {
+                const availableSlots = slots.filter((slot) => new Date(slot.start_time) > new Date() && !sessions.some((s) => s.availability_slot_id === slot.id))
+                return availableSlots.length === 0 ? (
+                  <p className="text-sm text-[var(--cp-text-muted)]">No available slots. Add availability above first.</p>
+                ) : (
+                  <select
+                    value={schedulingSlotId ?? availableSlots[0]?.id ?? ''}
+                    onChange={(e) => setSchedulingSlotId(e.target.value || null)}
+                    className="mt-2 w-full h-10 rounded-md border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] px-3 py-2 text-sm text-[var(--cp-text-primary)]"
                   >
-                    {formatInTz(slot.start_time, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })} – {formatInTz(slot.end_time, { hour: 'numeric', minute: '2-digit' })}
-                  </button>
-                ))}
+                    {availableSlots.map((slot) => (
+                      <option key={slot.id} value={slot.id}>
+                        {formatInTz(slot.start_time, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })} – {formatInTz(slot.end_time, { hour: 'numeric', minute: '2-digit' })}
+                      </option>
+                    ))}
+                  </select>
+                )
+              })()}
             </div>
-            {slots.filter((slot) => new Date(slot.start_time) > new Date() && !sessions.some((s) => s.availability_slot_id === slot.id)).length === 0 && (
-              <p className="text-sm text-[var(--cp-text-muted)] mt-2">
-                No available slots. Add availability above first.
-              </p>
-            )}
             <div className="mt-4 flex gap-2 justify-end">
               <Button variant="outline" onClick={() => setSchedulingRequest(null)} disabled={schedulingSubmitting}>Cancel</Button>
-              <Button onClick={handleScheduleRequestToSlot} disabled={!schedulingSlotId || schedulingSubmitting}>
-                {schedulingSubmitting ? 'Scheduling...' : 'Confirm'}
+              <Button
+                onClick={handleScheduleRequestToSlot}
+                disabled={!schedulingSlotId || schedulingSubmitting}
+              >
+                {schedulingSubmitting ? 'Scheduling...' : 'Add to calendar'}
               </Button>
             </div>
           </div>

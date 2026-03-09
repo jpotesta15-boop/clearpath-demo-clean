@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { getClientId } from '@/lib/config'
 import { clientIdSchema, updateClientProfileSchema } from '@/lib/validations'
 import { sanitizeActionError } from '@/lib/api-error'
 
@@ -57,7 +58,9 @@ export async function updateClientProfileAction(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Not authenticated' }
 
-  const { error } = await supabase
+  const tenantId = getClientId()
+
+  const { data: updated, error } = await supabase
     .from('clients')
     .update({
       full_name: parsed.data.full_name?.trim() || null,
@@ -68,8 +71,16 @@ export async function updateClientProfileAction(
     })
     .eq('id', clientId)
     .eq('coach_id', user.id)
+    .eq('client_id', tenantId)
+    .select('id')
 
-  if (error) return { error: sanitizeActionError(error) }
+  if (error) {
+    console.error('[updateClientProfile]', error)
+    return { error: sanitizeActionError(error) }
+  }
+  if (!updated?.length) {
+    return { error: 'Client record could not be updated. Try again.' }
+  }
   revalidatePath(`/coach/clients/${clientId}`)
   return {}
 }
