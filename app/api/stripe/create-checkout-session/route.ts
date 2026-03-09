@@ -61,7 +61,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Session request not found' }, { status: 404 })
   }
 
-  if (sessionRequest.status !== 'offered' && sessionRequest.status !== 'accepted') {
+  if (
+    sessionRequest.status !== 'offered' &&
+    sessionRequest.status !== 'accepted' &&
+    sessionRequest.status !== 'payment_pending'
+  ) {
     return NextResponse.json({ error: 'Request is not available for payment' }, { status: 400 })
   }
 

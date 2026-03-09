@@ -281,6 +281,11 @@ function ClientScheduleContent() {
         <p className="mt-0.5 text-xs text-[var(--cp-text-muted)]">
           Times in {displayTz}
         </p>
+        {searchParams.get('cancelled') === '1' && (
+          <p className="mt-2 text-xs text-[var(--cp-text-muted)]">
+            Your last checkout was cancelled. You can resume payment from the Session offers section below.
+          </p>
+        )}
       </div>
 
       <Card>
@@ -326,6 +331,10 @@ function ClientScheduleContent() {
                 const product = req.session_products as any
                 const name = product?.name ?? 'Session'
                 const amount = ((req.amount_cents ?? 0) / 100).toFixed(2)
+                const isOffered = req.status === 'offered' || req.status === 'accepted'
+                const isPaymentPending = req.status === 'payment_pending'
+                const isPaid = req.status === 'paid'
+                const isAvailabilitySubmitted = req.status === 'availability_submitted'
                 return (
                   <div
                     key={req.id}
@@ -335,34 +344,44 @@ function ClientScheduleContent() {
                       <div>
                         <p className="font-medium">{name} – ${amount}</p>
                         <p className="text-xs text-[var(--cp-text-muted)]">
-                          {req.status === 'offered' || req.status === 'accepted' || req.status === 'payment_pending'
-                            ? 'Accept to pay with card'
-                            : req.status === 'paid'
-                              ? 'Paid – submit when you are available'
-                              : 'Waiting for coach to confirm time'}
+                          {isOffered || isPaymentPending
+                            ? isPaymentPending
+                              ? 'Resume card payment to confirm this session.'
+                              : 'Accept to pay with card.'
+                            : isPaid
+                              ? 'Paid – submit when you are available.'
+                              : isAvailabilitySubmitted
+                                ? 'Waiting for coach to confirm time.'
+                                : 'Waiting for coach to confirm time.'}
                         </p>
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
-                        {req.status === 'offered' && (
+                        {(isOffered || isPaymentPending) && (
                           <>
                             <Button
                               size="sm"
                               onClick={() => handleAcceptOffer(req.id)}
                               disabled={!!submittingRequestId || !!decliningRequestId}
                             >
-                              {submittingRequestId === req.id ? 'Redirecting...' : 'Accept & pay'}
+                              {submittingRequestId === req.id
+                                ? 'Redirecting...'
+                                : isPaymentPending
+                                  ? 'Resume payment'
+                                  : 'Accept & pay'}
                             </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleDeclineOffer(req.id)}
-                              disabled={!!submittingRequestId || decliningRequestId === req.id}
-                            >
-                              {decliningRequestId === req.id ? 'Declining...' : 'Decline'}
-                            </Button>
+                            {isOffered && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleDeclineOffer(req.id)}
+                                disabled={!!submittingRequestId || decliningRequestId === req.id}
+                              >
+                                {decliningRequestId === req.id ? 'Declining...' : 'Decline'}
+                              </Button>
+                            )}
                           </>
                         )}
-                        {req.status === 'paid' && (
+                        {isPaid && (
                           <Button size="sm" variant="outline" onClick={() => setSubmittingRequestId(req.id)}>
                             Submit availability
                           </Button>

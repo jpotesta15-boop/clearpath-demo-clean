@@ -126,7 +126,7 @@ export default function ProgramDetailPage() {
   const [addingLink, setAddingLink] = useState(false)
   const [addingNote, setAddingNote] = useState(false)
   const [addingImage, setAddingImage] = useState(false)
-  const [assignClientId, setAssignClientId] = useState('')
+  const [assignClientIds, setAssignClientIds] = useState<string[]>([])
   const [linkForm, setLinkForm] = useState({ title: '', url: '' })
   const [noteContent, setNoteContent] = useState('')
   const [imageForm, setImageForm] = useState({ title: '', url: '' })
@@ -359,25 +359,43 @@ export default function ProgramDetailPage() {
     if (!error) router.push('/coach/programs')
   }
 
-  const handleAssignClient = async (clientId: string) => {
-    const { error } = await supabase.from('program_assignments').insert({
-      program_id: params.id,
-      client_id: clientId,
-    })
-    if (error) {
-      loadData()
+  const handleAssignClients = async (clientIds: string[]) => {
+    if (!clientIds.length) return
+
+    // Create or keep program assignments for each selected client
+    const { error: assignError } = await supabase
+      .from('program_assignments')
+      .upsert(
+        clientIds.map((clientId) => ({
+          program_id: params.id,
+          client_id: clientId,
+        })),
+        { onConflict: 'program_id,client_id' }
+      )
+
+    if (assignError) {
+      await loadData()
       return
     }
-    for (const lesson of lessons) {
-      if (lesson.video_id) {
-        await supabase.from('video_assignments').insert({
-          video_id: lesson.video_id,
+
+    // Ensure video lessons in this program are also assigned to each client
+    const videoRows = clientIds.flatMap((clientId) =>
+      lessons
+        .filter((lesson) => lesson.video_id)
+        .map((lesson) => ({
+          video_id: lesson.video_id!,
           client_id: clientId,
-        })
-      }
+        }))
+    )
+
+    if (videoRows.length > 0) {
+      await supabase
+        .from('video_assignments')
+        .upsert(videoRows, { onConflict: 'video_id,client_id' })
     }
-    setAssignClientId('')
-    loadData()
+
+    setAssignClientIds([])
+    await loadData()
   }
 
   if (loading) return <Loading />
@@ -613,14 +631,20 @@ export default function ProgramDetailPage() {
         <CardContent className="space-y-4">
           {allClients.length > 0 && (
             <div className="flex gap-2 flex-wrap items-end">
-              <div className="min-w-[200px] flex-1">
-                <label className="block text-xs font-medium text-[var(--cp-text-muted)] mb-1">Add access</label>
+              <div className="min-w-[220px] flex-1">
+                <label className="block text-xs font-medium text-[var(--cp-text-muted)] mb-1">
+                  Add access (select one or more)
+                </label>
                 <select
-                  value={assignClientId}
-                  onChange={(e) => setAssignClientId(e.target.value)}
-                  className="w-full h-10 rounded-md border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] px-3 py-2 text-sm text-[var(--cp-text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cp-border-focus)]"
+                  multiple
+                  value={assignClientIds}
+                  onChange={(e) =>
+                    setAssignClientIds(
+                      Array.from(e.target.selectedOptions, (option) => option.value)
+                    )
+                  }
+                  className="w-full min-h-[2.5rem] rounded-md border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] px-3 py-2 text-sm text-[var(--cp-text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cp-border-focus)]"
                 >
-                  <option value="">Choose a client…</option>
                   {unassignedClients.map((client) => (
                     <option key={client.id} value={client.id}>
                       {client.full_name?.trim() || client.email || 'Unnamed'}
@@ -630,8 +654,8 @@ export default function ProgramDetailPage() {
               </div>
               <Button
                 size="sm"
-                onClick={() => assignClientId && handleAssignClient(assignClientId)}
-                disabled={!assignClientId}
+                onClick={() => handleAssignClients(assignClientIds)}
+                disabled={assignClientIds.length === 0}
               >
                 Add access
               </Button>

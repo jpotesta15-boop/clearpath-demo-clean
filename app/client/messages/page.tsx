@@ -219,7 +219,7 @@ export default function ClientMessagesPage() {
   }
 
   const activeOffers = sessionRequests.filter((r: any) =>
-    ['offered', 'paid', 'availability_submitted'].includes(r.status)
+    ['offered', 'accepted', 'payment_pending', 'paid', 'availability_submitted'].includes(r.status)
   )
 
   const chatMessages: ChatMessage[] = messages.map((message) => {
@@ -260,7 +260,8 @@ export default function ClientMessagesPage() {
                   const product = req.session_products
                   const name = product?.name ?? 'Session'
                   const amount = ((req.amount_cents ?? 0) / 100).toFixed(2)
-                  const isOffered = req.status === 'offered'
+                  const isOffered = req.status === 'offered' || req.status === 'accepted'
+                  const isPaymentPending = req.status === 'payment_pending'
                   const isPaid = req.status === 'paid'
                   const isScheduled = req.status === 'scheduled'
                   const isAvailabilitySubmitted = req.status === 'availability_submitted'
@@ -272,31 +273,24 @@ export default function ClientMessagesPage() {
                       <p className="text-sm font-semibold">{name} – ${amount}</p>
                       <p className="text-xs text-[var(--cp-text-muted)] mt-0.5">
                         {isScheduled
-                          ? 'Session scheduled — pay now if you haven’t yet'
+                          ? 'Session scheduled — pay now if you haven’t yet.'
                           : isAvailabilitySubmitted
-                            ? 'Waiting for coach to confirm a time'
+                            ? 'Waiting for coach to confirm a time.'
                             : isPaid
-                              ? 'Share when you’re available'
-                              : 'Accept & pay, or share availability first'}
+                              ? 'Share when you’re available.'
+                              : isPaymentPending
+                                ? 'Client can resume payment from their Schedule page.'
+                                : 'Accept & pay, or share availability first.'}
                       </p>
                       <div className="flex flex-wrap gap-2 mt-3">
                         {isOffered && (
-                          <>
-                            <Button
-                              size="sm"
-                              onClick={() => handleAcceptOffer(req.id)}
-                              disabled={!!payingRequestId}
-                            >
-                              {payingRequestId === req.id ? 'Redirecting…' : 'Accept & pay'}
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => setAvailabilityRequestId(req.id)}
-                            >
-                              Share availability
-                            </Button>
-                          </>
+                          <Button
+                            size="sm"
+                            onClick={() => handleAcceptOffer(req.id)}
+                            disabled={!!payingRequestId}
+                          >
+                            {payingRequestId === req.id ? 'Redirecting…' : 'Accept & pay'}
+                          </Button>
                         )}
                         {isPaid && (
                           <Button
