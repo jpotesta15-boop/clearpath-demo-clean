@@ -97,7 +97,7 @@ export default async function ClientDashboard() {
         <p className="mt-1 text-sm text-[var(--cp-text-muted)]">Welcome back, {client.full_name}</p>
       </div>
 
-      {clientExperience?.show_welcome_block !== false && (
+      {clientExperience && clientExperience.show_welcome_block !== false && (
         <Card className="shadow-[var(--cp-shadow-soft)] border-[var(--cp-border-subtle)] bg-[var(--cp-bg-elevated)]">
           <CardContent className="pt-6 space-y-4">
             {(clientExperience.welcome_title || clientExperience.welcome_body) && (
