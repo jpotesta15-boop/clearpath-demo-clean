@@ -22,6 +22,7 @@ export default function CoachPaymentsPage() {
   const [recordForm, setRecordForm] = useState({ clientId: '', amountDollars: '', provider: 'zelle' as string, description: '' })
   const [recordSubmitting, setRecordSubmitting] = useState(false)
   const [recordError, setRecordError] = useState<string | null>(null)
+  const [refundingId, setRefundingId] = useState<string | null>(null)
   const supabase = createClient()
   const tenantId = getClientId()
 
@@ -116,6 +117,18 @@ export default function CoachPaymentsPage() {
     paypal: 'PayPal',
     cashapp: 'Cash App',
     other: 'Other',
+  }
+
+  const handleMarkRefunded = async (paymentId: string) => {
+    setRefundingId(paymentId)
+    const { error } = await supabase
+      .from('payments')
+      .update({ status: 'refunded' })
+      .eq('id', paymentId)
+    if (!error) {
+      await loadPayments()
+    }
+    setRefundingId(null)
   }
 
   if (loading) return <Loading />
@@ -245,7 +258,8 @@ export default function CoachPaymentsPage() {
                     <th className="py-2 pr-4">Client</th>
                     <th className="py-2 pr-4">Amount</th>
                     <th className="py-2 pr-4">Status</th>
-                    <th className="py-2">Provider</th>
+                    <th className="py-2 pr-4">Provider</th>
+                    <th className="py-2">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -256,7 +270,19 @@ export default function CoachPaymentsPage() {
                       <td className="py-3 pr-4">{p.payer_client_id ? (clientsById[p.payer_client_id]?.full_name ?? '—') : '—'}</td>
                       <td className="py-3 pr-4 font-medium">${((p.amount_cents ?? 0) / 100).toFixed(2)}</td>
                       <td className="py-3 pr-4">{statusLabel[p.status] ?? p.status}</td>
-                      <td className="py-3">{providerLabel[p.provider] ?? p.provider}</td>
+                      <td className="py-3 pr-4">{providerLabel[p.provider] ?? p.provider}</td>
+                      <td className="py-3">
+                        {p.provider === 'stripe' && p.status === 'succeeded' && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleMarkRefunded(p.id)}
+                            disabled={refundingId === p.id}
+                          >
+                            {refundingId === p.id ? 'Marking…' : 'Mark refunded'}
+                          </Button>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

@@ -153,11 +153,21 @@ export default function CoachSettingsPage() {
 
   return (
     <div className="max-w-3xl space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-[var(--cp-text-primary)]">Settings</h1>
-        <p className="mt-1 text-sm text-[var(--cp-text-muted)]">
-          Personalize your dashboard theme and preferences. Changes only affect your view.
-        </p>
+      <div className="flex flex-col gap-2">
+        <div>
+          <h1 className="text-3xl font-bold text-[var(--cp-text-primary)]">Settings</h1>
+          <p className="mt-1 text-sm text-[var(--cp-text-muted)]">
+            Personalize your dashboard theme and preferences. Changes only affect your view.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-3">
+          <a
+            href="/coach/settings/client-experience"
+            className="inline-flex items-center rounded-md border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] px-3 py-1.5 text-xs font-medium text-[var(--cp-text-primary)] hover:border-[var(--cp-accent-primary)] hover:bg-[var(--cp-bg-subtle)]"
+          >
+            Client portal appearance
+          </a>
+        </div>
       </div>
 
       <div className="rounded-lg border border-[var(--cp-border-subtle)] bg-[var(--cp-accent-primary-subtle)] px-4 py-3">

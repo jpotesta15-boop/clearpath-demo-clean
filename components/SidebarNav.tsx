@@ -160,6 +160,59 @@ export default function SidebarNav({ navItems }: { navItems: NavItem[] }) {
     router.push('/')
   }
 
+  const isCoachNav = navState.some((item) => item.href.startsWith('/coach/'))
+
+  const workspaceItems = isCoachNav
+    ? navState.filter((item) =>
+        [
+          '/coach/dashboard',
+          '/coach/clients',
+          '/coach/schedule',
+          '/coach/programs',
+          '/coach/videos',
+          '/coach/messages',
+          '/coach/payments',
+          '/coach/analytics',
+        ].includes(item.href)
+      )
+    : navState
+
+  const customizationItems = isCoachNav
+    ? navState.filter((item) =>
+        ['/coach/settings', '/coach/settings/client-experience'].includes(item.href)
+      )
+    : []
+
+  const systemItems: NavItem[] = [] // reserved for future System pages
+
+  const renderNavItems = (items: NavItem[]) =>
+    items.map((item) => {
+      const isActive = pathname === item.href
+      const icon = iconMap[item.label] ?? defaultIcon
+      const badge = item.badgeCount ?? 0
+      return (
+        <Link
+          key={item.href}
+          href={item.href}
+          aria-current={isActive ? 'page' : undefined}
+          className={`relative flex items-center gap-3 min-h-[44px] px-3 py-2.5 text-sm font-medium border-l-2 mx-2 my-0.5 rounded-r transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cp-border-focus)] ${
+            isActive
+              ? 'bg-[var(--cp-accent-primary-soft)] border-[var(--cp-accent-primary)] text-[var(--cp-accent-primary)]'
+              : 'border-transparent text-[var(--cp-text-muted)] hover:bg-[rgba(148,163,184,0.12)] hover:border-[var(--cp-border-subtle)] hover:text-[var(--cp-text-primary)]'
+          }`}
+          title={!expanded ? item.label : undefined}
+        >
+          {icon}
+          {expanded && <span className="truncate">{item.label}</span>}
+          {badge > 0 && (
+            <span className="absolute right-3 top-2 inline-flex min-w-[1.5rem] items-center justify-center rounded-full bg-[var(--cp-accent-primary)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--cp-text-on-accent)]">
+              {badge > 99 ? '99+' : badge}
+            </span>
+          )}
+        </Link>
+      )
+    })
+
   return (
     <>
       <aside
@@ -192,32 +245,42 @@ export default function SidebarNav({ navItems }: { navItems: NavItem[] }) {
           )}
         </div>
         <nav className="flex-1 overflow-y-auto py-3" aria-label="Primary">
-          {navState.map((item) => {
-            const isActive = pathname === item.href
-            const icon = iconMap[item.label] ?? defaultIcon
-            const badge = item.badgeCount ?? 0
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                aria-current={isActive ? 'page' : undefined}
-                className={`relative flex items-center gap-3 min-h-[44px] px-3 py-2.5 text-sm font-medium border-l-2 mx-2 my-0.5 rounded-r transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cp-border-focus)] ${
-                  isActive
-                    ? 'bg-[var(--cp-accent-primary-soft)] border-[var(--cp-accent-primary)] text-[var(--cp-accent-primary)]'
-                    : 'border-transparent text-[var(--cp-text-muted)] hover:bg-[rgba(148,163,184,0.12)] hover:border-[var(--cp-border-subtle)] hover:text-[var(--cp-text-primary)]'
-                }`}
-                title={!expanded ? item.label : undefined}
-              >
-                {icon}
-                {expanded && <span className="truncate">{item.label}</span>}
-                {badge > 0 && (
-                  <span className="absolute right-3 top-2 inline-flex min-w-[1.5rem] items-center justify-center rounded-full bg-[var(--cp-accent-primary)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--cp-text-on-accent)]">
-                    {badge > 99 ? '99+' : badge}
-                  </span>
-                )}
-              </Link>
-            )
-          })}
+          {isCoachNav ? (
+            <>
+              {workspaceItems.length > 0 && (
+                <div className="mb-2">
+                  {expanded && (
+                    <p className="px-4 pb-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--cp-text-muted)]">
+                      Workspace
+                    </p>
+                  )}
+                  {renderNavItems(workspaceItems)}
+                </div>
+              )}
+              {customizationItems.length > 0 && (
+                <div className="mt-4">
+                  {expanded && (
+                    <p className="px-4 pb-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--cp-text-muted)]">
+                      Customization
+                    </p>
+                  )}
+                  {renderNavItems(customizationItems)}
+                </div>
+              )}
+              {systemItems.length > 0 && (
+                <div className="mt-4">
+                  {expanded && (
+                    <p className="px-4 pb-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--cp-text-muted)]">
+                      System
+                    </p>
+                  )}
+                  {renderNavItems(systemItems)}
+                </div>
+              )}
+            </>
+          ) : (
+            renderNavItems(navState)
+          )}
         </nav>
         <div className="border-t border-[var(--cp-border-subtle)] p-2">
           <button

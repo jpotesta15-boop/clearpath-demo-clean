@@ -24,6 +24,7 @@ function ClientScheduleContent() {
   const [timeRequestText, setTimeRequestText] = useState('')
   const [submittingTimeRequest, setSubmittingTimeRequest] = useState(false)
   const [timeRequests, setTimeRequests] = useState<any[]>([])
+  const [cancellingSessionId, setCancellingSessionId] = useState<string | null>(null)
   const searchParams = useSearchParams()
   const supabase = createClient()
   const tenantId = getClientId()
@@ -248,6 +249,18 @@ function ClientScheduleContent() {
       setPayError('Could not start payment. Please try again.')
     }
     setSubmittingRequestId(null)
+  }
+
+  const handleCancelSession = async (sessionId: string) => {
+    setCancellingSessionId(sessionId)
+    const { error } = await supabase
+      .from('sessions')
+      .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+      .eq('id', sessionId)
+    if (!error) {
+      await loadData()
+    }
+    setCancellingSessionId(null)
   }
 
   if (loading) return <Loading />
@@ -492,24 +505,47 @@ function ClientScheduleContent() {
           <CardContent>
             <div className="space-y-4">
               {sessions.length > 0 ? (
-                sessions.map((session) => (
-                  <div key={session.id} className="border-b pb-4 last:border-0">
-                    <p className="font-medium text-[var(--cp-text-primary)]">
-                      {formatInTz(session.scheduled_time, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
-                    </p>
-                    <span
-                      className={`inline-block mt-2 px-2 py-1 text-xs rounded ${
-                        session.status === 'confirmed'
-                          ? 'bg-[var(--cp-accent-success)]/20 text-[var(--cp-accent-success)]'
-                          : session.status === 'pending'
-                            ? 'bg-[var(--cp-accent-warning)]/20 text-[var(--cp-accent-warning)]'
-                            : 'bg-[var(--cp-accent-primary-soft)] text-[var(--cp-text-primary)]'
-                      }`}
-                    >
-                      {session.status}
-                    </span>
-                  </div>
-                ))
+                sessions.map((session) => {
+                  const isUpcoming =
+                    session.status === 'confirmed' &&
+                    new Date(session.scheduled_time) > new Date()
+                  return (
+                    <div key={session.id} className="border-b pb-4 last:border-0">
+                      <p className="font-medium text-[var(--cp-text-primary)]">
+                        {formatInTz(session.scheduled_time, {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                          hour: 'numeric',
+                          minute: '2-digit',
+                        })}
+                      </p>
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <span
+                          className={`inline-block px-2 py-1 text-xs rounded ${
+                            session.status === 'confirmed'
+                              ? 'bg-[var(--cp-accent-success)]/20 text-[var(--cp-accent-success)]'
+                              : session.status === 'pending'
+                                ? 'bg-[var(--cp-accent-warning)]/20 text-[var(--cp-accent-warning)]'
+                                : 'bg-[var(--cp-accent-primary-soft)] text-[var(--cp-text-primary)]'
+                          }`}
+                        >
+                          {session.status}
+                        </span>
+                        {isUpcoming && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleCancelSession(session.id)}
+                            disabled={cancellingSessionId === session.id}
+                          >
+                            {cancellingSessionId === session.id ? 'Cancelling…' : 'Request cancel'}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })
               ) : (
                 <EmptyState
                   title="No sessions scheduled"
