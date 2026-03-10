@@ -7,7 +7,7 @@ import { NextResponse } from 'next/server'
 import { getSafeMessage, logServerError } from '@/lib/api-error'
 import { normalizePhone } from '@/lib/phone'
 
-const N8N_URL = process.env.N8N_SESSION_BOOKED_WEBHOOK_URL
+const N8N_URL = process.env.N8N_SESSION_REMINDER_ON_DEMAND_URL
 
 export async function POST(
   request: Request,
