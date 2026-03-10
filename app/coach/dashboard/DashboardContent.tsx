@@ -318,7 +318,7 @@ export function DashboardContent({
                   href="/coach/schedule"
                   className={hasAvailability ? 'text-[var(--cp-text-muted)]' : 'font-medium text-[var(--cp-accent-primary)] hover:text-[var(--cp-accent-primary-strong)]'}
                 >
-                  Set your availability
+                  Schedule your first session
                 </Link>
               </li>
               <li className="flex items-center gap-3">

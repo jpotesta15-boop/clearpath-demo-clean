@@ -289,7 +289,7 @@ function ClientScheduleContent() {
       <div>
         <h1 className="text-3xl font-bold text-[var(--cp-text-primary)]">Schedule</h1>
         <p className="mt-1 text-sm text-[var(--cp-text-muted)]">
-          View your coach&apos;s availability and request sessions.
+          Request sessions and respond to offers from your coach.
         </p>
         <p className="mt-0.5 text-xs text-[var(--cp-text-muted)]">
           Times in {displayTz}
@@ -438,7 +438,7 @@ function ClientScheduleContent() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Available Time Slots</CardTitle>
+            <CardTitle>Optional time slots</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -490,8 +490,8 @@ function ClientScheduleContent() {
                 })
               ) : (
                 <EmptyState
-                  title="No available slots"
-                  description="Your coach will add availability. Check back later."
+                  title="No special time slots"
+                  description="Your coach will usually send you offers after you request times."
                 />
               )}
             </div>

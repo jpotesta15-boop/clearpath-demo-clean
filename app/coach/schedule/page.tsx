@@ -102,25 +102,11 @@ export default function SchedulePage() {
   const [clients, setClients] = useState<Client[]>([])
   const [sessionProducts, setSessionProducts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [showForm, setShowForm] = useState(false)
   const [month, setMonth] = useState(() => new Date())
-  const [newSlot, setNewSlot] = useState({
-    slotDate: '',
-    slotStartTime: '',
-    slotEndTime: '',
-    start_time: '',
-    end_time: '',
-    is_group_session: false,
-    max_participants: 1,
-    repeat: 'none' as 'none' | 'daily' | 'weekly',
-    repeatEndDate: '',
-    repeatCount: 4,
-    is_paid_slot: false,
-    session_product_id: '',
-    label: '',
-  })
   const [bookClient, setBookClient] = useState<Client | null>(null)
   const [bookForm, setBookForm] = useState({ date: '', startTime: '', endTime: '' })
+  const [bookSessionProductId, setBookSessionProductId] = useState<string>('')
+  const [bookRequirePayment, setBookRequirePayment] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [editingSession, setEditingSession] = useState<Session | null>(null)
   const [editForm, setEditForm] = useState({ date: '', startTime: '', endTime: '', notes: '' })
@@ -137,7 +123,6 @@ export default function SchedulePage() {
   const [offerSubmitting, setOfferSubmitting] = useState(false)
   const [reminderSendingId, setReminderSendingId] = useState<string | null>(null)
   const [reminderError, setReminderError] = useState<string | null>(null)
-  const [slotError, setSlotError] = useState<string | null>(null)
   const supabase = createClient()
   const tenantId = process.env.NEXT_PUBLIC_CLIENT_ID ?? 'demo'
 
@@ -221,97 +206,6 @@ export default function SchedulePage() {
     setSessionRequests(requestsData || [])
     setClientTimeRequests(timeRequestsData || [])
     setLoading(false)
-  }
-
-  const handleCreateSlot = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setSlotError(null)
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-    if (!user) return
-
-    const start_time = newSlot.slotDate && newSlot.slotStartTime ? `${newSlot.slotDate}T${newSlot.slotStartTime}` : newSlot.start_time
-    const end_time = newSlot.slotDate && newSlot.slotEndTime ? `${newSlot.slotDate}T${newSlot.slotEndTime}` : newSlot.end_time
-    const start = new Date(start_time)
-    const end = new Date(end_time)
-    if (isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) {
-      setSlotError('Please choose a valid date and start/end time.')
-      return
-    }
-
-    if (newSlot.is_paid_slot && !newSlot.session_product_id) {
-      return
-    }
-
-    const durationMs = end.getTime() - start.getTime()
-    const occurrences: { start_time: string; end_time: string }[] = []
-
-    if (newSlot.repeat === 'none') {
-      occurrences.push({ start_time, end_time })
-    } else {
-      const maxCount = 100
-      let count = 0
-      if (newSlot.repeat === 'daily') {
-        const endDate = newSlot.repeatEndDate ? new Date(newSlot.repeatEndDate) : null
-        const limit = endDate ? undefined : Math.min(newSlot.repeatCount, maxCount)
-        let d = new Date(start)
-        while ((!endDate || d <= endDate) && (limit === undefined || count < limit)) {
-          const e = new Date(d.getTime() + durationMs)
-          occurrences.push({ start_time: d.toISOString(), end_time: e.toISOString() })
-          d.setDate(d.getDate() + 1)
-          count++
-          if (count >= maxCount) break
-        }
-      } else {
-        const endDate = newSlot.repeatEndDate ? new Date(newSlot.repeatEndDate) : null
-        const limit = endDate ? undefined : Math.min(newSlot.repeatCount, maxCount)
-        let d = new Date(start)
-        while ((!endDate || d <= endDate) && (limit === undefined || count < limit)) {
-          const e = new Date(d.getTime() + durationMs)
-          occurrences.push({ start_time: d.toISOString(), end_time: e.toISOString() })
-          d.setDate(d.getDate() + 7)
-          count++
-          if (count >= maxCount) break
-        }
-      }
-    }
-
-    for (const occ of occurrences) {
-      const { error } = await supabase.from('availability_slots').insert({
-        coach_id: user.id,
-        client_id: tenantId,
-        start_time: occ.start_time,
-        end_time: occ.end_time,
-        is_group_session: newSlot.is_group_session,
-        max_participants: newSlot.max_participants,
-        session_product_id: newSlot.is_paid_slot ? newSlot.session_product_id : null,
-        label: newSlot.is_paid_slot ? newSlot.label.trim() || null : null,
-      })
-      if (error) {
-        setSlotError('Failed to create slot. Try again.')
-        await loadData()
-        return
-      }
-    }
-
-    setShowForm(false)
-    setNewSlot({
-      slotDate: '',
-      slotStartTime: '',
-      slotEndTime: '',
-      start_time: '',
-      end_time: '',
-      is_group_session: false,
-      max_participants: 1,
-      repeat: 'none',
-      repeatEndDate: '',
-      repeatCount: 4,
-      is_paid_slot: false,
-      session_product_id: '',
-      label: '',
-    })
-    await loadData()
   }
 
   const handleApproveSession = async (sessionId: string) => {
@@ -569,40 +463,63 @@ export default function SchedulePage() {
     if (!isSameDay(startDateTime, endDateTime) || startOfDay(endDateTime).getTime() !== startOfDay(startDateTime).getTime()) return
 
     const start_time = startDateTime.toISOString()
-    const end_time = endDateTime.toISOString()
 
     setSubmitting(true)
-    const { data: slot, error: slotError } = await supabase
-      .from('availability_slots')
+
+    const product = bookSessionProductId
+      ? sessionProducts.find((p) => p.id === bookSessionProductId)
+      : null
+
+    if (bookRequirePayment) {
+      if (!product) {
+        setSubmitting(false)
+        return
+      }
+
+      const { error: requestError } = await supabase
+        .from('session_requests')
+        .insert({
+          coach_id: user.id,
+          client_id: bookClient.id,
+          session_product_id: product.id,
+          tenant_id: tenantId,
+          status: 'offered',
+          amount_cents: product.price_cents ?? 0,
+        })
+
+      setSubmitting(false)
+      if (!requestError) {
+        setBookClient(null)
+        setBookForm({ date: '', startTime: '', endTime: '' })
+        setBookSessionProductId('')
+        setBookRequirePayment(false)
+        loadData()
+      }
+      return
+    }
+
+    const { data: newSession, error: sessionError } = await supabase
+      .from('sessions')
       .insert({
         coach_id: user.id,
-        start_time,
-        end_time,
-        is_group_session: false,
-        max_participants: 1,
-        client_id: tenantId,
+        client_id: bookClient.id,
+        availability_slot_id: null,
+        scheduled_time: start_time,
+        status: 'confirmed',
+        tenant_id: tenantId,
+        session_product_id: product?.id ?? null,
+        amount_cents: product?.price_cents ?? null,
       })
       .select('id')
       .single()
 
-    if (slotError || !slot) {
-      setSubmitting(false)
-      return
-    }
-
-    const { data: newSession, error: sessionError } = await supabase.from('sessions').insert({
-      coach_id: user.id,
-      client_id: bookClient.id,
-      availability_slot_id: slot.id,
-      scheduled_time: start_time,
-      status: 'confirmed',
-      tenant_id: tenantId,
-    }).select('id').single()
     setSubmitting(false)
     if (!sessionError && newSession?.id) {
       notifySessionBooked(newSession.id, user.id, bookClient.id, start_time)
       setBookClient(null)
       setBookForm({ date: '', startTime: '', endTime: '' })
+      setBookSessionProductId('')
+      setBookRequirePayment(false)
       loadData()
     }
   }
@@ -623,7 +540,7 @@ export default function SchedulePage() {
         <div>
           <h1 className="text-3xl font-bold text-[var(--cp-text-primary)]">Schedule</h1>
           <p className="mt-1 text-sm text-[var(--cp-text-muted)]">
-            Click a client to choose date and time; confirmed sessions appear on your calendar.
+            Click a client to choose a session, date, and time — confirmed sessions appear on your calendar.
           </p>
           <p className="mt-0.5 text-xs text-[var(--cp-text-muted)]">
             Times in {displayTz}
@@ -638,203 +555,8 @@ export default function SchedulePage() {
           >
             Export calendar
           </a>
-          <Button onClick={() => { setShowForm(!showForm); if (!showForm) setSlotError(null) }}>
-            {showForm ? 'Cancel' : 'Add Availability'}
-          </Button>
         </div>
       </div>
-
-      {showForm && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Create availability slot</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleCreateSlot} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-[var(--cp-text-primary)]">Date</label>
-                <Input
-                  type="date"
-                  value={newSlot.slotDate}
-                  onChange={(e) => setNewSlot({ ...newSlot, slotDate: e.target.value })}
-                  required
-                  className="max-w-xs bg-[var(--cp-bg-surface)] border-[var(--cp-border-subtle)]"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-[var(--cp-text-primary)]">Start time</label>
-                <select
-                  value={newSlot.slotStartTime}
-                  onChange={(e) => setNewSlot({ ...newSlot, slotStartTime: e.target.value })}
-                  required
-                  className="mt-1 w-full max-w-xs h-10 rounded-md border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] px-3 py-2 text-sm text-[var(--cp-text-primary)]"
-                >
-                  <option value="">Select start time</option>
-                  {TIME_OPTIONS.map((t) => (
-                    <option key={t} value={t}>
-                      {new Date(`2000-01-01T${t}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-[var(--cp-text-primary)]">End time</label>
-                <select
-                  value={newSlot.slotEndTime}
-                  onChange={(e) => setNewSlot({ ...newSlot, slotEndTime: e.target.value })}
-                  required
-                  className="mt-1 w-full max-w-xs h-10 rounded-md border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] px-3 py-2 text-sm text-[var(--cp-text-primary)]"
-                >
-                  <option value="">Select end time</option>
-                  {TIME_OPTIONS.map((t) => (
-                    <option key={t} value={t}>
-                      {new Date(`2000-01-01T${t}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              {slotError && <p className="text-sm text-[var(--cp-accent-danger)]">{slotError}</p>}
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={newSlot.is_group_session}
-                  onChange={(e) =>
-                    setNewSlot({ ...newSlot, is_group_session: e.target.checked })
-                  }
-                  className="mr-2"
-                />
-                <label className="text-sm font-medium text-[var(--cp-text-primary)]">
-                  Group session
-                </label>
-              </div>
-              {newSlot.is_group_session && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Max Participants
-                  </label>
-                  <Input
-                    type="number"
-                    value={newSlot.max_participants}
-                    onChange={(e) =>
-                      setNewSlot({ ...newSlot, max_participants: parseInt(e.target.value) || 1 })
-                    }
-                    min={1}
-                  />
-                </div>
-              )}
-              <div>
-                <label className="block text-sm font-medium text-[var(--cp-text-primary)]">Repeat</label>
-                <select
-                  value={newSlot.repeat}
-                  onChange={(e) => setNewSlot({ ...newSlot, repeat: e.target.value as 'none' | 'daily' | 'weekly' })}
-                  className="mt-1 w-full max-w-xs h-10 rounded-md border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] px-3 py-2 text-sm text-[var(--cp-text-primary)]"
-                >
-                  <option value="none">No repeat</option>
-                  <option value="daily">Daily</option>
-                  <option value="weekly">Weekly</option>
-                </select>
-              </div>
-              {(newSlot.repeat === 'daily' || newSlot.repeat === 'weekly') && (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-[var(--cp-text-primary)]">End date (optional)</label>
-                    <Input
-                      type="date"
-                      value={newSlot.repeatEndDate}
-                      onChange={(e) => setNewSlot({ ...newSlot, repeatEndDate: e.target.value })}
-                      className="mt-1 max-w-xs bg-[var(--cp-bg-surface)] border-[var(--cp-border-subtle)]"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-[var(--cp-text-primary)]">Or number of occurrences (if no end date)</label>
-                    <Input
-                      type="number"
-                      min={2}
-                      max={100}
-                      value={newSlot.repeatCount}
-                      onChange={(e) => setNewSlot({ ...newSlot, repeatCount: parseInt(e.target.value, 10) || 4 })}
-                      className="mt-1 max-w-[8rem] bg-[var(--cp-bg-surface)] border-[var(--cp-border-subtle)]"
-                    />
-                  </div>
-                </>
-              )}
-              <div className="border-t border-[var(--cp-border-subtle)] pt-4 mt-2 space-y-3">
-                <label className="flex items-center gap-2 text-sm font-medium text-[var(--cp-text-primary)]">
-                  <input
-                    type="checkbox"
-                    checked={newSlot.is_paid_slot}
-                    onChange={(e) =>
-                      setNewSlot((prev) => ({
-                        ...prev,
-                        is_paid_slot: e.target.checked,
-                      }))
-                    }
-                    className="h-4 w-4 rounded border-[var(--cp-border-subtle)]"
-                  />
-                  Make this a paid bookable slot
-                </label>
-                <p className="text-xs text-[var(--cp-text-muted)]">
-                  Use one of your session packages so clients can book and pay for this time directly.
-                </p>
-                {newSlot.is_paid_slot && (
-                  <>
-                    {sessionProducts.length === 0 ? (
-                      <p className="text-xs text-[var(--cp-text-muted)]">
-                        You don&apos;t have any session types yet. Create one under Session Packages, then come
-                        back to make specific times bookable.
-                      </p>
-                    ) : (
-                      <>
-                        <div>
-                          <label className="block text-xs font-medium text-[var(--cp-text-muted)]">
-                            Session type
-                          </label>
-                          <select
-                            value={newSlot.session_product_id}
-                            onChange={(e) =>
-                              setNewSlot((prev) => ({
-                                ...prev,
-                                session_product_id: e.target.value,
-                              }))
-                            }
-                            required
-                            className="mt-1 w-full max-w-xs h-10 rounded-md border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] px-3 py-2 text-sm text-[var(--cp-text-primary)]"
-                          >
-                            <option value="">Select a session type…</option>
-                            {sessionProducts.map((p) => (
-                              <option key={p.id} value={p.id}>
-                                {p.name} – ${((p.price_cents ?? 0) / 100).toFixed(2)}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium text-[var(--cp-text-muted)]">
-                            Optional label shown to clients
-                          </label>
-                          <Input
-                            type="text"
-                            value={newSlot.label}
-                            onChange={(e) =>
-                              setNewSlot((prev) => ({
-                                ...prev,
-                                label: e.target.value,
-                              }))
-                            }
-                            placeholder="e.g. Friday open mat, 60-min 1:1"
-                            className="mt-1 max-w-md bg-[var(--cp-bg-surface)] border-[var(--cp-border-subtle)]"
-                          />
-                        </div>
-                      </>
-                    )}
-                  </>
-                )}
-              </div>
-              <Button type="submit">Create slot{newSlot.repeat !== 'none' ? 's' : ''}</Button>
-            </form>
-          </CardContent>
-        </Card>
-      )}
 
       {clientTimeRequests.length > 0 && (
         <Card className="border-[var(--cp-accent-primary)]/30">
@@ -1048,6 +770,38 @@ export default function SchedulePage() {
                 {bookClient.full_name}
               </p>
               <form onSubmit={handleBookSessionSubmit} className="space-y-3">
+                <div>
+                  <label className="block text-xs font-medium text-[var(--cp-text-muted)]">
+                    Session type (optional)
+                  </label>
+                  <select
+                    value={bookSessionProductId}
+                    onChange={(e) => setBookSessionProductId(e.target.value)}
+                    className="w-full h-10 rounded-md border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cp-border-focus)]"
+                  >
+                    <option value="">No specific package</option>
+                    {sessionProducts.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} – ${((p.price_cents ?? 0) / 100).toFixed(2)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    id="book-require-payment"
+                    type="checkbox"
+                    checked={bookRequirePayment}
+                    onChange={(e) => setBookRequirePayment(e.target.checked)}
+                    className="h-4 w-4 rounded border-[var(--cp-border-subtle)]"
+                  />
+                  <label
+                    htmlFor="book-require-payment"
+                    className="text-xs font-medium text-[var(--cp-text-muted)]"
+                  >
+                    Require card payment before confirming
+                  </label>
+                </div>
                 <div>
                   <label className="block text-xs font-medium text-[var(--cp-text-muted)]">
                     Date
