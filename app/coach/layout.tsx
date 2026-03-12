@@ -5,7 +5,9 @@ import { MobileBottomNav } from '@/components/MobileBottomNav'
 import { CoachHeader } from '@/components/layout/CoachHeader'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { AnimatedPageWithExit } from '@/components/layout/AnimatedPage'
+import { ClientBrandWrapper } from '@/components/providers/ClientBrandWrapper'
 import { getClientId } from '@/lib/config'
+import { getCoachBrand } from '@/lib/brand-resolver'
 import { startOfWeek } from 'date-fns'
 
 const baseCoachNavItems: NavItem[] = [
@@ -37,9 +39,8 @@ export default async function CoachLayout({
   const now = new Date()
   const weekStart = startOfWeek(now, { weekStartsOn: 1 }).toISOString()
 
-  const [profileRes, unseenMessagesRes, recentPaymentsRes] = await Promise.all([
+  const [profileRes, recentPaymentsRes] = await Promise.all([
     supabase.from('profiles').select('role').eq('id', user.id).single(),
-    supabase.from('messages').select('*', { count: 'exact', head: true }).eq('recipient_id', user.id).is('read_at', null),
     supabase
       .from('payments')
       .select('*', { count: 'exact', head: true })
@@ -54,30 +55,30 @@ export default async function CoachLayout({
     redirect('/client/dashboard')
   }
 
-  const unseenMessagesCount = unseenMessagesRes.count
   const recentPaymentsCount = recentPaymentsRes.count
 
   const coachNavItems: NavItem[] = baseCoachNavItems.map((item) => {
-    if (item.href === '/coach/messages') {
-      return { ...item, badgeCount: unseenMessagesCount ?? 0 }
-    }
     if (item.href === '/coach/payments') {
       return { ...item, badgeCount: recentPaymentsCount ?? 0 }
     }
     return item
   })
 
+  const brand = await getCoachBrand(supabase, user.id)
+
   return (
-    <div className="flex min-h-screen bg-[var(--cp-bg-page)] text-[var(--cp-text-primary)]">
-      <SidebarNav navItems={coachNavItems} />
-      <div className="flex-1 flex flex-col min-w-0">
-        <CoachHeader />
-        <AppLayout>
-          <AnimatedPageWithExit>{children}</AnimatedPageWithExit>
-        </AppLayout>
+    <ClientBrandWrapper brand={brand}>
+      <div className="flex min-h-screen bg-[var(--cp-bg-page)] text-[var(--cp-text-primary)]">
+        <SidebarNav navItems={coachNavItems} />
+        <div className="flex-1 flex flex-col min-w-0">
+          <CoachHeader />
+          <AppLayout>
+            <AnimatedPageWithExit>{children}</AnimatedPageWithExit>
+          </AppLayout>
+        </div>
+        <MobileBottomNav navItems={coachNavItems} />
       </div>
-      <MobileBottomNav navItems={coachNavItems} />
-    </div>
+    </ClientBrandWrapper>
   )
 }
 

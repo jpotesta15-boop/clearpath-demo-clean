@@ -112,14 +112,10 @@ export function MobileBottomNav({ navItems }: { navItems: NavItem[] }) {
   useEffect(() => {
     if (typeof window === "undefined") return
 
-    const handleUnreadUpdate = (event: Event) => {
-      const customEvent = event as CustomEvent<{ totalUnread?: number }>
-      const totalUnread =
-        typeof customEvent.detail?.totalUnread === "number" ? customEvent.detail.totalUnread : 0
-
+    const handleUnreadUpdate = () => {
       setNavState((current) =>
         current.map((item) =>
-          item.href.endsWith("/messages") ? { ...item, badgeCount: totalUnread } : item
+          item.href.endsWith("/messages") ? { ...item, badgeCount: 0 } : item
         )
       )
     }

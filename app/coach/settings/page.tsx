@@ -162,9 +162,14 @@ export default function CoachSettingsPage() {
         title="Settings"
         subtitle="Personalize your dashboard theme and preferences. Changes only affect your view."
         primaryAction={
-          <Button variant="outline" size="sm" asChild>
-            <a href="/coach/settings/client-experience">Client portal appearance</a>
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" asChild>
+              <a href="/coach/settings/branding">Branding & white-label</a>
+            </Button>
+            <Button variant="outline" size="sm" asChild>
+              <a href="/coach/settings/client-experience">Client portal appearance</a>
+            </Button>
+          </div>
         }
       />
 

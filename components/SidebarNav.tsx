@@ -130,14 +130,10 @@ export default function SidebarNav({ navItems }: { navItems: NavItem[] }) {
   useEffect(() => {
     if (typeof window === 'undefined') return
 
-    const handleUnreadUpdate = (event: Event) => {
-      const customEvent = event as CustomEvent<{ totalUnread?: number }>
-      const totalUnread =
-        typeof customEvent.detail?.totalUnread === 'number' ? customEvent.detail.totalUnread : 0
-
+    const handleUnreadUpdate = () => {
       setNavState((current) =>
         current.map((item) =>
-          item.href.endsWith('/messages') ? { ...item, badgeCount: totalUnread } : item
+          item.href.endsWith('/messages') ? { ...item, badgeCount: 0 } : item
         )
       )
     }
@@ -184,14 +180,14 @@ export default function SidebarNav({ navItems }: { navItems: NavItem[] }) {
           'postgres_changes',
           { event: 'INSERT', schema: 'public', table: 'messages' },
           (payload: { new: { recipient_id?: string } }) => {
-            if (payload.new?.recipient_id === user.id) refetchUnreadAndDispatch()
+            if (payload.new?.recipient_id === user.id) clearMessagesBadge()
           }
         )
         .on(
           'postgres_changes',
           { event: 'UPDATE', schema: 'public', table: 'messages' },
           (payload: { new: { recipient_id?: string } }) => {
-            if (payload.new?.recipient_id === user.id) refetchUnreadAndDispatch()
+            if (payload.new?.recipient_id === user.id) clearMessagesBadge()
           }
         )
         .subscribe()
