@@ -616,6 +616,7 @@ export function DashboardContent({
           </motion.div>
         </div>
       </div>
+      </motion.div>
     </div>
   )
 }
