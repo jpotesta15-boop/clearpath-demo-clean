@@ -158,19 +158,9 @@ export default function SidebarNav({ navItems }: { navItems: NavItem[] }) {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
-      const refetchUnreadAndDispatch = async () => {
-        const { count } = await supabase
-          .from('messages')
-          .select('*', { count: 'exact', head: true })
-          .eq('recipient_id', user.id)
-          .is('read_at', null)
-        const totalUnread = count ?? 0
+      const clearMessagesBadge = () => {
         if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
-          window.dispatchEvent(
-            new CustomEvent('clearpath:unread-messages-updated', {
-              detail: { totalUnread },
-            })
-          )
+          window.dispatchEvent(new CustomEvent('clearpath:unread-messages-updated'))
         }
       }
 
