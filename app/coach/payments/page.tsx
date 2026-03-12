@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input'
 import { EmptyState } from '@/components/ui/empty-state'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { ActionRow } from '@/components/ui/ActionRow'
-import { Loading } from '@/components/ui/loading'
+import { PageSkeleton } from '@/components/ui/PageSkeleton'
 import { Modal } from '@/components/ui/modal'
 import { getClientId } from '@/lib/config'
 import { format } from 'date-fns'
@@ -142,7 +142,7 @@ export default function CoachPaymentsPage() {
     setRefundingId(null)
   }
 
-  if (loading) return <Loading />
+  if (loading) return <PageSkeleton />
 
   return (
     <div className="space-y-8">

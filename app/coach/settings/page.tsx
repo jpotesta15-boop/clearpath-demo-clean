@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useThemeVariant, type ThemeVariant, type ThemeMode, VARIANT_SWATCH_COLORS } from '@/components/providers/ThemeVariantProvider'
 import { GENERIC_FAILED } from '@/lib/safe-messages'
+import { PageSkeleton } from '@/components/ui/PageSkeleton'
 
 const VARIANT_LABELS: Record<ThemeVariant, string> = {
   blue: 'Blue',
@@ -152,6 +153,8 @@ export default function CoachSettingsPage() {
       setMessage('Saved.')
     }
   }
+
+  if (loading) return <PageSkeleton cardCount={4} />
 
   return (
     <div className="max-w-3xl space-y-8">

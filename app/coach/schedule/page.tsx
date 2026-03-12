@@ -11,7 +11,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { ListRow } from '@/components/ui/ListRow'
 import { Modal } from '@/components/ui/modal'
-import { Loading } from '@/components/ui/loading'
+import { PageSkeleton } from '@/components/ui/PageSkeleton'
 import { Input } from '@/components/ui/input'
 import {
   format,
@@ -41,10 +41,13 @@ type Slot = {
 type Session = {
   id: string
   client_id: string
+  coach_id?: string
   availability_slot_id: string | null
+  session_request_id?: string | null
   scheduled_time: string
   status: string
   paid_at: string | null
+  amount_cents?: number | null
   notes?: string | null
   clients?: { full_name?: string } | null
   availability_slots?: { start_time: string; end_time: string } | null
@@ -130,6 +133,9 @@ export default function SchedulePage() {
   const [offerSubmitting, setOfferSubmitting] = useState(false)
   const [reminderSendingId, setReminderSendingId] = useState<string | null>(null)
   const [reminderError, setReminderError] = useState<string | null>(null)
+  const [editModalError, setEditModalError] = useState<string | null>(null)
+  const [offerError, setOfferError] = useState<string | null>(null)
+  const [bookError, setBookError] = useState<string | null>(null)
   const supabase = createClient()
   const tenantId = process.env.NEXT_PUBLIC_CLIENT_ID ?? 'demo'
 
@@ -159,68 +165,37 @@ export default function SchedulePage() {
     } = await supabase.auth.getUser()
     if (!user) return
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('timezone')
-      .eq('id', user.id)
-      .single()
-    if (profile?.timezone) setCoachTimezone(profile.timezone)
+    const [profileRes, slotsRes, sessionsRes, clientsRes, productsRes, requestsRes, timeRequestsRes] = await Promise.all([
+      supabase.from('profiles').select('timezone').eq('id', user.id).single(),
+      supabase.from('availability_slots').select('*').eq('coach_id', user.id).order('start_time', { ascending: true }),
+      supabase.from('sessions').select('*, clients(*), availability_slots(*)').eq('coach_id', user.id).order('scheduled_time', { ascending: true }),
+      supabase.from('clients').select('id, full_name, email').eq('coach_id', user.id).order('full_name', { ascending: true }),
+      supabase.from('session_products').select('*').eq('coach_id', user.id).eq('client_id', tenantId).eq('is_active', true).order('created_at', { ascending: false }),
+      supabase.from('session_requests').select('*, clients(*), session_products(name)').eq('coach_id', user.id).eq('status', 'availability_submitted').order('created_at', { ascending: false }),
+      supabase.from('client_time_requests').select('*, clients(full_name, email)').eq('coach_id', user.id).eq('status', 'pending').order('created_at', { ascending: false }),
+    ])
 
-    const { data: slotsData } = await supabase
-      .from('availability_slots')
-      .select('*')
-      .eq('coach_id', user.id)
-      .order('start_time', { ascending: true })
-
-    const { data: sessionsData } = await supabase
-      .from('sessions')
-      .select('*, clients(*), availability_slots(*)')
-      .eq('coach_id', user.id)
-      .order('scheduled_time', { ascending: true })
-
-    const { data: clientsData } = await supabase
-      .from('clients')
-      .select('id, full_name, email')
-      .eq('coach_id', user.id)
-      .order('full_name', { ascending: true })
-
-    const { data: productsData } = await supabase
-      .from('session_products')
-      .select('*')
-      .eq('coach_id', user.id)
-      .eq('client_id', tenantId)
-      .eq('is_active', true)
-      .order('created_at', { ascending: false })
-
-    const { data: requestsData } = await supabase
-      .from('session_requests')
-      .select('*, clients(*), session_products(name)')
-      .eq('coach_id', user.id)
-      .eq('status', 'availability_submitted')
-      .order('created_at', { ascending: false })
-
-    const { data: timeRequestsData } = await supabase
-      .from('client_time_requests')
-      .select('*, clients(full_name, email)')
-      .eq('coach_id', user.id)
-      .eq('status', 'pending')
-      .order('created_at', { ascending: false })
-
-    setSlots(slotsData || [])
-    setSessions(sessionsData || [])
-    setClients(clientsData || [])
-    setSessionProducts(productsData || [])
-    setSessionRequests(requestsData || [])
-    setClientTimeRequests(timeRequestsData || [])
+    if (profileRes.data?.timezone) setCoachTimezone(profileRes.data.timezone)
+    setSlots(slotsRes.data || [])
+    setSessions(sessionsRes.data || [])
+    setClients(clientsRes.data || [])
+    setSessionProducts(productsRes.data || [])
+    setSessionRequests(requestsRes.data || [])
+    setClientTimeRequests(timeRequestsRes.data || [])
     setLoading(false)
   }
 
   const handleApproveSession = async (sessionId: string) => {
+    setEditModalError(null)
     const { error } = await supabase
       .from('sessions')
       .update({ status: 'confirmed' })
       .eq('id', sessionId)
-    if (!error) loadData()
+    if (error) {
+      setEditModalError('Could not approve session. Please try again.')
+      return
+    }
+    loadData()
   }
 
   const notifySessionBooked = async (sessionId: string, coachId: string, clientId: string, scheduledTime: string) => {
@@ -293,10 +268,19 @@ export default function SchedulePage() {
       return
     }
     if (newSession?.id) {
-      await supabase
+      const { error: reqUpdateErr } = await supabase
         .from('session_requests')
         .update({ status: 'scheduled', updated_at: new Date().toISOString() })
         .eq('id', schedulingRequest.id)
+      if (reqUpdateErr) {
+        const { error: retryErr } = await supabase
+          .from('session_requests')
+          .update({ status: 'scheduled', updated_at: new Date().toISOString() })
+          .eq('id', schedulingRequest.id)
+        if (retryErr) {
+          setSchedulingError('Session created but could not update request status. Please refresh and check.')
+        }
+      }
       notifySessionBooked(newSession.id, schedulingRequest.coach_id, schedulingRequest.client_id, scheduled_time)
       setSchedulingRequest(null)
       setSchedulingForm({ date: '', startTime: '', endTime: '', notes: '' })
@@ -305,12 +289,39 @@ export default function SchedulePage() {
     setSchedulingSubmitting(false)
   }
 
-  const handleMarkAsPaid = async (sessionId: string) => {
+  const handleMarkAsPaid = async (session: Session) => {
+    setEditModalError(null)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      setEditModalError('Please sign in to mark as paid.')
+      return
+    }
+    const paymentPayload = {
+      coach_id: session.coach_id ?? user.id,
+      client_id: tenantId,
+      session_id: session.id,
+      session_request_id: session.session_request_id ?? null,
+      amount_cents: session.amount_cents ?? 0,
+      currency: 'usd',
+      status: 'recorded_manual',
+      provider: 'other',
+      payer_client_id: session.client_id,
+      description: 'Session marked as paid',
+    }
+    const { error: payErr } = await supabase.from('payments').insert(paymentPayload)
+    if (payErr) {
+      setEditModalError('Could not record payment. Please try again.')
+      return
+    }
     const { error } = await supabase
       .from('sessions')
       .update({ paid_at: new Date().toISOString() })
-      .eq('id', sessionId)
-    if (!error) loadData()
+      .eq('id', session.id)
+    if (error) {
+      setEditModalError('Payment recorded but session could not be updated. Please try again or contact support.')
+      return
+    }
+    loadData()
   }
 
   const handleSendReminder = async (sessionId: string) => {
@@ -342,6 +353,7 @@ export default function SchedulePage() {
   }
 
   const openEditSession = (session: Session) => {
+    setEditModalError(null)
     const start = parseISO(session.scheduled_time)
     const endFromSlot = session.availability_slots?.end_time
       ? parseISO(session.availability_slots.end_time)
@@ -375,6 +387,7 @@ export default function SchedulePage() {
     if (!isSameDay(startDateTime, endDateTime)) return
 
     setSavingEdit(true)
+    setEditModalError(null)
     const start_time = startDateTime.toISOString()
     const end_time = endDateTime.toISOString()
 
@@ -386,7 +399,13 @@ export default function SchedulePage() {
       })
       .eq('id', editingSession.id)
 
-    if (!sessionError && editingSession.availability_slot_id) {
+    if (sessionError) {
+      setEditModalError('Could not save. Please try again.')
+      setSavingEdit(false)
+      return
+    }
+
+    if (editingSession.availability_slot_id) {
       await supabase
         .from('availability_slots')
         .update({ start_time, end_time })
@@ -401,9 +420,22 @@ export default function SchedulePage() {
   const handleDeleteSession = async () => {
     if (!editingSession || savingEdit) return
     setSavingEdit(true)
+    setEditModalError(null)
     const slotId = editingSession.availability_slot_id
+    const sessionRequestId = editingSession.session_request_id
     const { error } = await supabase.from('sessions').delete().eq('id', editingSession.id)
-    if (!error && slotId) {
+    if (error) {
+      setEditModalError('Could not delete session. Please try again.')
+      setSavingEdit(false)
+      return
+    }
+    if (sessionRequestId) {
+      await supabase
+        .from('session_requests')
+        .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+        .eq('id', sessionRequestId)
+    }
+    if (slotId) {
       await supabase.from('availability_slots').delete().eq('id', slotId)
     }
     setSavingEdit(false)
@@ -414,7 +446,13 @@ export default function SchedulePage() {
   const handleMarkCompleted = async () => {
     if (!editingSession || savingEdit) return
     setSavingEdit(true)
-    await supabase.from('sessions').update({ status: 'completed' }).eq('id', editingSession.id)
+    setEditModalError(null)
+    const { error } = await supabase.from('sessions').update({ status: 'completed' }).eq('id', editingSession.id)
+    if (error) {
+      setEditModalError('Could not mark completed. Please try again.')
+      setSavingEdit(false)
+      return
+    }
     setSavingEdit(false)
     setEditingSession(null)
     loadData()
@@ -423,7 +461,19 @@ export default function SchedulePage() {
   const handleMarkCanceled = async () => {
     if (!editingSession || savingEdit) return
     setSavingEdit(true)
-    await supabase.from('sessions').update({ status: 'cancelled' }).eq('id', editingSession.id)
+    setEditModalError(null)
+    const { error } = await supabase.from('sessions').update({ status: 'cancelled' }).eq('id', editingSession.id)
+    if (error) {
+      setEditModalError('Could not cancel session. Please try again.')
+      setSavingEdit(false)
+      return
+    }
+    if (editingSession.session_request_id) {
+      await supabase
+        .from('session_requests')
+        .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+        .eq('id', editingSession.session_request_id)
+    }
     setSavingEdit(false)
     setEditingSession(null)
     loadData()
@@ -438,6 +488,7 @@ export default function SchedulePage() {
     if (!client) return
 
     setOfferSubmitting(true)
+    setOfferError(null)
     const { data: sessionRequest, error: reqError } = await supabase
       .from('session_requests')
       .insert({
@@ -451,7 +502,13 @@ export default function SchedulePage() {
       .select('id')
       .single()
 
-    if (!reqError && sessionRequest?.id) {
+    if (reqError) {
+      setOfferError('Could not create offer. Please try again.')
+      setOfferSubmitting(false)
+      return
+    }
+
+    if (sessionRequest?.id) {
       await supabase
         .from('client_time_requests')
         .update({ status: 'offered', session_request_id: sessionRequest.id, updated_at: new Date().toISOString() })
@@ -518,6 +575,7 @@ export default function SchedulePage() {
         return
       }
 
+      setBookError(null)
       const { error: requestError } = await supabase
         .from('session_requests')
         .insert({
@@ -530,16 +588,19 @@ export default function SchedulePage() {
         })
 
       setSubmitting(false)
-      if (!requestError) {
-        setBookClient(null)
-        setBookForm({ date: '', startTime: '', endTime: '' })
-        setBookSessionProductId('')
-        setBookRequirePayment(false)
-        loadData()
+      if (requestError) {
+        setBookError('Could not create offer. Please try again.')
+        return
       }
+      setBookClient(null)
+      setBookForm({ date: '', startTime: '', endTime: '' })
+      setBookSessionProductId('')
+      setBookRequirePayment(false)
+      loadData()
       return
     }
 
+    setBookError(null)
     const { data: newSession, error: sessionError } = await supabase
       .from('sessions')
       .insert({
@@ -556,7 +617,11 @@ export default function SchedulePage() {
       .single()
 
     setSubmitting(false)
-    if (!sessionError && newSession?.id) {
+    if (sessionError) {
+      setBookError('Could not create session. Please try again.')
+      return
+    }
+    if (newSession?.id) {
       notifySessionBooked(newSession.id, user.id, bookClient.id, start_time)
       setBookClient(null)
       setBookForm({ date: '', startTime: '', endTime: '' })
@@ -566,7 +631,7 @@ export default function SchedulePage() {
     }
   }
 
-  if (loading) return <Loading />
+  if (loading) return <PageSkeleton />
 
   const monthStart = startOfMonth(month)
   const monthEnd = endOfMonth(month)
@@ -663,7 +728,7 @@ export default function SchedulePage() {
 
       <Modal
         open={!!offerFromTimeRequest}
-        onClose={() => !offerSubmitting && setOfferFromTimeRequest(null)}
+        onClose={() => !offerSubmitting && (setOfferFromTimeRequest(null), setOfferError(null))}
         preventClose={!!offerSubmitting}
       >
         <div className="p-6">
@@ -672,6 +737,9 @@ export default function SchedulePage() {
             Pick a session type to send a payment offer.
           </p>
           <form onSubmit={handleOfferFromTimeRequest} className="mt-4 space-y-4">
+            {offerError && (
+              <p className="text-sm text-[var(--cp-accent-danger)]">{offerError}</p>
+            )}
             <div>
               <label className="block text-sm font-medium text-[var(--cp-text-primary)]">Session type</label>
               <select
@@ -689,7 +757,7 @@ export default function SchedulePage() {
               </select>
             </div>
             <div className="flex gap-2 justify-end">
-              <Button type="button" variant="outline" onClick={() => setOfferFromTimeRequest(null)} disabled={offerSubmitting}>Cancel</Button>
+              <Button type="button" variant="outline" onClick={() => { setOfferFromTimeRequest(null); setOfferError(null) }} disabled={offerSubmitting}>Cancel</Button>
               <Button type="submit" disabled={!offerProductId || offerSubmitting}>
                 {offerSubmitting ? 'Sending...' : 'Send offer'}
               </Button>
@@ -828,12 +896,15 @@ export default function SchedulePage() {
           <Card className="lg:col-span-1">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-base">Book session</CardTitle>
-              <Button variant="ghost" size="sm" onClick={() => { setBookClient(null); setBookForm({ date: '', startTime: '', endTime: '' }) }}>Close</Button>
+              <Button variant="ghost" size="sm" onClick={() => { setBookClient(null); setBookForm({ date: '', startTime: '', endTime: '' }); setBookError(null) }}>Close</Button>
             </CardHeader>
             <CardContent>
               <p className="text-sm font-medium text-[var(--cp-text-primary)] mb-3">
                 {bookClient.full_name}
               </p>
+              {bookError && (
+                <p className="text-sm text-[var(--cp-accent-danger)] mb-3">{bookError}</p>
+              )}
               <form onSubmit={handleBookSessionSubmit} className="space-y-3">
                 <div>
                   <label className="block text-xs font-medium text-[var(--cp-text-muted)]">
@@ -928,6 +999,7 @@ export default function SchedulePage() {
                   onClick={() => {
                     setBookClient(null)
                     setBookForm({ date: '', startTime: '', endTime: '' })
+                    setBookError(null)
                   }}
                 >
                   Cancel
@@ -1238,7 +1310,7 @@ export default function SchedulePage() {
                       size="sm"
                       variant="outline"
                       onClick={async () => {
-                        await handleMarkAsPaid(editingSession.id)
+                        await handleMarkAsPaid(editingSession)
                         setEditingSession(null)
                       }}
                       disabled={savingEdit}
@@ -1345,6 +1417,9 @@ export default function SchedulePage() {
                         {reminderSendingId === editingSession.id ? 'Sending…' : 'Remind client'}
                       </Button>
                     )}
+                  {editModalError && (
+                    <p className="text-sm text-[var(--cp-accent-danger)]">{editModalError}</p>
+                  )}
                   <div className="space-y-2 pt-2">
                     <Button
                       type="submit"

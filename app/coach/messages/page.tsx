@@ -14,6 +14,7 @@ import { ActionRow } from '@/components/ui/ActionRow'
 import { Modal } from '@/components/ui/modal'
 import { Input } from '@/components/ui/input'
 import { getClientId } from '@/lib/config'
+import { PageSkeleton } from '@/components/ui/PageSkeleton'
 import { MessageThread, type ChatMessage } from '@/components/chat/MessageThread'
 
 export default function MessagesPage() {
@@ -29,6 +30,7 @@ export default function MessagesPage() {
   const [requestLoading, setRequestLoading] = useState(false)
   const [requestError, setRequestError] = useState<string | null>(null)
   const [sendError, setSendError] = useState<string | null>(null)
+  const [pageLoading, setPageLoading] = useState(true)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const realtimeChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
   const searchParams = useSearchParams()
@@ -141,7 +143,10 @@ export default function MessagesPage() {
 
   const loadClients = async () => {
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+    if (!user) {
+      setPageLoading(false)
+      return
+    }
     setCurrentUser(user)
 
     const { data } = await supabase
@@ -160,6 +165,7 @@ export default function MessagesPage() {
     }
 
     await refreshUnreadCounts(user.id, clientList)
+    setPageLoading(false)
   }
 
   const loadMessages = async () => {
@@ -360,6 +366,8 @@ export default function MessagesPage() {
       offer,
     }
   })
+
+  if (pageLoading) return <PageSkeleton />
 
   return (
     <div className="space-y-8">

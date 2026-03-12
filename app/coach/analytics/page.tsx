@@ -1,7 +1,12 @@
+import dynamic from 'next/dynamic'
 import { createClient } from '@/lib/supabase/server'
 import { startOfMonth, subMonths, format } from 'date-fns'
 import { getClientId } from '@/lib/config'
-import { AnalyticsContent } from './AnalyticsContent'
+import { PageSkeleton } from '@/components/ui/PageSkeleton'
+
+const AnalyticsContent = dynamic(() => import('./AnalyticsContent').then((m) => ({ default: m.AnalyticsContent })), {
+  loading: () => <PageSkeleton />,
+})
 
 export default async function AnalyticsPage() {
   const supabase = await createClient()

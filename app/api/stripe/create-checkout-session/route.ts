@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
 import { createServiceClient } from '@/lib/supabase/service'
+import { checkRateLimitAsync } from '@/lib/rate-limit'
+import { getSafeMessage, logServerError } from '@/lib/api-error'
 import Stripe from 'stripe'
 import { z } from 'zod'
 
@@ -147,15 +149,29 @@ export async function POST(request: Request) {
     client_reference_id: sessionRequestId,
   }
 
-  const session = await stripe.checkout.sessions.create(
-    sessionParams as Stripe.Checkout.SessionCreateParams,
-    { stripeAccount: coachAccountId }
-  )
+  try {
+    const session = await stripe.checkout.sessions.create(
+      sessionParams as Stripe.Checkout.SessionCreateParams,
+      { stripeAccount: coachAccountId }
+    )
 
-  await supabaseAdmin
-    .from('session_requests')
-    .update({ status: 'payment_pending', updated_at: new Date().toISOString() })
-    .eq('id', sessionRequestId)
+    await supabaseAdmin
+      .from('session_requests')
+      .update({ status: 'payment_pending', updated_at: new Date().toISOString() })
+      .eq('id', sessionRequestId)
 
-  return NextResponse.json({ url: session.url })
+    return NextResponse.json({ url: session.url })
+  } catch (err: unknown) {
+    const message = err && typeof err === 'object' && 'message' in err && typeof (err as { message: string }).message === 'string'
+      ? (err as { message: string }).message
+      : ''
+    if (message.toLowerCase().includes('rate limit') || message.toLowerCase().includes('too many')) {
+      return NextResponse.json({ error: 'Too many requests. Please try again in a moment.' }, { status: 429 })
+    }
+    logServerError('create-checkout-session', err)
+    return NextResponse.json(
+      { error: 'Payment could not be started. Please try again.' },
+      { status: 502 }
+    )
+  }
 }

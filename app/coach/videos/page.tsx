@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Loading } from '@/components/ui/loading'
+import { PageSkeleton } from '@/components/ui/PageSkeleton'
 import { Input } from '@/components/ui/input'
 import { getEmbedUrl } from '@/lib/video-embed'
 import { GENERIC_FAILED } from '@/lib/safe-messages'
@@ -326,7 +326,7 @@ export default function VideosPage() {
     setSavingEdit(false)
   }
 
-  if (loading) return <Loading />
+  if (loading) return <PageSkeleton />
 
   return (
     <div className="space-y-8">

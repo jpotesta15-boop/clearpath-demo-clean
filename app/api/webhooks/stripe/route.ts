@@ -184,6 +184,13 @@ export async function POST(request: Request) {
 
       if (markScheduledErr) {
         logServerError('stripe-webhook', markScheduledErr, { sessionRequestId })
+        const { error: retryErr } = await supabase
+          .from('session_requests')
+          .update({ status: 'scheduled', updated_at: new Date().toISOString() })
+          .eq('id', sessionRequestId)
+        if (retryErr) {
+          logServerError('stripe-webhook', retryErr, { sessionRequestId, context: 'retry' })
+        }
       }
 
       void notifySessionBooked(

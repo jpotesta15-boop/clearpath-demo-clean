@@ -230,9 +230,12 @@ export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center bg-[var(--cp-bg-page)]">
-          <div className="max-w-md w-full p-8 bg-[var(--cp-bg-elevated)] rounded-lg shadow-[var(--cp-shadow-card)] text-center text-[var(--cp-text-muted)]">
-            Loading…
+        <div className="min-h-screen flex items-center justify-center bg-[var(--cp-bg-page)]" aria-label="Loading">
+          <div className="max-w-md w-full p-8 space-y-4">
+            <div className="h-9 w-40 rounded-md bg-[var(--cp-bg-subtle)] animate-pulse motion-reduce:animate-none mx-auto" />
+            <div className="h-11 w-full rounded-md bg-[var(--cp-bg-subtle)] animate-pulse motion-reduce:animate-none" />
+            <div className="h-11 w-full rounded-md bg-[var(--cp-bg-subtle)] animate-pulse motion-reduce:animate-none" />
+            <div className="h-10 w-24 rounded-md bg-[var(--cp-bg-subtle)] animate-pulse motion-reduce:animate-none" />
           </div>
         </div>
       }

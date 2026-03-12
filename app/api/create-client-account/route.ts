@@ -98,18 +98,28 @@ export async function POST(request: Request) {
     if (!data?.user) {
       return NextResponse.json({ error: 'User could not be created' }, { status: 500 })
     }
-    const { error: updateError } = await admin
-      .from('profiles')
-      .update({ tenant_id: tenantId })
-      .eq('id', data.user.id)
-    if (updateError) {
-      console.error('Failed to set profile tenant_id:', updateError)
-      return NextResponse.json(
-        { error: 'Account created but tenant could not be set. Contact support.' },
-        { status: 500 }
-      )
+    const maxRetries = 3
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      const { error: updateError } = await admin
+        .from('profiles')
+        .update({ tenant_id: tenantId })
+        .eq('id', data.user.id)
+      if (!updateError) {
+        return NextResponse.json({ ok: true, password })
+      }
+      logServerError('create-client-account', updateError, { attempt, userId: data.user.id })
+      if (attempt < maxRetries) {
+        await new Promise((r) => setTimeout(r, 300 * attempt))
+      }
     }
-    return NextResponse.json({ ok: true, password })
+    const { error: deleteErr } = await admin.auth.admin.deleteUser(data.user.id)
+    if (deleteErr) {
+      logServerError('create-client-account', deleteErr, { context: 'rollback delete user', userId: data.user.id })
+    }
+    return NextResponse.json(
+      { error: 'Account could not be set up. Please try again or contact support.' },
+      { status: 500 }
+    )
   } catch (err) {
     logServerError('create-client-account', err)
     return NextResponse.json({ error: getSafeMessage(500) }, { status: 500 })

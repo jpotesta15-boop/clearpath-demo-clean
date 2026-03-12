@@ -164,10 +164,16 @@ export function DashboardContent({
       const res = await fetch('/api/stripe/connect/account-link', { method: 'POST' })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
-        setStripeConnectError(data.error ?? 'Failed to start Stripe Connect')
+        setStripeConnectError(data.error ?? 'Failed to start Stripe Connect. Please try again.')
         return
       }
-      if (data.url) window.location.href = data.url
+      if (data.url) {
+        window.location.href = data.url
+      } else {
+        setStripeConnectError('Could not open Stripe. Please try again.')
+      }
+    } catch {
+      setStripeConnectError('Network error. Please check your connection and try again.')
     } finally {
       setConnectLoading(false)
     }

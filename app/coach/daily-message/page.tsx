@@ -167,7 +167,11 @@ export default function CoachDailyMessagePage() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <p className="text-sm text-[var(--cp-text-muted)]">Loading…</p>
+            <div className="space-y-3" aria-label="Loading">
+              <div className="h-4 w-full rounded-md bg-[var(--cp-bg-subtle)] animate-pulse motion-reduce:animate-none" />
+              <div className="h-4 max-w-[85%] rounded-md bg-[var(--cp-bg-subtle)] animate-pulse motion-reduce:animate-none" />
+              <div className="h-4 max-w-[60%] rounded-md bg-[var(--cp-bg-subtle)] animate-pulse motion-reduce:animate-none" />
+            </div>
           ) : history.length > 0 ? (
             <div className="space-y-3">
               {history.map((msg) => (

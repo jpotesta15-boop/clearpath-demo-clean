@@ -2,6 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { checkRateLimit, getClientIdentifier } from '@/lib/rate-limit'
+import { logServerError } from '@/lib/api-error'
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url)
@@ -45,6 +46,7 @@ export async function GET(request: Request) {
       const redirectTo = profile?.role === 'coach' ? '/coach/dashboard' : profile?.role === 'client' ? '/client/dashboard' : next
       return NextResponse.redirect(new URL(redirectTo, requestUrl.origin))
     }
+    logServerError('auth-callback', error, { context: 'exchangeCodeForSession' })
   }
 
   return NextResponse.redirect(new URL('/login?error=auth', requestUrl.origin))

@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { MessageThread, type ChatMessage } from '@/components/chat/MessageThread'
 import { getClientId } from '@/lib/config'
+import { PageSkeleton } from '@/components/ui/PageSkeleton'
 
 export default function ClientMessagesPage() {
   const [messages, setMessages] = useState<any[]>([])
@@ -21,6 +22,9 @@ export default function ClientMessagesPage() {
   const [submittingAvailability, setSubmittingAvailability] = useState(false)
   const [payingRequestId, setPayingRequestId] = useState<string | null>(null)
   const [payError, setPayError] = useState<string | null>(null)
+  const [sendError, setSendError] = useState<string | null>(null)
+  const [availabilityError, setAvailabilityError] = useState<string | null>(null)
+  const [pageLoading, setPageLoading] = useState(true)
   const realtimeChannelRef = useRef<ReturnType<ReturnType<typeof createClient>['channel']> | null>(null)
   const supabase = createClient()
   const tenantId = getClientId()
@@ -79,7 +83,10 @@ export default function ClientMessagesPage() {
 
   const loadData = async () => {
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+    if (!user) {
+      setPageLoading(false)
+      return
+    }
     setCurrentUser(user)
 
     const { data: clientData } = await supabase
@@ -90,6 +97,7 @@ export default function ClientMessagesPage() {
 
     if (!clientData) {
       setClientNotFound(true)
+      setPageLoading(false)
       return
     }
 
@@ -127,6 +135,7 @@ export default function ClientMessagesPage() {
 
       await updateUnreadBadge(user.id)
     }
+    setPageLoading(false)
   }
 
   const handleAcceptOffer = async (requestId: string) => {
@@ -155,6 +164,7 @@ export default function ClientMessagesPage() {
   const handleSubmitAvailability = async () => {
     if (!availabilityRequestId || !availabilityText.trim()) return
     setSubmittingAvailability(true)
+    setAvailabilityError(null)
     const { error } = await supabase
       .from('session_requests')
       .update({
@@ -163,7 +173,9 @@ export default function ClientMessagesPage() {
         updated_at: new Date().toISOString(),
       })
       .eq('id', availabilityRequestId)
-    if (!error) {
+    if (error) {
+      setAvailabilityError('Could not submit. Please try again.')
+    } else {
       setAvailabilityRequestId(null)
       setAvailabilityText('')
       loadData()
@@ -175,6 +187,7 @@ export default function ClientMessagesPage() {
     e.preventDefault()
     if (!newMessage.trim() || !coach || !currentUser) return
 
+    setSendError(null)
     const contentToSend = newMessage.trim()
 
     const { error } = await supabase
@@ -186,21 +199,25 @@ export default function ClientMessagesPage() {
         content: contentToSend,
       })
 
-    if (!error) {
-      setNewMessage('')
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `temp-${Date.now()}`,
-          sender_id: currentUser.id,
-          recipient_id: coach.id,
-          content: contentToSend,
-          created_at: new Date().toISOString(),
-        },
-      ])
-      loadData()
+    if (error) {
+      setSendError('Failed to send. Please try again.')
+      return
     }
+    setNewMessage('')
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: `temp-${Date.now()}`,
+        sender_id: currentUser.id,
+        recipient_id: coach.id,
+        content: contentToSend,
+        created_at: new Date().toISOString(),
+      },
+    ])
+    loadData()
   }
+
+  if (pageLoading) return <PageSkeleton />
 
   if (clientNotFound) {
     return (
@@ -331,6 +348,9 @@ export default function ClientMessagesPage() {
               />
               <Button type="submit">Send</Button>
             </div>
+            {sendError && (
+              <p className="text-sm text-[var(--cp-accent-danger)] mt-2">{sendError}</p>
+            )}
           </form>
         </CardContent>
       </Card>
@@ -338,7 +358,7 @@ export default function ClientMessagesPage() {
       {availabilityRequestId && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--cp-bg-backdrop)] p-4"
-          onClick={() => !submittingAvailability && setAvailabilityRequestId(null)}
+          onClick={() => !submittingAvailability && (setAvailabilityRequestId(null), setAvailabilityError(null))}
         >
           <div
             className="rounded-2xl border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-elevated)] shadow-[var(--cp-shadow-card)] max-w-md w-full p-6"
@@ -348,6 +368,9 @@ export default function ClientMessagesPage() {
             <p className="text-sm text-[var(--cp-text-muted)] mb-3">
               When are you available? Your coach will confirm a time.
             </p>
+            {availabilityError && (
+              <p className="text-sm text-[var(--cp-accent-danger)] mb-3">{availabilityError}</p>
+            )}
             <textarea
               value={availabilityText}
               onChange={(e) => setAvailabilityText(e.target.value)}
@@ -356,7 +379,7 @@ export default function ClientMessagesPage() {
               rows={3}
             />
             <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setAvailabilityRequestId(null)} disabled={submittingAvailability}>
+              <Button variant="outline" onClick={() => { setAvailabilityRequestId(null); setAvailabilityError(null) }} disabled={submittingAvailability}>
                 Cancel
               </Button>
               <Button onClick={handleSubmitAvailability} disabled={!availabilityText.trim() || submittingAvailability}>

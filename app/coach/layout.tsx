@@ -33,33 +33,29 @@ export default async function CoachLayout({
     redirect('/login')
   }
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single()
-
-  if (profile?.role !== 'coach') {
-    redirect('/client/dashboard')
-  }
-
   const tenantId = getClientId()
   const now = new Date()
   const weekStart = startOfWeek(now, { weekStartsOn: 1 }).toISOString()
 
-  const { count: unseenMessagesCount } = await supabase
-    .from('messages')
-    .select('*', { count: 'exact', head: true })
-    .eq('recipient_id', user.id)
-    .is('read_at', null)
+  const [profileRes, unseenMessagesRes, recentPaymentsRes] = await Promise.all([
+    supabase.from('profiles').select('role').eq('id', user.id).single(),
+    supabase.from('messages').select('*', { count: 'exact', head: true }).eq('recipient_id', user.id).is('read_at', null),
+    supabase
+      .from('payments')
+      .select('*', { count: 'exact', head: true })
+      .eq('coach_id', user.id)
+      .eq('client_id', tenantId)
+      .eq('status', 'succeeded')
+      .gte('created_at', weekStart),
+  ])
 
-  const { count: recentPaymentsCount } = await supabase
-    .from('payments')
-    .select('*', { count: 'exact', head: true })
-    .eq('coach_id', user.id)
-    .eq('client_id', tenantId)
-    .eq('status', 'succeeded')
-    .gte('created_at', weekStart)
+  const profile = profileRes.data
+  if (profile?.role !== 'coach') {
+    redirect('/client/dashboard')
+  }
+
+  const unseenMessagesCount = unseenMessagesRes.count
+  const recentPaymentsCount = recentPaymentsRes.count
 
   const coachNavItems: NavItem[] = baseCoachNavItems.map((item) => {
     if (item.href === '/coach/messages') {

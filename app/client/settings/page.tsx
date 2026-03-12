@@ -78,7 +78,11 @@ export default function ClientSettingsPage() {
         </CardHeader>
         <CardContent>
           {phoneLoading ? (
-            <p className="text-sm text-[var(--cp-text-muted)]">Loading…</p>
+            <div className="space-y-3" aria-label="Loading">
+              <div className="h-4 w-32 rounded-md bg-[var(--cp-bg-subtle)] animate-pulse motion-reduce:animate-none" />
+              <div className="h-10 w-full max-w-xs rounded-md bg-[var(--cp-bg-subtle)] animate-pulse motion-reduce:animate-none" />
+              <div className="h-9 w-16 rounded-md bg-[var(--cp-bg-subtle)] animate-pulse motion-reduce:animate-none" />
+            </div>
           ) : (
             <form onSubmit={handleSavePhone} className="space-y-3">
               <div>

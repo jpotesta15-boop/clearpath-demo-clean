@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Modal } from '@/components/ui/modal'
-import { Loading } from '@/components/ui/loading'
+import { PageSkeleton } from '@/components/ui/PageSkeleton'
 import { Input } from '@/components/ui/input'
 import Link from 'next/link'
 
@@ -92,7 +92,7 @@ export default function ProgramsPage() {
     if (!error) loadPrograms()
   }
 
-  if (loading) return <Loading />
+  if (loading) return <PageSkeleton />
 
   return (
     <div className="space-y-8">

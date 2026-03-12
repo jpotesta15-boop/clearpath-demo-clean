@@ -118,7 +118,13 @@ export default function SidebarNav({ navItems }: { navItems: NavItem[] }) {
   }, [])
 
   useEffect(() => {
-    setNavState(navItems)
+    setNavState((prev) =>
+      navItems.map((item) =>
+        item.href.endsWith('/messages')
+          ? { ...item, badgeCount: prev.find((p) => p.href === item.href)?.badgeCount ?? item.badgeCount }
+          : item
+      )
+    )
   }, [navItems])
 
   useEffect(() => {
@@ -146,6 +152,57 @@ export default function SidebarNav({ navItems }: { navItems: NavItem[] }) {
         'clearpath:unread-messages-updated',
         handleUnreadUpdate as EventListener
       )
+    }
+  }, [])
+
+  useEffect(() => {
+    let channel: ReturnType<ReturnType<typeof createClient>['channel']> | null = null
+
+    const setupRealtime = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const refetchUnreadAndDispatch = async () => {
+        const { count } = await supabase
+          .from('messages')
+          .select('*', { count: 'exact', head: true })
+          .eq('recipient_id', user.id)
+          .is('read_at', null)
+        const totalUnread = count ?? 0
+        if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+          window.dispatchEvent(
+            new CustomEvent('clearpath:unread-messages-updated', {
+              detail: { totalUnread },
+            })
+          )
+        }
+      }
+
+      channel = supabase
+        .channel('sidebar-nav-messages-badge')
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'messages' },
+          (payload: { new: { recipient_id?: string } }) => {
+            if (payload.new?.recipient_id === user.id) refetchUnreadAndDispatch()
+          }
+        )
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'messages' },
+          (payload: { new: { recipient_id?: string } }) => {
+            if (payload.new?.recipient_id === user.id) refetchUnreadAndDispatch()
+          }
+        )
+        .subscribe()
+    }
+
+    setupRealtime()
+
+    return () => {
+      if (channel) {
+        supabase.removeChannel(channel)
+      }
     }
   }, [])
 

@@ -63,33 +63,45 @@ export async function POST(request: Request) {
 
   let accountId = profile.stripe_connect_account_id
 
-  if (!accountId) {
-    const account = await stripe.accounts.create({
-      type: 'express',
-      email: user.email ?? undefined,
-    })
-    accountId = account.id
-    const supabaseAdmin = createServiceClient()
-    const { error: updateErr } = await supabaseAdmin
-      .from('profiles')
-      .update({
-        stripe_connect_account_id: accountId,
-        updated_at: new Date().toISOString(),
+  try {
+    if (!accountId) {
+      const account = await stripe.accounts.create({
+        type: 'express',
+        email: user.email ?? undefined,
       })
-      .eq('id', user.id)
+      accountId = account.id
+      const supabaseAdmin = createServiceClient()
+      const { error: updateErr } = await supabaseAdmin
+        .from('profiles')
+        .update({
+          stripe_connect_account_id: accountId,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', user.id)
 
-    if (updateErr) {
-      console.error('Failed to save stripe_connect_account_id', updateErr)
-      return NextResponse.json({ error: 'Failed to save Connect account' }, { status: 500 })
+      if (updateErr) {
+        console.error('Failed to save stripe_connect_account_id', updateErr)
+        return NextResponse.json({ error: 'Failed to save Connect account. Please try again.' }, { status: 500 })
+      }
     }
+
+    const accountLink = await stripe.accountLinks.create({
+      account: accountId,
+      refresh_url: refreshUrl,
+      return_url: returnUrl,
+      type: 'account_onboarding',
+    })
+
+    if (!accountLink?.url) {
+      return NextResponse.json({ error: 'Could not create Stripe link. Please try again.' }, { status: 502 })
+    }
+
+    return NextResponse.json({ url: accountLink.url })
+  } catch (err) {
+    console.error('[stripe-connect] account-link error:', err)
+    return NextResponse.json(
+      { error: 'Stripe is temporarily unavailable. Please try again in a moment.' },
+      { status: 502 }
+    )
   }
-
-  const accountLink = await stripe.accountLinks.create({
-    account: accountId,
-    refresh_url: refreshUrl,
-    return_url: returnUrl,
-    type: 'account_onboarding',
-  })
-
-  return NextResponse.json({ url: accountLink.url })
 }

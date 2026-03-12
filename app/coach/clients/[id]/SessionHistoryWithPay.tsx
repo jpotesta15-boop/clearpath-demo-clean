@@ -14,6 +14,10 @@ type SessionRow = {
   status: string
   notes: string | null
   paid_at: string | null
+  coach_id?: string
+  client_id?: string
+  amount_cents?: number | null
+  session_request_id?: string | null
 }
 
 function sessionStatusToKind(status: string): 'success' | 'warning' | 'danger' | 'info' | 'neutral' {
@@ -23,16 +27,47 @@ function sessionStatusToKind(status: string): 'success' | 'warning' | 'danger' |
   return 'warning'
 }
 
-export function SessionHistoryWithPay({ sessions }: { sessions: SessionRow[] }) {
+export function SessionHistoryWithPay({
+  sessions,
+  tenantId,
+}: {
+  sessions: SessionRow[]
+  tenantId: string
+}) {
   const router = useRouter()
   const supabase = createClient()
 
-  const handleMarkAsPaid = async (sessionId: string) => {
+  const handleMarkAsPaid = async (session: SessionRow) => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      router.refresh()
+      return
+    }
+    const { error: payErr } = await supabase.from('payments').insert({
+      coach_id: session.coach_id ?? user.id,
+      client_id: tenantId,
+      session_id: session.id,
+      session_request_id: session.session_request_id ?? null,
+      amount_cents: session.amount_cents ?? 0,
+      currency: 'usd',
+      status: 'recorded_manual',
+      provider: 'other',
+      payer_client_id: session.client_id ?? null,
+      description: 'Session marked as paid',
+    })
+    if (payErr) {
+      router.refresh()
+      return
+    }
     const { error } = await supabase
       .from('sessions')
       .update({ paid_at: new Date().toISOString() })
-      .eq('id', sessionId)
-    if (!error) router.refresh()
+      .eq('id', session.id)
+    if (error) {
+      router.refresh()
+      return
+    }
+    router.refresh()
   }
 
   if (!sessions || sessions.length === 0) {
@@ -55,7 +90,7 @@ export function SessionHistoryWithPay({ sessions }: { sessions: SessionRow[] }) 
             meta={<StatusBadge status={sessionStatusToKind(session.status)} label={session.status} />}
             actions={
               !session.paid_at ? (
-                <Button size="sm" variant="outline" onClick={() => handleMarkAsPaid(session.id)}>
+                <Button size="sm" variant="outline" onClick={() => handleMarkAsPaid(session)}>
                   Mark as paid
                 </Button>
               ) : undefined

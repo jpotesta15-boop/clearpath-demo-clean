@@ -28,74 +28,74 @@ export default function NewClientPage() {
     e.preventDefault()
     setError(null)
     setSaving(true)
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-    if (!user) {
-      setError('Not signed in')
-      setSaving(false)
-      return
-    }
-    const clientId = typeof process.env.NEXT_PUBLIC_CLIENT_ID === 'string'
-      ? process.env.NEXT_PUBLIC_CLIENT_ID
-      : null
-    const emailTrimmed = form.email.trim() || null
-    const { data: newClient, error: insertError } = await supabase
-      .from('clients')
-      .insert({
-        coach_id: user.id,
-        full_name: form.full_name.trim(),
-        email: emailTrimmed,
-        phone: form.phone.trim() || null,
-        notes: form.notes.trim() || null,
-        ...(clientId && { client_id: clientId }),
-      })
-      .select('id')
-      .single()
-    if (insertError) {
-      setError(GENERIC_FAILED)
-      setSaving(false)
-      return
-    }
-    let generatedPassword: string | undefined
-
-    if (sendInvite && emailTrimmed) {
-      const res = await fetch('/api/invite-client', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: emailTrimmed }),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) {
-        setError(data.error || 'Failed to send invite')
-        setSaving(false)
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) {
+        setError('Not signed in')
         return
       }
-    } else if (emailTrimmed) {
-      // Create a Supabase auth user immediately and surface a password for the coach to share
-      const res = await fetch('/api/create-client-account', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: emailTrimmed }),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) {
-        setError(data.error || 'Failed to create login for this client')
-        setSaving(false)
+      const clientId = typeof process.env.NEXT_PUBLIC_CLIENT_ID === 'string'
+        ? process.env.NEXT_PUBLIC_CLIENT_ID
+        : null
+      const emailTrimmed = form.email.trim() || null
+      const { data: newClient, error: insertError } = await supabase
+        .from('clients')
+        .insert({
+          coach_id: user.id,
+          full_name: form.full_name.trim(),
+          email: emailTrimmed,
+          phone: form.phone.trim() || null,
+          notes: form.notes.trim() || null,
+          ...(clientId && { client_id: clientId }),
+        })
+        .select('id')
+        .single()
+      if (insertError) {
+        setError(GENERIC_FAILED)
         return
       }
-      generatedPassword = data.password
-    }
+      let generatedPassword: string | undefined
 
-    setSaving(false)
-    if (newClient?.id) {
-      setCreatedCredentials({
-        id: newClient.id,
-        email: emailTrimmed,
-        password: generatedPassword,
-      })
-    } else {
-      router.push('/coach/clients')
+      if (sendInvite && emailTrimmed) {
+        const res = await fetch('/api/invite-client', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: emailTrimmed }),
+        })
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok) {
+          setError(data.error || 'Failed to send invite. Please try again.')
+          return
+        }
+      } else if (emailTrimmed) {
+        const res = await fetch('/api/create-client-account', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: emailTrimmed }),
+        })
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok) {
+          setError(data.error || 'Failed to create login for this client. Please try again.')
+          return
+        }
+        generatedPassword = data.password
+      }
+
+      if (newClient?.id) {
+        setCreatedCredentials({
+          id: newClient.id,
+          email: emailTrimmed,
+          password: generatedPassword,
+        })
+      } else {
+        router.push('/coach/clients')
+      }
+    } catch {
+      setError('Something went wrong. Please try again.')
+    } finally {
+      setSaving(false)
     }
   }
 

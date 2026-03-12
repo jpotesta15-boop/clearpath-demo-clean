@@ -7,7 +7,7 @@ import { SectionHeader } from '@/components/ui/SectionHeader'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
-import { Loading } from '@/components/ui/loading'
+import { PageSkeleton } from '@/components/ui/PageSkeleton'
 import { Input } from '@/components/ui/input'
 import { Modal } from '@/components/ui/modal'
 import { getClientId } from '@/lib/config'
@@ -172,7 +172,7 @@ export default function SessionPackagesPage() {
     loadData()
   }
 
-  if (loading) return <Loading />
+  if (loading) return <PageSkeleton />
 
   return (
     <div className="space-y-8">

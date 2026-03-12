@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { getClientId } from '@/lib/config'
 import { Card, CardContent } from '@/components/ui/card'
 import { SectionHeader } from '@/components/ui/SectionHeader'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -39,55 +40,52 @@ export default async function ClientDetailPage({
     notFound()
   }
 
-  const { data: sessions } = await supabase
-    .from('sessions')
-    .select('*')
-    .eq('client_id', id)
-    .order('scheduled_time', { ascending: false })
-    .limit(10)
+  const [
+    sessionsRes,
+    programsRes,
+    sessionRequestsRes,
+    completedCountRes,
+    upcomingCountRes,
+    videosCompletedCountRes,
+    lastSessionRes,
+  ] = await Promise.all([
+    supabase.from('sessions').select('*').eq('client_id', id).order('scheduled_time', { ascending: false }).limit(10),
+    supabase.from('program_assignments').select('*, programs(*)').eq('client_id', id),
+    supabase
+      .from('session_requests')
+      .select('id, status, amount_cents, created_at, session_products(name, duration_minutes)')
+      .eq('client_id', id)
+      .order('created_at', { ascending: false }),
+    supabase.from('sessions').select('*', { count: 'exact', head: true }).eq('client_id', id).eq('status', 'completed'),
+    supabase
+      .from('sessions')
+      .select('*', { count: 'exact', head: true })
+      .eq('client_id', id)
+      .eq('status', 'confirmed')
+      .gte('scheduled_time', new Date().toISOString()),
+    supabase.from('video_completions').select('*', { count: 'exact', head: true }).eq('client_id', id),
+    supabase
+      .from('sessions')
+      .select('scheduled_time')
+      .eq('client_id', id)
+      .in('status', ['completed', 'confirmed'])
+      .order('scheduled_time', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ])
 
-  const { data: programs } = await supabase
-    .from('program_assignments')
-    .select('*, programs(*)')
-    .eq('client_id', id)
-
-  const { data: sessionRequests } = await supabase
-    .from('session_requests')
-    .select('id, status, amount_cents, created_at, session_products(name, duration_minutes)')
-    .eq('client_id', id)
-    .order('created_at', { ascending: false })
+  const sessions = sessionsRes.data
+  const programs = programsRes.data
+  const sessionRequests = sessionRequestsRes.data
+  const completedCount = completedCountRes.count
+  const upcomingCount = upcomingCountRes.count
+  const videosCompletedCount = videosCompletedCountRes.count
+  const lastSession = lastSessionRes.data
 
   const balanceOwedCents =
     (sessionRequests ?? [])
       .filter((r: any) => ['offered', 'accepted', 'payment_pending'].includes(r.status))
       .reduce((sum: number, r: any) => sum + (r.amount_cents ?? 0), 0) ?? 0
-
-  const { count: completedCount } = await supabase
-    .from('sessions')
-    .select('*', { count: 'exact', head: true })
-    .eq('client_id', id)
-    .eq('status', 'completed')
-
-  const { count: upcomingCount } = await supabase
-    .from('sessions')
-    .select('*', { count: 'exact', head: true })
-    .eq('client_id', id)
-    .eq('status', 'confirmed')
-    .gte('scheduled_time', new Date().toISOString())
-
-  const { count: videosCompletedCount } = await supabase
-    .from('video_completions')
-    .select('*', { count: 'exact', head: true })
-    .eq('client_id', id)
-
-  const { data: lastSession } = await supabase
-    .from('sessions')
-    .select('scheduled_time')
-    .eq('client_id', id)
-    .in('status', ['completed', 'confirmed'])
-    .order('scheduled_time', { ascending: false })
-    .limit(1)
-    .maybeSingle()
 
   const lastActive = lastSession?.scheduled_time
     ? format(new Date(lastSession.scheduled_time), 'MMM d, yyyy')
@@ -248,12 +246,17 @@ export default async function ClientDetailPage({
         <CardContent className="p-5 sm:p-6">
           <SectionHeader title="Session History" className="mb-4" />
           <SessionHistoryWithPay
+            tenantId={getClientId()}
             sessions={sessions?.map((s) => ({
               id: s.id,
               scheduled_time: s.scheduled_time,
               status: s.status,
               notes: s.notes ?? null,
               paid_at: (s as { paid_at?: string | null }).paid_at ?? null,
+              coach_id: (s as { coach_id?: string }).coach_id,
+              client_id: (s as { client_id?: string }).client_id,
+              amount_cents: (s as { amount_cents?: number | null }).amount_cents,
+              session_request_id: (s as { session_request_id?: string | null }).session_request_id,
             })) ?? []}
           />
         </CardContent>

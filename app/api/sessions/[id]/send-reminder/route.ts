@@ -5,6 +5,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { getSafeMessage, logServerError } from '@/lib/api-error'
+import { checkRateLimitAsync } from '@/lib/rate-limit'
 import { normalizePhone } from '@/lib/phone'
 
 const N8N_URL = process.env.N8N_SESSION_REMINDER_ON_DEMAND_URL
@@ -19,6 +20,11 @@ export async function POST(
 
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const { allowed } = await checkRateLimitAsync(`send-reminder:${user.id}`, { windowMs: 60_000, max: 30 })
+  if (!allowed) {
+    return NextResponse.json({ error: getSafeMessage(429) }, { status: 429 })
   }
 
   const { data: profile } = await supabase
@@ -99,7 +105,7 @@ export async function POST(
     })
     if (!res.ok) {
       const text = await res.text()
-      console.error('[send-reminder] Forward failed:', res.status, text)
+      logServerError('send-reminder', new Error(`Forward failed: ${res.status}`), { status: res.status, body: text.slice(0, 200) })
       return NextResponse.json(
         { error: getSafeMessage(502, 'Could not send reminder. Try again later.') },
         { status: 502 }

@@ -164,10 +164,10 @@ export default function ClientExperienceSettingsPage() {
 
   if (loading) {
     return (
-      <div className="max-w-3xl space-y-4">
-        <div className="h-7 w-40 rounded-md bg-[var(--cp-bg-subtle)]" />
-        <div className="h-5 w-64 rounded-md bg-[var(--cp-bg-subtle)]" />
-        <div className="h-40 rounded-lg bg-[var(--cp-bg-subtle)]" />
+      <div className="max-w-3xl space-y-4" aria-label="Loading">
+        <div className="h-7 w-40 rounded-md bg-[var(--cp-bg-subtle)] animate-pulse motion-reduce:animate-none" />
+        <div className="h-5 w-64 rounded-md bg-[var(--cp-bg-subtle)] animate-pulse motion-reduce:animate-none" />
+        <div className="h-40 rounded-lg bg-[var(--cp-bg-subtle)] animate-pulse motion-reduce:animate-none" />
       </div>
     )
   }

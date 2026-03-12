@@ -45,48 +45,44 @@ export default async function ClientDashboard() {
     )
   }
 
-  const { data: upcomingSessions } = await supabase
-    .from('sessions')
-    .select('*')
-    .eq('client_id', client.id)
-    .eq('status', 'confirmed')
-    .gte('scheduled_time', new Date().toISOString())
-    .order('scheduled_time', { ascending: true })
-    .limit(5)
-
-  const { data: programs } = await supabase
-    .from('program_assignments')
-    .select('*, programs(*)')
-    .eq('client_id', client.id)
-
-  const { data: dailyMessages } = await supabase
-    .from('coach_daily_messages')
-    .select('*')
-    .eq('coach_id', client.coach_id)
-    .order('effective_at', { ascending: false })
-    .order('created_at', { ascending: false })
-    .limit(1)
-
-  const dailyMessage = dailyMessages && dailyMessages.length > 0 ? dailyMessages[0] : null
-
-  // Client experience configuration from coach
-  let clientExperience: CoachClientExperience | null = null
-  if (client.coach_id && client.client_id) {
-    const { data } = await supabase
-      .from('coach_client_experience')
-      .select('welcome_title, welcome_body, hero_image_url, intro_video_source, intro_video_url, show_welcome_block')
+  const [upcomingSessionsRes, programsRes, dailyMessagesRes, clientExperienceRes, unpaidRequestsRes] = await Promise.all([
+    supabase
+      .from('sessions')
+      .select('*')
+      .eq('client_id', client.id)
+      .eq('status', 'confirmed')
+      .gte('scheduled_time', new Date().toISOString())
+      .order('scheduled_time', { ascending: true })
+      .limit(5),
+    supabase.from('program_assignments').select('*, programs(*)').eq('client_id', client.id),
+    supabase
+      .from('coach_daily_messages')
+      .select('*')
       .eq('coach_id', client.coach_id)
-      .eq('tenant_id', client.client_id)
-      .maybeSingle<CoachClientExperience>()
+      .order('effective_at', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(1),
+    client.coach_id && client.client_id
+      ? supabase
+          .from('coach_client_experience')
+          .select('welcome_title, welcome_body, hero_image_url, intro_video_source, intro_video_url, show_welcome_block')
+          .eq('coach_id', client.coach_id)
+          .eq('tenant_id', client.client_id)
+          .maybeSingle<CoachClientExperience>()
+      : Promise.resolve({ data: null as CoachClientExperience | null }),
+    supabase
+      .from('session_requests')
+      .select('id, amount_cents')
+      .eq('client_id', client.id)
+      .in('status', ['offered', 'accepted', 'payment_pending']),
+  ])
 
-    clientExperience = data ?? null
-  }
-
-  const { data: unpaidRequests } = await supabase
-    .from('session_requests')
-    .select('id, amount_cents')
-    .eq('client_id', client.id)
-    .in('status', ['offered', 'accepted', 'payment_pending'])
+  const upcomingSessions = upcomingSessionsRes.data
+  const programs = programsRes.data
+  const dailyMessages = dailyMessagesRes.data
+  const dailyMessage = dailyMessages && dailyMessages.length > 0 ? dailyMessages[0] : null
+  const clientExperience = clientExperienceRes.data ?? null
+  const unpaidRequests = unpaidRequestsRes.data
 
   const balanceOwedCents = (unpaidRequests ?? []).reduce((sum: number, r: any) => sum + (r.amount_cents ?? 0), 0)
 

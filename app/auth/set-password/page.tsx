@@ -83,8 +83,13 @@ export default function SetPasswordPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[var(--cp-bg-page)]">
-        <div className="text-[var(--cp-text-muted)]">Loading…</div>
+      <div className="min-h-screen flex items-center justify-center bg-[var(--cp-bg-page)]" aria-label="Loading">
+        <div className="w-full max-w-md space-y-4 p-6">
+          <div className="h-9 w-48 rounded-md bg-[var(--cp-bg-subtle)] animate-pulse motion-reduce:animate-none mx-auto" />
+          <div className="h-4 w-64 rounded-md bg-[var(--cp-bg-subtle)] animate-pulse motion-reduce:animate-none mx-auto" />
+          <div className="h-12 w-full rounded-lg bg-[var(--cp-bg-subtle)] animate-pulse motion-reduce:animate-none" />
+          <div className="h-12 w-full rounded-lg bg-[var(--cp-bg-subtle)] animate-pulse motion-reduce:animate-none" />
+        </div>
       </div>
     )
   }

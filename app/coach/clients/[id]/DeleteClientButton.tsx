@@ -13,9 +13,14 @@ export function DeleteClientButton({ clientId, clientName }: { clientId: string;
   const handleDelete = async () => {
     setDeleting(true)
     setError(null)
-    const result = await deleteClientAction(clientId)
-    if (result?.error) {
-      setError(result.error)
+    try {
+      const result = await deleteClientAction(clientId)
+      if (result?.error) {
+        setError(result.error)
+      }
+    } catch {
+      setError('Something went wrong. Please try again.')
+    } finally {
       setDeleting(false)
     }
   }

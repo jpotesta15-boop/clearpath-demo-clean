@@ -6,6 +6,8 @@ import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
 import { createServiceClient } from '@/lib/supabase/service'
+import { checkRateLimitAsync } from '@/lib/rate-limit'
+import { getSafeMessage, logServerError } from '@/lib/api-error'
 import Stripe from 'stripe'
 import { z } from 'zod'
 import { getClientId } from '@/lib/config'
@@ -51,6 +53,11 @@ export async function POST(request: Request) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const { allowed } = await checkRateLimitAsync(`request-payment:${user.id}`, { windowMs: 60_000, max: 20 })
+  if (!allowed) {
+    return NextResponse.json({ error: getSafeMessage(429) }, { status: 429 })
   }
 
   const supabaseAdmin = createServiceClient()
@@ -99,38 +106,50 @@ export async function POST(request: Request) {
   const stripe = new Stripe(stripeSecret)
   const sessionRequestIds = unpaidRequests.map((r) => r.id).join(',')
 
-  const session = await stripe.checkout.sessions.create(
-    {
-      mode: 'payment',
-      payment_method_types: ['card'],
-      line_items: [
-        {
-          price_data: {
-            currency: 'usd',
-            product_data: {
-              name: `Balance – ${productName}`,
-              description:
-                unpaidRequests.length > 1
-                  ? `${unpaidRequests.length} session offers`
-                  : 'One coaching session',
+  try {
+    const session = await stripe.checkout.sessions.create(
+      {
+        mode: 'payment',
+        payment_method_types: ['card'],
+        line_items: [
+          {
+            price_data: {
+              currency: 'usd',
+              product_data: {
+                name: `Balance – ${productName}`,
+                description:
+                  unpaidRequests.length > 1
+                    ? `${unpaidRequests.length} session offers`
+                    : 'One coaching session',
+              },
+              unit_amount: totalCents,
             },
-            unit_amount: totalCents,
+            quantity: 1,
           },
-          quantity: 1,
+        ],
+        metadata: {
+          type: 'balance',
+          client_id: clientId,
+          coach_id: coachId,
+          session_request_ids: sessionRequestIds,
+          tenant_id: reqTenantId,
         },
-      ],
-      metadata: {
-        type: 'balance',
-        client_id: clientId,
-        coach_id: coachId,
-        session_request_ids: sessionRequestIds,
-        tenant_id: reqTenantId,
+        success_url: `${origin}/client/schedule?paid=1`,
+        cancel_url: `${origin}/client/schedule?cancelled=1`,
       },
-      success_url: `${origin}/client/schedule?paid=1`,
-      cancel_url: `${origin}/client/schedule?cancelled=1`,
-    },
-    { stripeAccount: coachAccountId }
-  )
+      { stripeAccount: coachAccountId }
+    )
 
-  return NextResponse.json({ url: session.url })
+    if (!session?.url) {
+      return NextResponse.json({ error: 'Could not create payment link. Please try again.' }, { status: 502 })
+    }
+
+    return NextResponse.json({ url: session.url })
+  } catch (err) {
+    logServerError('request-payment', err)
+    return NextResponse.json(
+      { error: 'Payment link could not be created. Please try again.' },
+      { status: 502 }
+    )
+  }
 }
