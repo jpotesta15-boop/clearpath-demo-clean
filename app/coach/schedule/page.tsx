@@ -1203,6 +1203,7 @@ export default function SchedulePage() {
         onClose={() => !savingEdit && setEditingSession(null)}
         preventClose={!!savingEdit}
       >
+        {editingSession ? (
         <Card className="border-0 shadow-none">
               <CardHeader className="flex flex-row items-center justify-between space-y-0">
                 <CardTitle className="text-base">Edit session</CardTitle>
@@ -1365,6 +1366,7 @@ export default function SchedulePage() {
                 </form>
               </CardContent>
             </Card>
+        ) : null}
       </Modal>
     </div>
   )
