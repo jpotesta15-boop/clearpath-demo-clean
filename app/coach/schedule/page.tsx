@@ -1097,7 +1097,7 @@ export default function SchedulePage() {
         <Card className="flex flex-col max-h-[90vh] border-0 shadow-none bg-transparent">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 shrink-0">
                 <CardTitle className="text-lg">
-                  {format(selectedDay, 'EEEE, MMMM d, yyyy')}
+                  {selectedDay ? format(selectedDay, 'EEEE, MMMM d, yyyy') : ''}
                 </CardTitle>
                 <Button
                   variant="outline"
