@@ -1,6 +1,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
+import { buttonClasses } from "@/components/ui/button"
 
 export interface EmptyStateProps {
   /** Optional icon or illustration (e.g. SVG). Defaults to a simple inlay icon. */
@@ -67,7 +68,7 @@ export function EmptyState({
           {action.href ? (
             <Link
               href={action.href}
-              className="inline-flex items-center justify-center rounded-md font-medium h-10 px-4 text-sm border border-transparent bg-[var(--cp-accent-primary)] text-[var(--cp-text-on-accent)] hover:bg-[var(--cp-accent-primary-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--cp-accent-primary-muted)] focus-visible:ring-offset-[var(--cp-bg-page)]"
+              className={buttonClasses()}
             >
               {action.label}
             </Link>
@@ -75,7 +76,7 @@ export function EmptyState({
             <button
               type="button"
               onClick={action.onClick}
-              className="inline-flex items-center justify-center rounded-md font-medium h-10 px-4 text-sm border border-transparent bg-[var(--cp-accent-primary)] text-[var(--cp-text-on-accent)] hover:bg-[var(--cp-accent-primary-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--cp-accent-primary-muted)] focus-visible:ring-offset-[var(--cp-bg-page)]"
+              className={buttonClasses()}
             >
               {action.label}
             </button>

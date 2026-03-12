@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Modal } from '@/components/ui/modal'
 import { Loading } from '@/components/ui/loading'
 import { Input } from '@/components/ui/input'
 import Link from 'next/link'
@@ -94,7 +95,7 @@ export default function ProgramsPage() {
   if (loading) return <Loading />
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-[var(--cp-text-primary)]">Programs</h1>
@@ -193,54 +194,50 @@ export default function ProgramsPage() {
         ))}
       </div>
 
-      {editingProgram && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--cp-bg-backdrop)] p-4"
-          onClick={() => !savingEdit && setEditingProgram(null)}
-        >
-          <Card
-            className="w-full max-w-md bg-[var(--cp-bg-elevated)] border-[var(--cp-border-subtle)]"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <CardHeader className="flex flex-row items-center justify-between space-y-0">
-              <CardTitle>Edit program</CardTitle>
-              <Button variant="ghost" size="sm" onClick={() => setEditingProgram(null)} disabled={savingEdit}>
-                Close
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleUpdateProgram} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-[var(--cp-text-primary)]">Name</label>
-                  <Input
-                    value={editingProgram.name}
-                    onChange={(e) => setEditingProgram((p) => p ? { ...p, name: e.target.value } : null)}
-                    required
-                    className="bg-[var(--cp-bg-surface)] border-[var(--cp-border-subtle)]"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-[var(--cp-text-primary)]">Description</label>
-                  <textarea
-                    value={editingProgram.description}
-                    onChange={(e) => setEditingProgram((p) => p ? { ...p, description: e.target.value } : null)}
-                    className="w-full rounded-md border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] px-3 py-2 text-[var(--cp-text-primary)]"
-                    rows={4}
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <Button type="submit" disabled={savingEdit}>
-                    {savingEdit ? 'Saving…' : 'Save'}
-                  </Button>
-                  <Button type="button" variant="outline" onClick={() => setEditingProgram(null)} disabled={savingEdit}>
-                    Cancel
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
+      <Modal
+        open={!!editingProgram}
+        onClose={() => !savingEdit && setEditingProgram(null)}
+        preventClose={!!savingEdit}
+      >
+        <div className="p-0">
+          <div className="flex flex-row items-center justify-between gap-2 px-6 pt-6 pb-2">
+            <h2 className="text-lg font-semibold text-[var(--cp-text-primary)]">Edit program</h2>
+            <Button variant="ghost" size="sm" onClick={() => setEditingProgram(null)} disabled={savingEdit}>
+              Close
+            </Button>
+          </div>
+          <div className="px-6 pb-6">
+            <form onSubmit={handleUpdateProgram} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-[var(--cp-text-primary)]">Name</label>
+                <Input
+                  value={editingProgram?.name ?? ''}
+                  onChange={(e) => setEditingProgram((p) => p ? { ...p, name: e.target.value } : null)}
+                  required
+                  className="bg-[var(--cp-bg-surface)] border-[var(--cp-border-subtle)]"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[var(--cp-text-primary)]">Description</label>
+                <textarea
+                  value={editingProgram?.description ?? ''}
+                  onChange={(e) => setEditingProgram((p) => p ? { ...p, description: e.target.value } : null)}
+                  className="w-full rounded-md border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] px-3 py-2 text-[var(--cp-text-primary)]"
+                  rows={4}
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button type="submit" disabled={savingEdit}>
+                  {savingEdit ? 'Saving…' : 'Save'}
+                </Button>
+                <Button type="button" variant="outline" onClick={() => setEditingProgram(null)} disabled={savingEdit}>
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </div>
         </div>
-      )}
+      </Modal>
     </div>
   )
 }

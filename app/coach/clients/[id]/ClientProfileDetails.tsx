@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
+import { SectionHeader } from '@/components/ui/SectionHeader'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { updateClientProfileAction } from './actions'
@@ -54,14 +55,10 @@ export function ClientProfileDetails({ clientId, height, weightKg, dateOfBirth }
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Profile details</CardTitle>
-        <p className="text-sm font-normal text-[var(--cp-text-muted)]">
-          Height, weight, and date of birth. Optional.
-        </p>
-      </CardHeader>
-      <CardContent className="space-y-3">
+    <Card variant="raised">
+      <CardContent className="p-5 sm:p-6">
+        <SectionHeader title="Profile details" subtitle="Height, weight, and date of birth. Optional." className="mb-4" />
+        <div className="space-y-3">
         {editing ? (
           <>
             <div>
@@ -127,6 +124,7 @@ export function ClientProfileDetails({ clientId, height, weightKg, dateOfBirth }
             </Button>
           </>
         )}
+        </div>
       </CardContent>
     </Card>
   )

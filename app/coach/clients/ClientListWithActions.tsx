@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Modal } from '@/components/ui/modal'
 import { bulkUpdateClientNamesAction, bulkDeleteClientsAction } from './actions'
 
 function getInitials(name: string | null | undefined): string {
@@ -199,67 +200,59 @@ export function ClientListWithActions({ clients }: { clients: Client[] }) {
         ))}
       </div>
 
-      {showSetNameModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--cp-bg-backdrop)] p-4"
-          onClick={() => !loading && setShowSetNameModal(false)}
-        >
-          <div
-            className="rounded-2xl border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-elevated)] p-6 w-full max-w-md"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="text-lg font-semibold text-[var(--cp-text-primary)] mb-2">Set display name</h3>
-            <p className="text-sm text-[var(--cp-text-muted)] mb-3">
-              This name will be applied to all {selectedIds.size} selected client(s).
-            </p>
-            <form onSubmit={handleSetName} className="space-y-3">
-              <Input
-                value={setNameValue}
-                onChange={(e) => setSetNameValue(e.target.value)}
-                placeholder="Display name"
-                className="bg-[var(--cp-bg-surface)] border-[var(--cp-border-subtle)] text-[var(--cp-text-primary)]"
-              />
-              <div className="flex gap-2 justify-end">
-                <Button type="button" variant="outline" onClick={() => setShowSetNameModal(false)} disabled={loading}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={loading}>
-                  {loading ? 'Saving…' : 'Save'}
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {showDeleteConfirm && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--cp-bg-backdrop)] p-4"
-          onClick={() => !loading && setShowDeleteConfirm(false)}
-        >
-          <div
-            className="rounded-2xl border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-elevated)] p-6 w-full max-w-md"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="text-lg font-semibold text-[var(--cp-text-primary)] mb-2">Delete {selectedIds.size} client(s)?</h3>
-            <p className="text-sm text-[var(--cp-text-muted)] mb-4">
-              This will permanently remove these clients and their assignments. This cannot be undone.
-            </p>
+      <Modal
+        open={showSetNameModal}
+        onClose={() => !loading && setShowSetNameModal(false)}
+        preventClose={!!loading}
+      >
+        <div className="p-6">
+          <h3 className="text-lg font-semibold text-[var(--cp-text-primary)] mb-2">Set display name</h3>
+          <p className="text-sm text-[var(--cp-text-muted)] mb-3">
+            This name will be applied to all {selectedIds.size} selected client(s).
+          </p>
+          <form onSubmit={handleSetName} className="space-y-3">
+            <Input
+              value={setNameValue}
+              onChange={(e) => setSetNameValue(e.target.value)}
+              placeholder="Display name"
+              className="bg-[var(--cp-bg-surface)] border-[var(--cp-border-subtle)] text-[var(--cp-text-primary)]"
+            />
             <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setShowDeleteConfirm(false)} disabled={loading}>
+              <Button type="button" variant="outline" onClick={() => setShowSetNameModal(false)} disabled={loading}>
                 Cancel
               </Button>
-              <Button
-                className="bg-[var(--cp-accent-danger)] text-white hover:opacity-90"
-                onClick={handleBulkDelete}
-                disabled={loading}
-              >
-                {loading ? 'Deleting…' : 'Yes, delete'}
+              <Button type="submit" disabled={loading}>
+                {loading ? 'Saving…' : 'Save'}
               </Button>
             </div>
+          </form>
+        </div>
+      </Modal>
+
+      <Modal
+        open={showDeleteConfirm}
+        onClose={() => !loading && setShowDeleteConfirm(false)}
+        preventClose={!!loading}
+      >
+        <div className="p-6">
+          <h3 className="text-lg font-semibold text-[var(--cp-text-primary)] mb-2">Delete {selectedIds.size} client(s)?</h3>
+          <p className="text-sm text-[var(--cp-text-muted)] mb-4">
+            This will permanently remove these clients and their assignments. This cannot be undone.
+          </p>
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" onClick={() => setShowDeleteConfirm(false)} disabled={loading}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-[var(--cp-accent-danger)] text-white hover:opacity-90"
+              onClick={handleBulkDelete}
+              disabled={loading}
+            >
+              {loading ? 'Deleting…' : 'Yes, delete'}
+            </Button>
           </div>
         </div>
-      )}
+      </Modal>
     </div>
   )
 }

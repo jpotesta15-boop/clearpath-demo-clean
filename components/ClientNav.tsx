@@ -32,12 +32,12 @@ export default function ClientNav() {
   }
 
   return (
-    <nav className="bg-white shadow-sm border-b">
+    <nav className="bg-[var(--cp-bg-surface)] shadow-sm border-b border-[var(--cp-border-subtle)]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex">
             <div className="flex-shrink-0 flex items-center">
-              <span className="text-xl font-bold text-primary-600">{clientName}</span>
+              <span className="text-xl font-bold text-[var(--cp-accent-primary)]">{clientName}</span>
             </div>
             <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
               {navItems.map((item) => (
@@ -46,8 +46,8 @@ export default function ClientNav() {
                   href={item.href}
                   className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
                     pathname === item.href
-                      ? 'border-primary-500 text-gray-900'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      ? 'border-[var(--cp-accent-primary)] text-[var(--cp-text-primary)]'
+                      : 'border-transparent text-[var(--cp-text-muted)] hover:text-[var(--cp-text-primary)] hover:border-[var(--cp-border-subtle)]'
                   }`}
                 >
                   {item.label}
@@ -58,7 +58,7 @@ export default function ClientNav() {
           <div className="flex items-center">
             <button
               onClick={handleLogout}
-              className="text-gray-500 hover:text-gray-700 px-3 py-2 text-sm font-medium"
+              className="text-[var(--cp-text-muted)] hover:text-[var(--cp-text-primary)] px-3 py-2 text-sm font-medium"
             >
               Logout
             </button>

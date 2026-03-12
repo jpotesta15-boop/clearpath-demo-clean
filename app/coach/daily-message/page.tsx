@@ -107,7 +107,7 @@ export default function CoachDailyMessagePage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-bold text-[var(--cp-text-primary)]">Client-facing message</h1>
         <p className="mt-1 text-sm text-[var(--cp-text-muted)]">

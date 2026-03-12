@@ -4,8 +4,13 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { SectionHeader } from '@/components/ui/SectionHeader'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
+import { StatusBadge } from '@/components/ui/StatusBadge'
+import { ListRow } from '@/components/ui/ListRow'
+import { Modal } from '@/components/ui/modal'
 import { Loading } from '@/components/ui/loading'
 import { Input } from '@/components/ui/input'
 import {
@@ -115,7 +120,9 @@ export default function SchedulePage() {
   const [sessionRequests, setSessionRequests] = useState<any[]>([])
   const [schedulingRequest, setSchedulingRequest] = useState<any>(null)
   const [schedulingSlotId, setSchedulingSlotId] = useState<string | null>(null)
+  const [schedulingForm, setSchedulingForm] = useState({ date: '', startTime: '', endTime: '', notes: '' })
   const [schedulingSubmitting, setSchedulingSubmitting] = useState(false)
+  const [schedulingError, setSchedulingError] = useState<string | null>(null)
   const [coachTimezone, setCoachTimezone] = useState<string | null>(null)
   const [clientTimeRequests, setClientTimeRequests] = useState<any[]>([])
   const [offerFromTimeRequest, setOfferFromTimeRequest] = useState<any>(null)
@@ -234,30 +241,65 @@ export default function SchedulePage() {
     }
   }
 
-  const handleScheduleRequestToSlot = async () => {
-    if (!schedulingRequest || !schedulingSlotId) return
-    const slot = slots.find((s) => s.id === schedulingSlotId)
-    if (!slot) return
+  const openSchedulingModal = (req: any) => {
+    const tomorrow = new Date()
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    setSchedulingRequest(req)
+    setSchedulingForm({
+      date: format(tomorrow, 'yyyy-MM-dd'),
+      startTime: '09:00',
+      endTime: '10:00',
+      notes: '',
+    })
+    setSchedulingError(null)
+  }
+
+  const handleConfirmScheduleWithDateTime = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!schedulingRequest || schedulingSubmitting) return
+    const { date, startTime, endTime, notes } = schedulingForm
+    if (!date || !startTime || !endTime) {
+      setSchedulingError('Please pick date and time.')
+      return
+    }
+    const startDateTime = new Date(`${date}T${startTime}`)
+    const endDateTime = new Date(`${date}T${endTime}`)
+    if (isNaN(startDateTime.getTime()) || isNaN(endDateTime.getTime()) || endDateTime <= startDateTime) {
+      setSchedulingError('Invalid time range.')
+      return
+    }
+    if (!isSameDay(startDateTime, endDateTime)) {
+      setSchedulingError('Start and end must be on the same day.')
+      return
+    }
+    setSchedulingError(null)
     setSchedulingSubmitting(true)
+    const scheduled_time = startDateTime.toISOString()
     const { data: newSession, error: sessionError } = await supabase.from('sessions').insert({
       coach_id: schedulingRequest.coach_id,
       client_id: schedulingRequest.client_id,
-      availability_slot_id: schedulingSlotId,
-      scheduled_time: slot.start_time,
+      availability_slot_id: null,
+      scheduled_time,
       status: 'confirmed',
       tenant_id: schedulingRequest.tenant_id,
       session_request_id: schedulingRequest.id,
       session_product_id: schedulingRequest.session_product_id ?? null,
       amount_cents: schedulingRequest.amount_cents ?? null,
+      notes: notes.trim() || null,
     }).select('id').single()
-    if (!sessionError && newSession?.id) {
+    if (sessionError) {
+      setSchedulingError(sessionError.message ?? 'Could not create session.')
+      setSchedulingSubmitting(false)
+      return
+    }
+    if (newSession?.id) {
       await supabase
         .from('session_requests')
         .update({ status: 'scheduled', updated_at: new Date().toISOString() })
         .eq('id', schedulingRequest.id)
-      notifySessionBooked(newSession.id, schedulingRequest.coach_id, schedulingRequest.client_id, slot.start_time)
+      notifySessionBooked(newSession.id, schedulingRequest.coach_id, schedulingRequest.client_id, scheduled_time)
       setSchedulingRequest(null)
-      setSchedulingSlotId(null)
+      setSchedulingForm({ date: '', startTime: '', endTime: '', notes: '' })
       loadData()
     }
     setSchedulingSubmitting(false)
@@ -535,201 +577,224 @@ export default function SchedulePage() {
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center flex-wrap gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-[var(--cp-text-primary)]">Schedule</h1>
-          <p className="mt-1 text-sm text-[var(--cp-text-muted)]">
-            Click a client to choose a session, date, and time — confirmed sessions appear on your calendar.
-          </p>
-          <p className="mt-0.5 text-xs text-[var(--cp-text-muted)]">
-            Times in {displayTz}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <a
-            href="/api/calendar/feed"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm font-medium text-[var(--cp-accent-primary)] hover:underline"
-          >
-            Export calendar
-          </a>
-        </div>
-      </div>
+    <div className="space-y-8">
+      <PageHeader
+        title="Schedule"
+        subtitle={`Book by client. Times in ${displayTz}.`}
+        primaryAction={
+          <Button variant="ghost" size="sm" asChild>
+            <a href="/api/calendar/feed" target="_blank" rel="noopener noreferrer">
+              Export calendar
+            </a>
+          </Button>
+        }
+      />
 
-      {clientTimeRequests.length > 0 && (
-        <Card className="border-[var(--cp-accent-primary)]/30">
-          <CardHeader>
-            <CardTitle>Client time requests</CardTitle>
-            <p className="text-sm font-normal text-[var(--cp-text-muted)]">
-              Clients said when they&apos;re free. Offer a session to send them a payment link.
-            </p>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {clientTimeRequests.map((req) => {
-              const client = req.clients as any
-              return (
-                <div
-                  key={req.id}
-                  className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--cp-border-subtle)] pb-3 last:border-0 last:pb-0"
-                >
-                  <div>
-                    <p className="font-medium">{client?.full_name ?? 'Client'}</p>
-                    <p className="text-sm text-[var(--cp-text-muted)]">{req.preferred_times}</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button size="sm" onClick={() => { setOfferFromTimeRequest(req); setOfferProductId(sessionProducts[0]?.id ?? '') }}>
-                      Offer session
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => handleDeclineTimeRequest(req.id)}>
-                      Decline
-                    </Button>
-                  </div>
-                </div>
-              )
-            })}
-          </CardContent>
-        </Card>
+      {(clientTimeRequests.length > 0 || sessionRequests.length > 0) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {clientTimeRequests.length > 0 && (
+            <Card variant="raised" className="border-[var(--cp-accent-primary)]/30">
+              <CardContent className="p-5 sm:p-6">
+                <SectionHeader
+                  title="Client time requests"
+                  subtitle="Clients shared availability. Offer a session to send a payment link."
+                  className="mb-4"
+                />
+                <ul className="divide-y divide-[var(--cp-border-subtle)]">
+                  {clientTimeRequests.map((req) => {
+                    const client = req.clients as any
+                    return (
+                      <li key={req.id}>
+                        <ListRow
+                          title={client?.full_name ?? 'Client'}
+                          subtitle={req.preferred_times}
+                          actions={
+                            <div className="flex gap-2">
+                              <Button size="sm" onClick={() => { setOfferFromTimeRequest(req); setOfferProductId(sessionProducts[0]?.id ?? '') }}>
+                                Offer session
+                              </Button>
+                              <Button size="sm" variant="outline" onClick={() => handleDeclineTimeRequest(req.id)}>
+                                Decline
+                              </Button>
+                            </div>
+                          }
+                          className="px-0"
+                        />
+                      </li>
+                    )
+                  })}
+                </ul>
+              </CardContent>
+            </Card>
+          )}
+          {sessionRequests.length > 0 && (
+            <Card variant="raised">
+              <CardContent className="p-5 sm:p-6">
+                <SectionHeader
+                  title="Ready to schedule"
+                  subtitle="Client paid and submitted availability. Pick a time to confirm."
+                  className="mb-4"
+                />
+                <ul className="divide-y divide-[var(--cp-border-subtle)]">
+                  {sessionRequests.map((req) => {
+                    const client = req.clients as any
+                    const product = req.session_products as any
+                    return (
+                      <li key={req.id}>
+                        <ListRow
+                          title={`${client?.full_name ?? 'Client'} – ${product?.name ?? 'Session'}`}
+                          subtitle={req.availability_preferences?.notes ?? undefined}
+                          actions={
+                            <Button size="sm" onClick={() => openSchedulingModal(req)}>
+                              Offer time & confirm
+                            </Button>
+                          }
+                          className="px-0"
+                        />
+                      </li>
+                    )
+                  })}
+                </ul>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       )}
 
-      {offerFromTimeRequest && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--cp-bg-backdrop)] p-4"
-          onClick={() => !offerSubmitting && setOfferFromTimeRequest(null)}
-        >
-          <div
-            className="bg-[var(--cp-bg-elevated)] text-[var(--cp-text-primary)] border border-[var(--cp-border-subtle)] rounded-lg shadow-[var(--cp-shadow-card)] max-w-md w-full p-6"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="text-lg font-semibold">Offer session</h3>
-            <p className="text-sm text-[var(--cp-text-muted)] mt-1">
-              Pick a session type to send a payment offer.
-            </p>
-            <form onSubmit={handleOfferFromTimeRequest} className="mt-4 space-y-4">
+      <Modal
+        open={!!offerFromTimeRequest}
+        onClose={() => !offerSubmitting && setOfferFromTimeRequest(null)}
+        preventClose={!!offerSubmitting}
+      >
+        <div className="p-6">
+          <h3 className="text-lg font-semibold text-[var(--cp-text-primary)]">Offer session</h3>
+          <p className="text-sm text-[var(--cp-text-muted)] mt-1">
+            Pick a session type to send a payment offer.
+          </p>
+          <form onSubmit={handleOfferFromTimeRequest} className="mt-4 space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-[var(--cp-text-primary)]">Session type</label>
+              <select
+                value={offerProductId}
+                onChange={(e) => setOfferProductId(e.target.value)}
+                required
+                className="mt-1 w-full h-10 rounded-md border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] px-3 py-2 text-sm text-[var(--cp-text-primary)]"
+              >
+                <option value="">Select…</option>
+                {sessionProducts.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} – ${((p.price_cents ?? 0) / 100).toFixed(2)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button type="button" variant="outline" onClick={() => setOfferFromTimeRequest(null)} disabled={offerSubmitting}>Cancel</Button>
+              <Button type="submit" disabled={!offerProductId || offerSubmitting}>
+                {offerSubmitting ? 'Sending...' : 'Send offer'}
+              </Button>
+            </div>
+          </form>
+        </div>
+      </Modal>
+
+      <Modal
+        open={!!schedulingRequest}
+        onClose={() => !schedulingSubmitting && (setSchedulingRequest(null), setSchedulingError(null))}
+        preventClose={!!schedulingSubmitting}
+        className="max-h-[90vh] overflow-y-auto"
+      >
+        <div className="p-6">
+          <h3 className="text-lg font-semibold text-[var(--cp-text-primary)]">Offer session & confirm time</h3>
+            {(() => {
+              const client = schedulingRequest?.clients as any
+              const product = schedulingRequest?.session_products as any
+              return (
+                <p className="text-sm text-[var(--cp-text-muted)] mt-1">
+                  {client?.full_name ?? 'Client'} – {product?.name ?? 'Session'}
+                  {schedulingRequest?.amount_cents != null && (
+                    <span> · ${((schedulingRequest.amount_cents / 100)).toFixed(2)}</span>
+                  )}
+                </p>
+              )
+            })()}
+            <form onSubmit={handleConfirmScheduleWithDateTime} className="mt-4 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-[var(--cp-text-primary)]">Session type</label>
-                <select
-                  value={offerProductId}
-                  onChange={(e) => setOfferProductId(e.target.value)}
+                <label className="block text-xs font-medium text-[var(--cp-text-muted)]">Date</label>
+                <Input
+                  type="date"
+                  value={schedulingForm.date}
+                  onChange={(e) => setSchedulingForm((f) => ({ ...f, date: e.target.value }))}
                   required
-                  className="mt-1 w-full h-10 rounded-md border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] px-3 py-2 text-sm text-[var(--cp-text-primary)]"
-                >
-                  <option value="">Select…</option>
-                  {sessionProducts.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} – ${((p.price_cents ?? 0) / 100).toFixed(2)}
-                    </option>
-                  ))}
-                </select>
+                  className="mt-1"
+                />
               </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-[var(--cp-text-muted)]">Start time</label>
+                  <select
+                    value={schedulingForm.startTime}
+                    onChange={(e) => setSchedulingForm((f) => ({ ...f, startTime: e.target.value }))}
+                    required
+                    className="mt-1 w-full h-10 rounded-md border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] px-3 py-2 text-sm text-[var(--cp-text-primary)]"
+                  >
+                    {TIME_OPTIONS.map((t) => (
+                      <option key={t} value={t}>{formatTimeOption(t)}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-[var(--cp-text-muted)]">End time</label>
+                  <select
+                    value={schedulingForm.endTime}
+                    onChange={(e) => setSchedulingForm((f) => ({ ...f, endTime: e.target.value }))}
+                    required
+                    className="mt-1 w-full h-10 rounded-md border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] px-3 py-2 text-sm text-[var(--cp-text-primary)]"
+                  >
+                    {TIME_OPTIONS.map((t) => (
+                      <option key={t} value={t}>{formatTimeOption(t)}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-[var(--cp-text-muted)]">Notes or plan (optional)</label>
+                <textarea
+                  value={schedulingForm.notes}
+                  onChange={(e) => setSchedulingForm((f) => ({ ...f, notes: e.target.value }))}
+                  rows={2}
+                  className="mt-1 w-full rounded-md border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] px-3 py-2 text-sm text-[var(--cp-text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cp-border-focus)]"
+                  placeholder="Warm-up, drills, focus areas..."
+                />
+              </div>
+              {schedulingError && (
+                <p className="text-sm text-[var(--cp-accent-danger)]">{schedulingError}</p>
+              )}
               <div className="flex gap-2 justify-end">
-                <Button type="button" variant="outline" onClick={() => setOfferFromTimeRequest(null)} disabled={offerSubmitting}>Cancel</Button>
-                <Button type="submit" disabled={!offerProductId || offerSubmitting}>
-                  {offerSubmitting ? 'Sending...' : 'Send offer'}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => { setSchedulingRequest(null); setSchedulingError(null) }}
+                  disabled={schedulingSubmitting}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={schedulingSubmitting}>
+                  {schedulingSubmitting ? 'Confirming…' : 'Confirm session'}
                 </Button>
               </div>
             </form>
-          </div>
         </div>
-      )}
-
-      {sessionRequests.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Ready to schedule</CardTitle>
-            <p className="text-sm font-normal text-[var(--cp-text-muted)]">
-              Client paid and submitted availability. Pick a time slot to confirm.
-            </p>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {sessionRequests.map((req) => {
-              const client = req.clients as any
-              const product = req.session_products as any
-              return (
-                <div
-                  key={req.id}
-                  className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--cp-border-subtle)] pb-3 last:border-0 last:pb-0"
-                >
-                  <div>
-                    <p className="font-medium">{client?.full_name ?? 'Client'} – {product?.name ?? 'Session'}</p>
-                    {req.availability_preferences?.notes && (
-                      <p className="text-xs text-[var(--cp-text-muted)] mt-0.5">
-                        {req.availability_preferences.notes}
-                      </p>
-                    )}
-                  </div>
-                  <Button
-                    size="sm"
-                    onClick={() => {
-                      const available = slots.filter((slot) => new Date(slot.start_time) > new Date() && !sessions.some((s) => s.availability_slot_id === slot.id))
-                      setSchedulingSlotId(available[0]?.id ?? null)
-                      setSchedulingRequest(req)
-                    }}
-                  >
-                    Schedule
-                  </Button>
-                </div>
-              )
-            })}
-          </CardContent>
-        </Card>
-      )}
-
-      {schedulingRequest && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--cp-bg-backdrop)] p-4"
-          onClick={() => !schedulingSubmitting && setSchedulingRequest(null)}
-        >
-          <div
-            className="bg-[var(--cp-bg-elevated)] text-[var(--cp-text-primary)] border border-[var(--cp-border-subtle)] rounded-lg shadow-[var(--cp-shadow-card)] max-w-md w-full max-h-[80vh] overflow-y-auto p-6"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="text-lg font-semibold">Pick a time slot</h3>
-            <p className="text-sm text-[var(--cp-text-muted)] mt-1">
-              Choose an available slot to add this session to your calendar.
-            </p>
-            <div className="mt-4">
-              {(() => {
-                const availableSlots = slots.filter((slot) => new Date(slot.start_time) > new Date() && !sessions.some((s) => s.availability_slot_id === slot.id))
-                return availableSlots.length === 0 ? (
-                  <p className="text-sm text-[var(--cp-text-muted)]">No available slots. Add availability above first.</p>
-                ) : (
-                  <select
-                    value={schedulingSlotId ?? availableSlots[0]?.id ?? ''}
-                    onChange={(e) => setSchedulingSlotId(e.target.value || null)}
-                    className="mt-2 w-full h-10 rounded-md border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] px-3 py-2 text-sm text-[var(--cp-text-primary)]"
-                  >
-                    {availableSlots.map((slot) => (
-                      <option key={slot.id} value={slot.id}>
-                        {formatInTz(slot.start_time, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })} – {formatInTz(slot.end_time, { hour: 'numeric', minute: '2-digit' })}
-                      </option>
-                    ))}
-                  </select>
-                )
-              })()}
-            </div>
-            <div className="mt-4 flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setSchedulingRequest(null)} disabled={schedulingSubmitting}>Cancel</Button>
-              <Button
-                onClick={handleScheduleRequestToSlot}
-                disabled={!schedulingSlotId || schedulingSubmitting}
-              >
-                {schedulingSubmitting ? 'Scheduling...' : 'Add to calendar'}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      </Modal>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle>Available fighters</CardTitle>
-            <p className="text-xs text-[var(--cp-text-muted)] font-normal mt-1">
-              Click a client to book a session
-            </p>
-          </CardHeader>
+        <Card variant="raised" className="lg:col-span-1">
+          <div className="p-5 sm:p-6 pb-0">
+            <SectionHeader
+              title="Available fighters"
+              subtitle="Click a client to book a session"
+            />
+          </div>
           <CardContent className="p-0">
             <div className="divide-y divide-[var(--cp-border-subtle)] max-h-[400px] overflow-y-auto">
               {clients.map((client) => (
@@ -751,7 +816,7 @@ export default function SchedulePage() {
                 <EmptyState
                   title="No clients yet"
                   description="Add a client to book sessions."
-                  action={{ label: "Add client", href: "/coach/clients/new" }}
+                  action={{ label: 'Add client', href: '/coach/clients/new' }}
                   className="py-6"
                 />
               )}
@@ -968,80 +1033,43 @@ export default function SchedulePage() {
             </CardContent>
           </Card>
 
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle>Sessions (this month)</CardTitle>
-            </CardHeader>
-            <CardContent>
+          <Card variant="raised" className="mt-8">
+            <CardContent className="p-5 sm:p-6">
+              <SectionHeader title="Sessions (this month)" className="mb-4" />
               <div className="space-y-2 max-h-48 overflow-y-auto">
                 {sessions
                   .filter((s) => isSameMonth(parseISO(s.scheduled_time), month))
                   .map((session) => (
                     <div
                       key={session.id}
-                      className="flex flex-wrap justify-between items-center gap-2 border-b pb-2 last:border-0"
+                      className="flex flex-wrap justify-between items-center gap-2 border-b border-[var(--cp-border-subtle)] pb-2 last:border-0"
                     >
                       <div>
-                        <p className="font-medium">{session.clients?.full_name}</p>
-                        <p className="text-sm text-gray-500">
+                        <p className="font-medium text-[var(--cp-text-primary)]">{session.clients?.full_name}</p>
+                        <p className="text-sm text-[var(--cp-text-muted)]">
                           {format(
                             parseISO(session.scheduled_time),
                             'MMM d, yyyy h:mm a'
                           )}
                         </p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-[var(--cp-text-muted)]">
                           {session.paid_at
                             ? `Paid ${format(new Date(session.paid_at), 'MMM d, yyyy')}`
                             : 'Unpaid'}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span
-                          className={`px-2 py-1 text-xs rounded ${
-                            session.status === 'confirmed'
-                              ? 'bg-[var(--cp-accent-success)]/20 text-[var(--cp-accent-success)]'
-                              : session.status === 'pending'
-                                ? 'bg-[var(--cp-accent-warning)]/20 text-[var(--cp-accent-warning)]'
-                                : 'bg-[var(--cp-accent-primary-soft)] text-[var(--cp-text-primary)]'
-                          }`}
-                        >
-                          {session.status}
-                        </span>
-                        {session.status === 'pending' && (
-                          <Button
-                            size="sm"
-                            onClick={() => handleApproveSession(session.id)}
-                          >
-                            Approve
-                          </Button>
-                        )}
-                        {!session.paid_at && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleMarkAsPaid(session.id)}
-                          >
-                            Mark as paid
-                          </Button>
-                        )}
+                        <StatusBadge
+                          status={session.status === 'confirmed' ? 'success' : session.status === 'pending' ? 'warning' : 'neutral'}
+                          label={session.status}
+                        />
                         <Button
                           size="sm"
-                          variant="ghost"
+                          variant="outline"
                           onClick={() => openEditSession(session)}
                         >
-                          Edit
+                          Manage
                         </Button>
-                        {session.status === 'confirmed' &&
-                          new Date(session.scheduled_time) > new Date() && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleSendReminder(session.id)}
-                              disabled={reminderSendingId === session.id}
-                            >
-                              {reminderSendingId === session.id ? 'Sending…' : 'Remind'}
-                            </Button>
-                          )}
                       </div>
                     </div>
                   ))}
@@ -1061,10 +1089,12 @@ export default function SchedulePage() {
         </div>
       </div>
 
-      {selectedDay && (
-        <div className="fixed inset-0 z-50 bg-[var(--cp-bg-backdrop)] p-4 flex items-center justify-center">
-          <div className="w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-            <Card className="flex flex-col max-h-[90vh]">
+      <Modal
+        open={!!selectedDay}
+        onClose={() => setSelectedDay(null)}
+        className="max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+      >
+        <Card className="flex flex-col max-h-[90vh] border-0 shadow-none bg-transparent">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 shrink-0">
                 <CardTitle className="text-lg">
                   {format(selectedDay, 'EEEE, MMMM d, yyyy')}
@@ -1165,14 +1195,14 @@ export default function SchedulePage() {
                 })()}
               </CardContent>
             </Card>
-          </div>
-        </div>
-      )}
+      </Modal>
 
-      {editingSession && (
-        <div className="fixed inset-0 z-50 bg-[var(--cp-bg-backdrop)] p-4 flex items-center justify-center">
-          <div className="w-full max-w-md">
-            <Card>
+      <Modal
+        open={!!editingSession}
+        onClose={() => !savingEdit && setEditingSession(null)}
+        preventClose={!!savingEdit}
+      >
+        <Card className="border-0 shadow-none">
               <CardHeader className="flex flex-row items-center justify-between space-y-0">
                 <CardTitle className="text-base">Edit session</CardTitle>
                 <Button
@@ -1188,6 +1218,33 @@ export default function SchedulePage() {
                 <p className="text-sm font-medium text-[var(--cp-text-primary)]">
                   {editingSession.clients?.full_name ?? 'Client'}
                 </p>
+                <div className="flex flex-wrap gap-2">
+                  {editingSession.status === 'pending' && (
+                    <Button
+                      size="sm"
+                      onClick={async () => {
+                        await handleApproveSession(editingSession.id)
+                        setEditingSession(null)
+                      }}
+                      disabled={savingEdit}
+                    >
+                      Approve
+                    </Button>
+                  )}
+                  {!editingSession.paid_at && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={async () => {
+                        await handleMarkAsPaid(editingSession.id)
+                        setEditingSession(null)
+                      }}
+                      disabled={savingEdit}
+                    >
+                      Mark as paid
+                    </Button>
+                  )}
+                </div>
                 <form onSubmit={handleSaveEdit} className="space-y-3">
                   <div>
                     <label className="block text-xs font-medium text-[var(--cp-text-muted)]">
@@ -1257,7 +1314,7 @@ export default function SchedulePage() {
                       <Button
                         type="button"
                         variant="outline"
-                        className="flex-1 border-green-300 text-green-700 hover:bg-green-50"
+                        className="flex-1 border-[var(--cp-accent-success)] text-[var(--cp-accent-success)] hover:bg-[var(--cp-accent-success)]/10"
                         onClick={handleMarkCompleted}
                         disabled={savingEdit}
                       >
@@ -1266,7 +1323,7 @@ export default function SchedulePage() {
                       <Button
                         type="button"
                         variant="outline"
-                        className="flex-1 border-amber-300 text-amber-700 hover:bg-amber-50"
+                        className="flex-1 border-[var(--cp-accent-warning)] text-[var(--cp-accent-warning)] hover:bg-[var(--cp-accent-warning)]/10"
                         onClick={handleMarkCanceled}
                         disabled={savingEdit}
                       >
@@ -1297,7 +1354,7 @@ export default function SchedulePage() {
                     <Button
                       type="button"
                       variant="outline"
-                      className="w-full border-red-300 text-red-700 hover:bg-red-50"
+                      className="w-full border-[var(--cp-accent-danger)] text-[var(--cp-accent-danger)] hover:bg-[var(--cp-accent-danger)]/10"
                       onClick={handleDeleteSession}
                       disabled={savingEdit}
                     >
@@ -1307,9 +1364,7 @@ export default function SchedulePage() {
                 </form>
               </CardContent>
             </Card>
-          </div>
-        </div>
-      )}
+      </Modal>
     </div>
   )
 }

@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
 import Link from 'next/link'
 
@@ -22,12 +23,9 @@ export default async function ClientProgramsPage() {
         <p className="text-[var(--cp-text-muted)]">
           There is no client record for this account. Contact your coach to be added and to receive a portal invite.
         </p>
-        <Link
-          href="/login"
-          className="inline-flex items-center justify-center rounded-md font-medium px-4 py-2 bg-[var(--cp-accent-primary)] text-[var(--cp-text-on-accent)] hover:bg-[var(--cp-accent-primary-strong)]"
-        >
-          Back to login
-        </Link>
+        <Button asChild>
+        <Link href="/login">Back to login</Link>
+      </Button>
       </div>
     )
   }
@@ -61,7 +59,7 @@ export default async function ClientProgramsPage() {
   )
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-bold text-[var(--cp-text-primary)]">My Programs</h1>
         <p className="mt-1 text-sm text-[var(--cp-text-muted)]">
@@ -69,7 +67,7 @@ export default async function ClientProgramsPage() {
         </p>
       </div>
 
-      <div className="space-y-6">
+      <div className="space-y-8">
         {assignments && assignments.length > 0 ? (
           assignments.map((assignment: any) => {
             const program = assignment.programs

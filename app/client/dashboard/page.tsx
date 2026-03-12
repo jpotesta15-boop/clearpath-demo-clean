@@ -1,6 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import Link from 'next/link'
+import { Card, CardContent } from '@/components/ui/card'
 import { EmptyState } from '@/components/ui/empty-state'
+import { Button } from '@/components/ui/button'
+import { PageHeader } from '@/components/layout/PageHeader'
+import { SectionHeader } from '@/components/ui/SectionHeader'
+import { StatusBadge } from '@/components/ui/StatusBadge'
 import { format } from 'date-fns'
 
 interface CoachClientExperience {
@@ -30,12 +35,12 @@ export default async function ClientDashboard() {
         <p className="text-[var(--cp-text-muted)]">
           You&apos;re signed in as <strong className="text-[var(--cp-text-primary)]">{user?.email ?? 'this account'}</strong>. Your coach needs to add you as a client with this exact email. Ask them to add you in Clients, then use <strong>Create login</strong> so you can sign in here.
         </p>
-        <a
-          href="/login"
-          className="inline-flex items-center justify-center rounded-md font-medium px-4 py-2 bg-[var(--cp-accent-primary)] text-[var(--cp-text-on-accent)] hover:bg-[var(--cp-accent-primary-strong)]"
-        >
-          Back to login
-        </a>
+        <p className="text-sm text-[var(--cp-text-muted)]">
+          What happens next? Once they add you and create a login, you can sign in here and use your portal.
+        </p>
+        <Button asChild>
+          <Link href="/login">Back to login</Link>
+        </Button>
       </div>
     )
   }
@@ -91,15 +96,15 @@ export default async function ClientDashboard() {
     dailyMessage
 
   return (
-    <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-3xl font-bold text-[var(--cp-text-primary)]">Home</h1>
-        <p className="mt-1 text-sm text-[var(--cp-text-muted)]">Welcome back, {client.full_name}</p>
-      </div>
+    <div className="space-y-8">
+      <PageHeader
+        title="Home"
+        subtitle={`Welcome back, ${client.full_name}`}
+      />
 
       {clientExperience && clientExperience.show_welcome_block !== false && (
-        <Card className="shadow-[var(--cp-shadow-soft)] border-[var(--cp-border-subtle)] bg-[var(--cp-bg-elevated)]">
-          <CardContent className="pt-6 space-y-4">
+        <Card variant="raised">
+          <CardContent className="p-5 sm:p-6 space-y-4">
             {(clientExperience.welcome_title || clientExperience.welcome_body) && (
               <div className="space-y-1">
                 {clientExperience.welcome_title && (
@@ -149,50 +154,46 @@ export default async function ClientDashboard() {
       )}
 
       {balanceOwedCents > 0 && (
-        <Card className="border-[var(--cp-accent-primary)]/30 bg-[var(--cp-accent-primary)]/5">
-          <CardContent className="pt-6">
+        <Card variant="raised" className="border-[var(--cp-accent-primary)]/30 bg-[var(--cp-accent-primary)]/5">
+          <CardContent className="p-5 sm:p-6">
             <p className="font-medium text-[var(--cp-text-primary)]">You owe ${(balanceOwedCents / 100).toFixed(2)}</p>
             <p className="text-sm text-[var(--cp-text-muted)] mt-1">Pay for your session offers on the Schedule page.</p>
-            <a
-              href="/client/schedule"
-              className="mt-3 inline-flex items-center rounded-md font-medium px-4 py-2 bg-[var(--cp-accent-primary)] text-[var(--cp-text-on-accent)] hover:bg-[var(--cp-accent-primary-strong)] text-sm"
-            >
-              Pay now
-            </a>
+            <div className="mt-3">
+              <Button size="sm" asChild>
+                <a href="/client/schedule">
+                  Pay now
+                </a>
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}
 
       {!hasContent && (
-        <Card className="shadow-[var(--cp-shadow-soft)] border-[var(--cp-border-subtle)] bg-[var(--cp-bg-elevated)]">
-          <CardContent className="pt-6">
+        <Card variant="raised">
+          <CardContent className="p-5 sm:p-6">
             <p className="text-[var(--cp-text-muted)]">
-              Nothing scheduled yet. Your coach may send you an offer — check Schedule or Messages to get started.
+              To get started, tell your coach when you&apos;re free.
             </p>
-            <div className="mt-3 flex flex-wrap gap-3">
-              <a
-                href="/client/schedule"
-                className="inline-flex items-center rounded-md font-medium px-4 py-2 bg-[var(--cp-accent-primary)] text-[var(--cp-text-on-accent)] hover:bg-[var(--cp-accent-primary-strong)] text-sm"
-              >
-                View schedule
-              </a>
-              <a
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <Button size="sm" asChild>
+                <Link href="/client/schedule">Go to Schedule</Link>
+              </Button>
+              <Link
                 href="/client/messages"
-                className="inline-flex items-center rounded-md font-medium px-4 py-2 border border-[var(--cp-border-subtle)] text-[var(--cp-text-primary)] hover:bg-[var(--cp-bg-subtle)] text-sm"
+                className="text-sm text-[var(--cp-text-muted)] hover:text-[var(--cp-text-primary)]"
               >
                 Messages
-              </a>
+              </Link>
             </div>
           </CardContent>
         </Card>
       )}
 
       {dailyMessage && (
-        <Card className="shadow-[var(--cp-shadow-soft)] border-[var(--cp-border-subtle)] bg-[var(--cp-bg-elevated)]">
-          <CardHeader>
-            <CardTitle>Message from your coach</CardTitle>
-          </CardHeader>
-          <CardContent>
+        <Card variant="raised">
+          <CardContent className="p-5 sm:p-6">
+            <SectionHeader title="Message from your coach" className="mb-4" />
             <p className="text-sm text-[var(--cp-text-primary)] whitespace-pre-wrap break-words">
               {dailyMessage.content}
             </p>
@@ -206,11 +207,9 @@ export default async function ClientDashboard() {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="shadow-[var(--cp-shadow-soft)] border-[var(--cp-border-subtle)]">
-          <CardHeader>
-            <CardTitle>Upcoming Sessions</CardTitle>
-          </CardHeader>
-          <CardContent>
+        <Card variant="raised">
+          <CardContent className="p-5 sm:p-6">
+            <SectionHeader title="Upcoming Sessions" className="mb-3" />
             {upcomingSessions && upcomingSessions.length > 0 ? (
               <div className="space-y-4 animate-[fadeInUp_0.35s_ease-out]">
                 {upcomingSessions.map((session) => (
@@ -218,25 +217,35 @@ export default async function ClientDashboard() {
                     <p className="font-medium text-[var(--cp-text-primary)]">
                       {format(new Date(session.scheduled_time), 'MMM d, yyyy h:mm a')}
                     </p>
-                    <p className="text-sm text-[var(--cp-text-muted)]">Status: {session.status}</p>
+                    <StatusBadge
+                      status={
+                        session.status === 'confirmed'
+                          ? 'success'
+                          : session.status === 'pending'
+                            ? 'warning'
+                            : session.status === 'canceled' || session.status === 'cancelled'
+                              ? 'danger'
+                              : 'neutral'
+                      }
+                      label={session.status}
+                      className="mt-1"
+                    />
                   </div>
                 ))}
               </div>
             ) : (
               <EmptyState
                 title="No upcoming sessions"
-                description="Nothing scheduled yet. Your coach may send you an offer."
-                action={{ label: "View schedule", href: "/client/schedule" }}
+                description="Go to Schedule to request a time or respond to offers."
+                action={{ label: "Go to Schedule", href: "/client/schedule" }}
               />
             )}
           </CardContent>
         </Card>
 
-        <Card className="shadow-[var(--cp-shadow-soft)] border-[var(--cp-border-subtle)]">
-          <CardHeader>
-            <CardTitle>My Programs</CardTitle>
-          </CardHeader>
-          <CardContent>
+        <Card variant="raised">
+          <CardContent className="p-5 sm:p-6">
+            <SectionHeader title="My Programs" className="mb-4" />
             {programs && programs.length > 0 ? (
               <div className="space-y-2 animate-[fadeInUp_0.35s_ease-out]">
                 {programs.map((assignment: any) => (
@@ -251,7 +260,7 @@ export default async function ClientDashboard() {
             ) : (
               <EmptyState
                 title="No programs assigned"
-                description="Your coach will assign programs here."
+                description="Your coach will assign programs here. Check back later."
                 action={{ label: "View programs", href: "/client/programs" }}
               />
             )}

@@ -3,10 +3,14 @@
 import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
+import { SectionHeader } from '@/components/ui/SectionHeader'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
+import { StatusBadge } from '@/components/ui/StatusBadge'
 import { Loading } from '@/components/ui/loading'
+import { PageHeader } from '@/components/layout/PageHeader'
+import Link from 'next/link'
 import { getClientId } from '@/lib/config'
 
 function ClientScheduleContent() {
@@ -25,6 +29,8 @@ function ClientScheduleContent() {
   const [submittingTimeRequest, setSubmittingTimeRequest] = useState(false)
   const [timeRequests, setTimeRequests] = useState<any[]>([])
   const [cancellingSessionId, setCancellingSessionId] = useState<string | null>(null)
+  const [availabilityJustSubmittedRequestId, setAvailabilityJustSubmittedRequestId] = useState<string | null>(null)
+  const [timeRequestJustSent, setTimeRequestJustSent] = useState(false)
   const searchParams = useSearchParams()
   const supabase = createClient()
   const tenantId = getClientId()
@@ -151,6 +157,8 @@ function ClientScheduleContent() {
       setAvailabilityText('')
       setSubmittingRequestId(null)
       loadData()
+      setAvailabilityJustSubmittedRequestId(requestId)
+      setTimeout(() => setAvailabilityJustSubmittedRequestId(null), 8000)
     }
     setSubmittingAvailability(false)
   }
@@ -169,6 +177,8 @@ function ClientScheduleContent() {
     if (!error) {
       setTimeRequestText('')
       loadData()
+      setTimeRequestJustSent(true)
+      setTimeout(() => setTimeRequestJustSent(false), 6000)
     }
     setSubmittingTimeRequest(false)
   }
@@ -272,12 +282,9 @@ function ClientScheduleContent() {
         <p className="text-[var(--cp-text-muted)]">
           There is no client record for this account. Contact your coach to be added and to receive a portal invite.
         </p>
-        <a
-          href="/login"
-          className="inline-flex items-center justify-center rounded-md font-medium px-4 py-2 bg-[var(--cp-accent-primary)] text-[var(--cp-text-on-accent)] hover:bg-[var(--cp-accent-primary-strong)]"
-        >
-          Back to login
-        </a>
+        <Button asChild>
+          <Link href="/login">Back to login</Link>
+        </Button>
       </div>
     )
   }
@@ -285,12 +292,12 @@ function ClientScheduleContent() {
   const openAvailabilityFor = submittingRequestId
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-[var(--cp-text-primary)]">Schedule</h1>
-        <p className="mt-1 text-sm text-[var(--cp-text-muted)]">
-          Request sessions and respond to offers from your coach.
-        </p>
+    <div className="space-y-8">
+      <PageHeader
+        title="Schedule"
+        subtitle="Request sessions and respond to offers from your coach."
+      />
+      <div className="space-y-1">
         <p className="mt-0.5 text-xs text-[var(--cp-text-muted)]">
           Times in {displayTz}
         </p>
@@ -301,14 +308,13 @@ function ClientScheduleContent() {
         )}
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Request a session</CardTitle>
-          <p className="text-sm font-normal text-[var(--cp-text-muted)]">
-            Tell your coach when you&apos;re free. They&apos;ll send you an offer to book.
-          </p>
-        </CardHeader>
-        <CardContent>
+      <Card variant="raised">
+        <CardContent className="p-5 sm:p-6">
+          <SectionHeader
+            title="Request a session"
+            subtitle="Tell your coach when you're free. They'll send you an offer to book."
+            className="mb-3"
+          />
           <form onSubmit={handleSubmitTimeRequest} className="space-y-2">
             <textarea
               value={timeRequestText}
@@ -321,23 +327,27 @@ function ClientScheduleContent() {
               {submittingTimeRequest ? 'Sending...' : 'Send request'}
             </Button>
           </form>
-          {timeRequests.filter((r) => r.status === 'pending').length > 0 && (
+          {timeRequestJustSent && (
+            <p className="mt-3 text-sm text-[var(--cp-accent-success)]" role="status">
+              Request sent. Your coach will send you an offer — check back here or in Messages.
+            </p>
+          )}
+          {timeRequests.filter((r) => r.status === 'pending').length > 0 && !timeRequestJustSent && (
             <p className="mt-3 text-xs text-[var(--cp-text-muted)]">
-              Pending: {timeRequests.filter((r) => r.status === 'pending').length} request(s) waiting for coach
+              Pending: {timeRequests.filter((r) => r.status === 'pending').length} request(s). Your coach will send you an offer — check back here or in Messages.
             </p>
           )}
         </CardContent>
       </Card>
 
       {sessionRequests.filter((r) => ['offered', 'accepted', 'payment_pending', 'paid', 'availability_submitted'].includes(r.status)).length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Session offers</CardTitle>
-            <p className="text-sm font-normal text-[var(--cp-text-muted)]">
-              Accept and pay for offers from your coach, then submit your availability.
-            </p>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        <Card variant="raised">
+          <CardContent className="p-5 sm:p-6">
+            <SectionHeader
+              title="Session offers"
+              subtitle="Accept and pay for offers from your coach, then submit your availability."
+              className="mb-4"
+            />
             {sessionRequests
               .filter((r) => ['offered', 'accepted', 'payment_pending', 'paid', 'availability_submitted'].includes(r.status))
               .map((req) => {
@@ -359,13 +369,13 @@ function ClientScheduleContent() {
                         <p className="text-xs text-[var(--cp-text-muted)]">
                           {isOffered || isPaymentPending
                             ? isPaymentPending
-                              ? 'Resume card payment to confirm this session.'
-                              : 'Accept to pay with card.'
+                              ? 'Resume payment to confirm this session.'
+                              : 'Accept & pay to secure this session.'
                             : isPaid
-                              ? 'Paid – submit when you are available.'
+                              ? "You're paid. Submit when you're available so your coach can pick a time."
                               : isAvailabilitySubmitted
-                                ? 'Waiting for coach to confirm time.'
-                                : 'Waiting for coach to confirm time.'}
+                                ? "You're all set. Your coach will confirm the time and it will appear in My Sessions."
+                                : "You're all set. Your coach will confirm the time and it will appear in My Sessions."}
                         </p>
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
@@ -436,11 +446,13 @@ function ClientScheduleContent() {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Optional time slots</CardTitle>
-          </CardHeader>
-          <CardContent>
+        <Card variant="raised">
+          <CardContent className="p-5 sm:p-6">
+            <SectionHeader
+              title="Available slots to book"
+              subtitle="Times your coach has opened; book or request here."
+              className="mb-4"
+            />
             <div className="space-y-4">
               {slots.length > 0 ? (
                 slots.map((slot) => {
@@ -498,11 +510,9 @@ function ClientScheduleContent() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>My Sessions</CardTitle>
-          </CardHeader>
-          <CardContent>
+        <Card variant="raised">
+          <CardContent className="p-5 sm:p-6">
+            <SectionHeader title="My Sessions" className="mb-4" />
             <div className="space-y-4">
               {sessions.length > 0 ? (
                 sessions.map((session) => {
@@ -521,17 +531,18 @@ function ClientScheduleContent() {
                         })}
                       </p>
                       <div className="mt-2 flex flex-wrap items-center gap-2">
-                        <span
-                          className={`inline-block px-2 py-1 text-xs rounded ${
+                        <StatusBadge
+                          status={
                             session.status === 'confirmed'
-                              ? 'bg-[var(--cp-accent-success)]/20 text-[var(--cp-accent-success)]'
+                              ? 'success'
                               : session.status === 'pending'
-                                ? 'bg-[var(--cp-accent-warning)]/20 text-[var(--cp-accent-warning)]'
-                                : 'bg-[var(--cp-accent-primary-soft)] text-[var(--cp-text-primary)]'
-                          }`}
-                        >
-                          {session.status}
-                        </span>
+                                ? 'warning'
+                                : session.status === 'canceled' || session.status === 'cancelled'
+                                  ? 'danger'
+                                  : 'neutral'
+                          }
+                          label={session.status}
+                        />
                         {isUpcoming && (
                           <Button
                             size="sm"

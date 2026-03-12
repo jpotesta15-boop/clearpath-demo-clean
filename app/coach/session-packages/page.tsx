@@ -2,11 +2,14 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
+import { SectionHeader } from '@/components/ui/SectionHeader'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Loading } from '@/components/ui/loading'
 import { Input } from '@/components/ui/input'
+import { Modal } from '@/components/ui/modal'
 import { getClientId } from '@/lib/config'
 import { GENERIC_FAILED } from '@/lib/safe-messages'
 
@@ -172,83 +175,86 @@ export default function SessionPackagesPage() {
   if (loading) return <Loading />
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {error && (
         <div className="rounded-md bg-[var(--cp-accent-danger)]/10 border border-[var(--cp-accent-danger)] px-4 py-2 text-sm text-[var(--cp-accent-danger)]">
           {error}
         </div>
       )}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-[var(--cp-text-primary)]">Session Packages</h1>
-          <p className="mt-1 text-sm text-[var(--cp-text-muted)]">Create sellable sessions (e.g. single $30/45min, group $70). Send offers to clients from here.</p>
-        </div>
-        <Button onClick={() => setShowForm(!showForm)}>
-          {showForm ? 'Cancel' : 'Create Package'}
-        </Button>
-      </div>
+      <PageHeader
+        title="Session Packages"
+        subtitle="Create sellable sessions (e.g. single $30/45min, group $70). Send offers to clients from here."
+        primaryAction={
+          <Button onClick={() => setShowForm(!showForm)}>
+            {showForm ? 'Cancel' : 'Create Package'}
+          </Button>
+        }
+      />
 
       {showForm && (
-        <Card>
-          <CardHeader>
-            <CardTitle>New Session Package</CardTitle>
-          </CardHeader>
-          <CardContent>
+        <Card variant="raised">
+          <CardContent className="p-5 sm:p-6">
+            <SectionHeader title="New Session Package" className="mb-4" />
             <form onSubmit={handleCreate} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Name</label>
+                <label className="block text-sm font-medium text-[var(--cp-text-primary)] mb-1">Name</label>
                 <Input
                   value={form.name}
                   onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                   placeholder="e.g. Single 45min Session"
+                  className="bg-[var(--cp-bg-surface)] border-[var(--cp-border-subtle)] text-[var(--cp-text-primary)]"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Description</label>
+                <label className="block text-sm font-medium text-[var(--cp-text-primary)] mb-1">Description</label>
                 <textarea
                   value={form.description}
                   onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2"
+                  className="w-full rounded-md border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] px-3 py-2 text-sm text-[var(--cp-text-primary)] placeholder:text-[var(--cp-text-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cp-border-focus)]"
                   rows={2}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Goal</label>
+                <label className="block text-sm font-medium text-[var(--cp-text-primary)] mb-1">Goal</label>
                 <Input
                   value={form.goal}
                   onChange={(e) => setForm((f) => ({ ...f, goal: e.target.value }))}
                   placeholder="e.g. Technique focus"
+                  className="bg-[var(--cp-bg-surface)] border-[var(--cp-border-subtle)] text-[var(--cp-text-primary)]"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Duration (minutes)</label>
+                  <label className="block text-sm font-medium text-[var(--cp-text-primary)] mb-1">Duration (minutes)</label>
                   <Input
                     type="number"
                     min={1}
                     value={form.duration_minutes}
                     onChange={(e) => setForm((f) => ({ ...f, duration_minutes: parseInt(e.target.value, 10) || 45 }))}
+                    className="bg-[var(--cp-bg-surface)] border-[var(--cp-border-subtle)] text-[var(--cp-text-primary)]"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Price ($)</label>
+                  <label className="block text-sm font-medium text-[var(--cp-text-primary)] mb-1">Price ($)</label>
                   <Input
                     type="number"
                     min={0}
                     step={0.01}
                     value={form.price_cents / 100}
                     onChange={(e) => setForm((f) => ({ ...f, price_cents: Math.round((parseFloat(e.target.value) || 0) * 100) }))}
+                    className="bg-[var(--cp-bg-surface)] border-[var(--cp-border-subtle)] text-[var(--cp-text-primary)]"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Max participants</label>
+                <label className="block text-sm font-medium text-[var(--cp-text-primary)] mb-1">Max participants</label>
                 <Input
                   type="number"
                   min={1}
                   value={form.max_participants}
                   onChange={(e) => setForm((f) => ({ ...f, max_participants: parseInt(e.target.value, 10) || 1 }))}
+                  className="bg-[var(--cp-bg-surface)] border-[var(--cp-border-subtle)] text-[var(--cp-text-primary)]"
                 />
               </div>
               <Button type="submit">Create Package</Button>
@@ -258,64 +264,67 @@ export default function SessionPackagesPage() {
       )}
 
       {editingId && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Edit Package</CardTitle>
-          </CardHeader>
-          <CardContent>
+        <Card variant="raised">
+          <CardContent className="p-5 sm:p-6">
+            <SectionHeader title="Edit Package" className="mb-4" />
             <form onSubmit={handleUpdate} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Name</label>
+                <label className="block text-sm font-medium text-[var(--cp-text-primary)] mb-1">Name</label>
                 <Input
                   value={form.name}
                   onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                  className="bg-[var(--cp-bg-surface)] border-[var(--cp-border-subtle)] text-[var(--cp-text-primary)]"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Description</label>
+                <label className="block text-sm font-medium text-[var(--cp-text-primary)] mb-1">Description</label>
                 <textarea
                   value={form.description}
                   onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2"
+                  className="w-full rounded-md border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] px-3 py-2 text-sm text-[var(--cp-text-primary)] placeholder:text-[var(--cp-text-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cp-border-focus)]"
                   rows={2}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Goal</label>
+                <label className="block text-sm font-medium text-[var(--cp-text-primary)] mb-1">Goal</label>
                 <Input
                   value={form.goal}
                   onChange={(e) => setForm((f) => ({ ...f, goal: e.target.value }))}
+                  className="bg-[var(--cp-bg-surface)] border-[var(--cp-border-subtle)] text-[var(--cp-text-primary)]"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Duration (minutes)</label>
+                  <label className="block text-sm font-medium text-[var(--cp-text-primary)] mb-1">Duration (minutes)</label>
                   <Input
                     type="number"
                     min={1}
                     value={form.duration_minutes}
                     onChange={(e) => setForm((f) => ({ ...f, duration_minutes: parseInt(e.target.value, 10) || 45 }))}
+                    className="bg-[var(--cp-bg-surface)] border-[var(--cp-border-subtle)] text-[var(--cp-text-primary)]"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Price ($)</label>
+                  <label className="block text-sm font-medium text-[var(--cp-text-primary)] mb-1">Price ($)</label>
                   <Input
                     type="number"
                     min={0}
                     step={0.01}
                     value={form.price_cents / 100}
                     onChange={(e) => setForm((f) => ({ ...f, price_cents: Math.round((parseFloat(e.target.value) || 0) * 100) }))}
+                    className="bg-[var(--cp-bg-surface)] border-[var(--cp-border-subtle)] text-[var(--cp-text-primary)]"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Max participants</label>
+                <label className="block text-sm font-medium text-[var(--cp-text-primary)] mb-1">Max participants</label>
                 <Input
                   type="number"
                   min={1}
                   value={form.max_participants}
                   onChange={(e) => setForm((f) => ({ ...f, max_participants: parseInt(e.target.value, 10) || 1 }))}
+                  className="bg-[var(--cp-bg-surface)] border-[var(--cp-border-subtle)] text-[var(--cp-text-primary)]"
                 />
               </div>
               <div className="flex gap-2">
@@ -329,8 +338,9 @@ export default function SessionPackagesPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {products.filter((p) => p.is_active !== false).map((product) => (
-          <Card key={product.id}>
-            <CardHeader className="flex flex-row items-start gap-3">
+          <Card key={product.id} variant="raised">
+            <CardContent className="p-5 sm:p-6">
+            <div className="flex flex-row items-start gap-3">
               <span className="flex-shrink-0 rounded-lg bg-[var(--cp-accent-primary-soft)] p-2 text-[var(--cp-accent-primary)]" aria-hidden>
                 {product.max_participants > 1 ? (
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -343,14 +353,14 @@ export default function SessionPackagesPage() {
                 )}
               </span>
               <div className="min-w-0 flex-1">
-                <CardTitle>{product.name}</CardTitle>
+                <h3 className="text-base font-semibold text-[var(--cp-text-primary)]">{product.name}</h3>
                 <p className="text-lg font-semibold text-[var(--cp-accent-primary)] mt-1">
                   ${(product.price_cents / 100).toFixed(2)} · {product.duration_minutes} min
                   {product.max_participants > 1 ? ` · Up to ${product.max_participants} people` : ''}
                 </p>
               </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
+            </div>
+            <div className="space-y-3 mt-3">
               <p className="text-sm text-[var(--cp-text-muted)]">
                 {product.description || 'Add a description in Edit to help clients understand this package.'}
               </p>
@@ -370,10 +380,11 @@ export default function SessionPackagesPage() {
                 >
                   Send to client
                 </Button>
-                <Button size="sm" variant="ghost" className="text-gray-500" onClick={() => setInactive(product.id)}>
+                <Button size="sm" variant="ghost" className="text-[var(--cp-text-muted)]" onClick={() => setInactive(product.id)}>
                   Archive
                 </Button>
               </div>
+            </div>
             </CardContent>
           </Card>
         ))}
@@ -387,35 +398,37 @@ export default function SessionPackagesPage() {
         />
       )}
 
-      {sendToClientProduct && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--cp-bg-backdrop)] p-4" onClick={() => !sending && setSendToClientProduct(null)}>
-          <div className="bg-[var(--cp-bg-elevated)] border border-[var(--cp-border-subtle)] rounded-lg shadow-[var(--cp-shadow-card)] max-w-md w-full p-6 text-[var(--cp-text-primary)]" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-lg font-semibold">Send offer to client</h3>
-            <p className="text-sm text-[var(--cp-text-muted)] mt-1">
-              {sendToClientProduct.name} – ${(sendToClientProduct.price_cents / 100).toFixed(2)}
-            </p>
-            <div className="mt-4">
-              <label className="block text-sm font-medium text-[var(--cp-text-primary)]">Select client</label>
-              <select
-                value={sendToClientId}
-                onChange={(e) => setSendToClientId(e.target.value)}
-                className="mt-1 w-full rounded-md border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] px-3 py-2 text-[var(--cp-text-primary)]"
-              >
-                <option value="">Choose...</option>
-                {clients.map((c) => (
-                  <option key={c.id} value={c.id}>{c.full_name}</option>
-                ))}
-              </select>
-            </div>
-            <div className="mt-4 flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setSendToClientProduct(null)} disabled={sending}>Cancel</Button>
-              <Button onClick={handleSendToClient} disabled={!sendToClientId || sending}>
-                {sending ? 'Sending...' : 'Send offer'}
-              </Button>
-            </div>
+      <Modal
+        open={!!sendToClientProduct}
+        onClose={() => !sending && setSendToClientProduct(null)}
+        preventClose={!!sending}
+      >
+        <div className="p-6 text-[var(--cp-text-primary)]">
+          <h3 className="text-lg font-semibold">Send offer to client</h3>
+          <p className="text-sm text-[var(--cp-text-muted)] mt-1">
+            {sendToClientProduct?.name} – ${((sendToClientProduct?.price_cents ?? 0) / 100).toFixed(2)}
+          </p>
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-[var(--cp-text-primary)]">Select client</label>
+            <select
+              value={sendToClientId}
+              onChange={(e) => setSendToClientId(e.target.value)}
+              className="mt-1 w-full rounded-md border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] px-3 py-2 text-[var(--cp-text-primary)]"
+            >
+              <option value="">Choose...</option>
+              {clients.map((c) => (
+                <option key={c.id} value={c.id}>{c.full_name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="mt-4 flex gap-2 justify-end">
+            <Button variant="outline" onClick={() => setSendToClientProduct(null)} disabled={sending}>Cancel</Button>
+            <Button onClick={handleSendToClient} disabled={!sendToClientId || sending}>
+              {sending ? 'Sending...' : 'Send offer'}
+            </Button>
           </div>
         </div>
-      )}
+      </Modal>
     </div>
   )
 }

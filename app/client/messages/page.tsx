@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -208,12 +209,9 @@ export default function ClientMessagesPage() {
         <p className="text-[var(--cp-text-muted)]">
           There is no client record for this account. Contact your coach to be added and to receive a portal invite.
         </p>
-        <a
-          href="/login"
-          className="inline-flex items-center justify-center rounded-md font-medium px-4 py-2 bg-[var(--cp-accent-primary)] text-[var(--cp-text-on-accent)] hover:bg-[var(--cp-accent-primary-strong)]"
-        >
-          Back to login
-        </a>
+        <Button asChild>
+        <Link href="/login">Back to login</Link>
+      </Button>
       </div>
     )
   }
@@ -241,7 +239,7 @@ export default function ClientMessagesPage() {
   })
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-bold text-[var(--cp-text-primary)]">Messages</h1>
         <p className="mt-1 text-sm text-[var(--cp-text-muted)]">Chat with your coach</p>
@@ -273,14 +271,14 @@ export default function ClientMessagesPage() {
                       <p className="text-sm font-semibold">{name} – ${amount}</p>
                       <p className="text-xs text-[var(--cp-text-muted)] mt-0.5">
                         {isScheduled
-                          ? 'Session scheduled — pay now if you haven’t yet.'
+                          ? 'Session scheduled. Pay now on Schedule if you haven’t yet.'
                           : isAvailabilitySubmitted
-                            ? 'Waiting for coach to confirm a time.'
+                            ? "You're all set. Your coach will confirm the time and it will appear in Schedule."
                             : isPaid
-                              ? 'Share when you’re available.'
+                              ? 'Submit when you’re available on Schedule so your coach can pick a time.'
                               : isPaymentPending
-                                ? 'Client can resume payment from their Schedule page.'
-                                : 'Accept & pay, or share availability first.'}
+                                ? 'Go to Schedule to resume payment and confirm this session.'
+                                : 'Accept & pay to secure this session.'}
                       </p>
                       <div className="flex flex-wrap gap-2 mt-3">
                         {isOffered && (

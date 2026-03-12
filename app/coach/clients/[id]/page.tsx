@@ -1,6 +1,12 @@
 import { createClient } from '@/lib/supabase/server'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
+import { SectionHeader } from '@/components/ui/SectionHeader'
 import { EmptyState } from '@/components/ui/empty-state'
+import { Button } from '@/components/ui/button'
+import { StatusBadge } from '@/components/ui/StatusBadge'
+import { KPIBlock } from '@/components/ui/KPIBlock'
+import { ListRow } from '@/components/ui/ListRow'
+import { ActionRow } from '@/components/ui/ActionRow'
 import { notFound } from 'next/navigation'
 import { format } from 'date-fns'
 import Link from 'next/link'
@@ -87,49 +93,38 @@ export default async function ClientDetailPage({
     ? format(new Date(lastSession.scheduled_time), 'MMM d, yyyy')
     : null
 
+  const sessionStatusToKind = (status: string): 'success' | 'warning' | 'danger' | 'info' | 'neutral' => {
+    if (['scheduled', 'completed', 'paid'].includes(status)) return 'success'
+    if (['availability_submitted', 'payment_pending', 'accepted', 'offered'].includes(status)) return 'warning'
+    if (status === 'cancelled') return 'danger'
+    return 'neutral'
+  }
+
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-8">
       <div className="flex flex-wrap items-center gap-3">
-        <Link
-          href="/coach/clients"
-          className="text-sm font-medium text-[var(--cp-text-muted)] hover:text-[var(--cp-text-primary)]"
-        >
-          ← Back to Clients
-        </Link>
+        <Button variant="ghost" size="sm" asChild>
+          <Link href="/coach/clients" className="text-[var(--cp-text-muted)]">
+            ← Back to Clients
+          </Link>
+        </Button>
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-4">
         <ClientNameEditor clientId={client.id} initialName={client.full_name} />
-        <Link
-          href={`/coach/messages?client=${client.id}`}
-          className="inline-flex items-center rounded-md bg-[var(--cp-accent-primary)] px-4 py-2 text-sm font-medium text-[var(--cp-text-on-accent)] hover:bg-[var(--cp-accent-primary-strong)]"
-        >
-          Message
-        </Link>
+        <Button asChild>
+          <Link href={`/coach/messages?client=${client.id}`}>Message</Link>
+        </Button>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Stats</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <Card variant="raised">
+        <CardContent className="p-5 sm:p-6">
+          <SectionHeader title="Stats" className="mb-4" />
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div>
-              <p className="text-sm text-gray-500">Sessions completed</p>
-              <p className="text-lg font-semibold">{completedCount ?? 0}</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Upcoming</p>
-              <p className="text-lg font-semibold">{upcomingCount ?? 0}</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Videos completed</p>
-              <p className="text-lg font-semibold">{videosCompletedCount ?? 0}</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Last active</p>
-              <p className="text-lg font-semibold">{lastActive ?? '—'}</p>
-            </div>
+            <KPIBlock label="Sessions completed" value={completedCount ?? 0} />
+            <KPIBlock label="Upcoming" value={upcomingCount ?? 0} />
+            <KPIBlock label="Videos completed" value={videosCompletedCount ?? 0} />
+            <KPIBlock label="Last active" value={lastActive ?? '—'} />
           </div>
         </CardContent>
       </Card>
@@ -138,12 +133,10 @@ export default async function ClientDetailPage({
       <ClientNotesEditor clientId={client.id} initialNotes={client.notes} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Contact Information</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <p><span className="font-medium">Email:</span> {client.email || 'N/A'}</p>
+        <Card variant="raised">
+          <CardContent className="p-5 sm:p-6">
+            <SectionHeader title="Contact Information" className="mb-4" />
+            <p className="text-sm text-[var(--cp-text-primary)]"><span className="font-medium">Email:</span> {client.email || 'N/A'}</p>
             <ClientPhoneEditor clientId={client.id} initialPhone={client.phone ?? null} />
           </CardContent>
         </Card>
@@ -156,22 +149,21 @@ export default async function ClientDetailPage({
         <ClientPortalAccess clientEmail={client.email ?? null} />
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Assigned Programs</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <Card variant="raised">
+        <CardContent className="p-5 sm:p-6">
+          <SectionHeader title="Assigned Programs" className="mb-4" />
           {programs && programs.length > 0 ? (
-            <div className="space-y-2">
+            <ul className="divide-y divide-[var(--cp-border-subtle)]">
               {programs.map((assignment: any) => (
-                <div key={assignment.id} className="border-b pb-2 last:border-0">
-                  <p className="font-medium">{assignment.programs?.name}</p>
-                  {assignment.programs?.description && (
-                    <p className="text-sm text-gray-500">{assignment.programs.description}</p>
-                  )}
-                </div>
+                <li key={assignment.id}>
+                  <ListRow
+                    title={assignment.programs?.name ?? 'Program'}
+                    subtitle={assignment.programs?.description ?? undefined}
+                    className="px-0"
+                  />
+                </li>
               ))}
-            </div>
+            </ul>
           ) : (
             <EmptyState
               title="No programs assigned"
@@ -183,30 +175,31 @@ export default async function ClientDetailPage({
       </Card>
 
       {balanceOwedCents > 0 && (
-        <Card className="border-[var(--cp-accent-primary)]/30 bg-[var(--cp-accent-primary)]/5">
-          <CardHeader>
-            <CardTitle>Balance owed</CardTitle>
-            <p className="text-2xl font-bold text-[var(--cp-accent-primary)]">
+        <Card variant="raised" className="border-[var(--cp-accent-primary)]/30 bg-[var(--cp-accent-primary)]/5">
+          <CardContent className="p-5 sm:p-6">
+            <SectionHeader
+              title="Balance owed"
+              subtitle="Client can pay from their Schedule page, or copy a payment link to send them."
+            />
+            <p className="text-2xl font-bold text-[var(--cp-accent-primary)] mt-2">
               ${(balanceOwedCents / 100).toFixed(2)}
             </p>
-            <p className="text-sm text-[var(--cp-text-muted)]">
-              Client can pay from their Schedule page, or copy a payment link to send them.
-            </p>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <RequestPaymentButton clientId={id} />
+            <ActionRow className="mt-3">
+              <RequestPaymentButton clientId={id} />
+            </ActionRow>
           </CardContent>
         </Card>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Session offers</CardTitle>
-          <p className="text-sm font-normal text-gray-500 mt-1">Session packages sent to this client and their response.</p>
-        </CardHeader>
-        <CardContent>
+      <Card variant="raised">
+        <CardContent className="p-5 sm:p-6">
+          <SectionHeader
+            title="Session offers"
+            subtitle="Session packages sent to this client and their response."
+            className="mb-4"
+          />
           {sessionRequests && sessionRequests.length > 0 ? (
-            <div className="space-y-3">
+            <ul className="divide-y divide-[var(--cp-border-subtle)]">
               {sessionRequests.map((req: any) => {
                 const product = req.session_products
                 const name = product?.name ?? 'Session'
@@ -223,23 +216,23 @@ export default async function ClientDetailPage({
                 const label = statusLabels[req.status] ?? req.status
                 const needsPickTime = req.status === 'availability_submitted'
                 return (
-                  <div key={req.id} className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 pb-3 last:border-0 last:pb-0">
-                    <div>
-                      <p className="font-medium">{name} – ${amountDollars}</p>
-                      <p className="text-sm text-gray-500">{label}</p>
-                    </div>
-                    {needsPickTime && (
-                      <Link
-                        href="/coach/schedule"
-                        className="inline-flex items-center rounded-md bg-[var(--cp-accent-primary)] px-3 py-1.5 text-sm font-medium text-[var(--cp-text-on-accent)] hover:bg-[var(--cp-accent-primary-strong)]"
-                      >
-                        Pick time
-                      </Link>
-                    )}
-                  </div>
+                  <li key={req.id}>
+                    <ListRow
+                      title={`${name} – $${amountDollars}`}
+                      meta={<StatusBadge status={sessionStatusToKind(req.status)} label={label} />}
+                      actions={
+                        needsPickTime ? (
+                          <Button size="sm" asChild>
+                            <Link href="/coach/schedule">Pick time</Link>
+                          </Button>
+                        ) : undefined
+                      }
+                      className="px-0"
+                    />
+                  </li>
                 )
               })}
-            </div>
+            </ul>
           ) : (
             <EmptyState
               title="No session offers yet"
@@ -251,11 +244,9 @@ export default async function ClientDetailPage({
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Session History</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <Card variant="raised">
+        <CardContent className="p-5 sm:p-6">
+          <SectionHeader title="Session History" className="mb-4" />
           <SessionHistoryWithPay
             sessions={sessions?.map((s) => ({
               id: s.id,
@@ -268,15 +259,16 @@ export default async function ClientDetailPage({
         </CardContent>
       </Card>
 
-      <Card className="border-[var(--cp-accent-danger)]/30">
-        <CardHeader>
-          <CardTitle className="text-[var(--cp-accent-danger)]">Danger zone</CardTitle>
-          <p className="text-sm font-normal text-[var(--cp-text-muted)] mt-1">
-            Permanently remove this client. This will remove their assignments and session history.
-          </p>
-        </CardHeader>
-        <CardContent>
-          <DeleteClientButton clientId={client.id} clientName={client.full_name ?? undefined} />
+      <Card variant="raised" className="border-[var(--cp-accent-danger)]/30">
+        <CardContent className="p-5 sm:p-6">
+          <SectionHeader
+            title="Danger zone"
+            subtitle="Permanently remove this client. This will remove their assignments and session history."
+            className="[&_h3]:text-[var(--cp-accent-danger)]"
+          />
+          <div className="mt-3">
+            <DeleteClientButton clientId={client.id} clientName={client.full_name ?? undefined} />
+          </div>
         </CardContent>
       </Card>
     </div>

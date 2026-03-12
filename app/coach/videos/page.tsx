@@ -329,7 +329,7 @@ export default function VideosPage() {
   if (loading) return <Loading />
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {error && (
         <div className="rounded-md bg-[var(--cp-accent-danger)]/10 border border-[var(--cp-accent-danger)]/30 px-4 py-2 text-sm text-[var(--cp-accent-danger)]">
           {error}

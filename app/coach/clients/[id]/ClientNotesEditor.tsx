@@ -1,8 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
+import { SectionHeader } from '@/components/ui/SectionHeader'
 import { Button } from '@/components/ui/button'
+import { ActionRow } from '@/components/ui/ActionRow'
 import { createClient } from '@/lib/supabase/client'
 
 export function ClientNotesEditor({
@@ -29,24 +31,22 @@ export function ClientNotesEditor({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Notes</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
+    <Card variant="raised">
+      <CardContent className="p-5 sm:p-6">
+        <SectionHeader title="Notes" subtitle="Add notes about this client. Only you can see these." className="mb-4" />
         <textarea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           placeholder="Add notes about this client..."
-          className="w-full min-h-[120px] rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="w-full min-h-[120px] rounded-md border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] px-3 py-2 text-sm text-[var(--cp-text-primary)] placeholder:text-[var(--cp-text-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cp-border-focus)]"
           rows={4}
         />
-        <div className="flex items-center gap-2">
+        <ActionRow className="mt-3">
+          {saved && <span className="text-sm text-[var(--cp-accent-success)]">Saved</span>}
           <Button onClick={handleSave} disabled={saving}>
-            {saving ? 'Saving...' : 'Save notes'}
+            {saving ? 'Saving…' : 'Save notes'}
           </Button>
-          {saved && <span className="text-sm text-green-600">Saved</span>}
-        </div>
+        </ActionRow>
       </CardContent>
     </Card>
   )

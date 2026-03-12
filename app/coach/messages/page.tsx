@@ -5,8 +5,13 @@ import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent } from '@/components/ui/card'
+import { SectionHeader } from '@/components/ui/SectionHeader'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
+import { StatusBadge } from '@/components/ui/StatusBadge'
+import { ActionRow } from '@/components/ui/ActionRow'
+import { Modal } from '@/components/ui/modal'
 import { Input } from '@/components/ui/input'
 import { getClientId } from '@/lib/config'
 import { MessageThread, type ChatMessage } from '@/components/chat/MessageThread'
@@ -357,31 +362,24 @@ export default function MessagesPage() {
   })
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-[var(--cp-text-primary)]">Messages</h1>
-        <p className="mt-1 text-sm text-[var(--cp-text-muted)]">Communicate with your clients</p>
-      </div>
+    <div className="space-y-8">
+      <PageHeader
+        title="Messages"
+        subtitle="Communicate with your clients"
+      />
 
       {clients.length === 0 ? (
-        <div className="rounded-2xl border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-elevated)] p-8 text-center shadow-[var(--cp-shadow-soft)]">
-          <p className="text-[var(--cp-text-muted)]">
-            Add clients to start messaging. Once you have clients, you can send and receive messages
-            here.
-          </p>
-          <Link
-            href="/coach/clients/new"
-            className="mt-4 inline-flex items-center justify-center rounded-lg bg-[var(--cp-accent-primary)] px-4 py-2 text-sm font-medium text-[var(--cp-text-on-accent)] hover:opacity-90"
-          >
-            Add your first client
-          </Link>
-        </div>
+        <EmptyState
+          title="No clients yet"
+          description="Add clients to start messaging. Once you have clients, you can send and receive messages here."
+          action={{ label: 'Add your first client', href: '/coach/clients/new' }}
+        />
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          <Card className="border border-[var(--cp-border-subtle)] shadow-[var(--cp-shadow-soft)]">
+          <Card variant="raised" className="overflow-hidden">
             <CardContent className="p-0">
               <div className="p-4 border-b border-[var(--cp-border-subtle)] bg-[var(--cp-bg-subtle)]">
-                <h3 className="font-semibold text-[var(--cp-text-primary)]">Clients</h3>
+                <SectionHeader title="Clients" />
               </div>
               <div className="divide-y divide-[var(--cp-border-subtle)] max-h-[420px] overflow-y-auto">
               {clients.map((client) => {
@@ -391,7 +389,7 @@ export default function MessagesPage() {
                   key={client.id}
                   type="button"
                   onClick={() => setSelectedClient(client.id)}
-                  className={`w-full text-left px-4 py-3 hover:bg-[rgba(148,163,184,0.12)] transition-colors ${
+                  className={`w-full text-left px-4 py-3 hover:bg-[var(--cp-bg-subtle)] transition-colors ${
                     selectedClient === client.id
                       ? 'bg-[var(--cp-accent-primary-soft)] border-l-2 border-l-[var(--cp-accent-primary)]'
                       : ''
@@ -402,13 +400,11 @@ export default function MessagesPage() {
                       {client.full_name || 'Unnamed client'}
                     </p>
                     {unreadCount > 0 && (
-                      <span className="inline-flex min-w-[1.5rem] items-center justify-center rounded-full bg-[var(--cp-accent-primary)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--cp-text-on-accent)]">
-                        {unreadCount > 99 ? '99+' : unreadCount}
-                      </span>
+                      <StatusBadge status="info" label={unreadCount > 99 ? '99+' : String(unreadCount)} />
                     )}
                   </div>
                   {client.email && (
-                    <p className="text-xs text-[var(--cp-text-muted)] truncate">
+                    <p className="text-xs text-[var(--cp-text-muted)] truncate mt-0.5">
                       {client.email}
                     </p>
                   )}
@@ -419,7 +415,7 @@ export default function MessagesPage() {
           </Card>
 
           <div className="lg:col-span-3 flex flex-col min-h-[480px]">
-            <Card className="border border-[var(--cp-border-subtle)] shadow-[var(--cp-shadow-soft)] flex-1 flex flex-col overflow-hidden">
+            <Card variant="raised" className="flex-1 flex flex-col overflow-hidden">
             {selectedClient ? (
               <>
                 <div className="px-4 py-3 border-b border-[var(--cp-border-subtle)] bg-[var(--cp-bg-subtle)] flex flex-wrap items-center justify-between gap-3">
@@ -496,82 +492,74 @@ export default function MessagesPage() {
       </div>
       )}
 
-      {showRequestModal && selectedClient && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--cp-bg-backdrop)] p-4"
-          onClick={() => !requestLoading && setShowRequestModal(false)}
-        >
-          <div
-            className="bg-[var(--cp-bg-elevated)] border border-[var(--cp-border-subtle)] rounded-xl shadow-xl max-w-md w-full p-4 space-y-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between gap-2">
-              <h2 className="text-base font-semibold text-[var(--cp-text-primary)]">Request session</h2>
-              <button
-                type="button"
-                onClick={() => !requestLoading && setShowRequestModal(false)}
-                className="text-sm text-[var(--cp-text-muted)] hover:text-[var(--cp-text-primary)]"
-              >
-                Close
-              </button>
-            </div>
-            <p className="text-xs text-[var(--cp-text-muted)]">
-              Choose a session type to offer to {selectedClientData?.full_name ?? 'this client'}. They&apos;ll see it on their
-              Schedule page and can accept, pay, and share when they&apos;re available.
-            </p>
-            {sessionProducts.length === 0 ? (
-              <div className="space-y-2">
-                <p className="text-sm text-[var(--cp-text-muted)]">
-                  You don&apos;t have any session types yet. Create one from Session Packages, then come back to send an offer.
-                </p>
-                <Link
-                  href="/coach/session-packages"
-                  className="text-sm font-medium text-[var(--cp-accent-primary)] hover:text-[var(--cp-accent-primary-strong)]"
-                  onClick={() => setShowRequestModal(false)}
-                >
-                  Open Session Packages →
-                </Link>
-              </div>
-            ) : (
-              <form onSubmit={handleSendSessionRequest} className="space-y-4">
-                <div>
-                  <label className="block text-xs text-[var(--cp-text-muted)] mb-1">Session type</label>
-                  <select
-                    value={selectedProductId}
-                    onChange={(e) => setSelectedProductId(e.target.value)}
-                    className="w-full rounded-md border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] px-3 py-2 text-sm"
-                    required
-                  >
-                    <option value="">Select a session type…</option>
-                    {sessionProducts.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name} – ${((p.price_cents ?? 0) / 100).toFixed(2)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                {requestError && (
-                  <p className="text-xs text-[var(--cp-accent-danger)]">{requestError}</p>
-                )}
-                <div className="flex justify-end gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => !requestLoading && setShowRequestModal(false)}
-                    disabled={requestLoading}
-                  >
-                    Cancel
-                  </Button>
-                  <Button type="submit" size="sm" disabled={requestLoading || !selectedProductId}>
-                    {requestLoading ? 'Sending…' : 'Send request'}
-                  </Button>
-                </div>
-              </form>
-            )}
+      <Modal
+        open={!!(showRequestModal && selectedClient)}
+        onClose={() => !requestLoading && setShowRequestModal(false)}
+        preventClose={!!requestLoading}
+      >
+        <div className="p-4 space-y-4">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-base font-semibold text-[var(--cp-text-primary)]">Request session</h2>
+            <Button type="button" variant="ghost" size="sm" onClick={() => !requestLoading && setShowRequestModal(false)} disabled={requestLoading}>
+              Close
+            </Button>
           </div>
+          <p className="text-xs text-[var(--cp-text-muted)]">
+            Choose a session type to offer to {selectedClientData?.full_name ?? 'this client'}. They&apos;ll see it on their
+            Schedule page and can accept, pay, and share when they&apos;re available.
+          </p>
+          {sessionProducts.length === 0 ? (
+            <div className="space-y-2">
+              <p className="text-sm text-[var(--cp-text-muted)]">
+                You don&apos;t have any session types yet. Create one from Session Packages, then come back to send an offer.
+              </p>
+              <Link
+                href="/coach/session-packages"
+                className="text-sm font-medium text-[var(--cp-accent-primary)] hover:text-[var(--cp-accent-primary-strong)]"
+                onClick={() => setShowRequestModal(false)}
+              >
+                Open Session Packages →
+              </Link>
+            </div>
+          ) : (
+            <form onSubmit={handleSendSessionRequest} className="space-y-4">
+              <div>
+                <label className="block text-xs text-[var(--cp-text-muted)] mb-1">Session type</label>
+                <select
+                  value={selectedProductId}
+                  onChange={(e) => setSelectedProductId(e.target.value)}
+                  className="w-full rounded-md border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] px-3 py-2 text-sm"
+                  required
+                >
+                  <option value="">Select a session type…</option>
+                  {sessionProducts.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} – ${((p.price_cents ?? 0) / 100).toFixed(2)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {requestError && (
+                <p className="text-xs text-[var(--cp-accent-danger)]">{requestError}</p>
+              )}
+              <ActionRow>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => !requestLoading && setShowRequestModal(false)}
+                  disabled={requestLoading}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" size="sm" disabled={requestLoading || !selectedProductId}>
+                  {requestLoading ? 'Sending…' : 'Send request'}
+                </Button>
+              </ActionRow>
+            </form>
+          )}
         </div>
-      )}
+      </Modal>
     </div>
   )
 }

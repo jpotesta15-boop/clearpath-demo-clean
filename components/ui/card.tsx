@@ -22,7 +22,8 @@ const MotionDiv: any = motion.div
 const Card = React.forwardRef<HTMLDivElement, CardProps>(
   ({ className, variant = "surface", interactive = false, ...props }, ref) => {
     const baseClasses = cn(
-      "rounded-lg border transition-shadow",
+      "border transition-shadow",
+      variant === "raised" ? "rounded-2xl" : "rounded-lg",
       {
         // Default content surface; subtle accent tint for cohesion
         "border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] shadow-[var(--cp-shadow-soft)]":

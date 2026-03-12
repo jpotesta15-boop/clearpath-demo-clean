@@ -88,7 +88,7 @@ export function Modal({ open, onClose, children, className, preventClose }: Moda
             <motion.div
               ref={panelRef}
               className={cn(
-                "rounded-lg border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-elevated)] shadow-[var(--cp-shadow-elevated)] max-w-md w-full max-h-[90vh] overflow-y-auto",
+                "rounded-2xl border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-elevated)] shadow-[var(--cp-shadow-elevated)] max-w-md w-full max-h-[90vh] overflow-y-auto",
                 className
               )}
               initial={modalTransition.initial}

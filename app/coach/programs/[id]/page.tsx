@@ -408,7 +408,7 @@ export default function ProgramDetailPage() {
   const availableVideos = libraryVideos.filter((v) => !videoIdsInProgram.has(v.id))
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
         <Link
           href="/coach/programs"

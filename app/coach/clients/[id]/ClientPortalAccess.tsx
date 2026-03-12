@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
+import { SectionHeader } from '@/components/ui/SectionHeader'
 import { Button } from '@/components/ui/button'
 
 interface ClientPortalAccessProps {
@@ -96,11 +97,10 @@ export function ClientPortalAccess({ clientEmail }: ClientPortalAccessProps) {
   if (clientEmail === undefined) return null
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Client portal access</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <Card variant="raised">
+      <CardContent className="p-5 sm:p-6">
+        <SectionHeader title="Client portal access" className="mb-4" />
+        <div className="space-y-4">
         {!clientEmail || clientEmail.trim() === '' ? (
           <p className="text-sm text-[var(--cp-text-muted)]">
             Add email in Contact Information (or edit client) to enable portal login.
@@ -176,6 +176,7 @@ export function ClientPortalAccess({ clientEmail }: ClientPortalAccessProps) {
             </div>
           </>
         )}
+        </div>
       </CardContent>
     </Card>
   )

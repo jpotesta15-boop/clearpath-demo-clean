@@ -2,14 +2,25 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
+import { SectionHeader } from '@/components/ui/SectionHeader'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { EmptyState } from '@/components/ui/empty-state'
+import { StatusBadge } from '@/components/ui/StatusBadge'
+import { ActionRow } from '@/components/ui/ActionRow'
 import { Loading } from '@/components/ui/loading'
 import { Modal } from '@/components/ui/modal'
 import { getClientId } from '@/lib/config'
 import { format } from 'date-fns'
+
+function paymentStatusToKind(status: string): 'success' | 'warning' | 'danger' | 'info' | 'neutral' {
+  if (status === 'succeeded' || status === 'recorded_manual') return 'success'
+  if (status === 'refunded') return 'info'
+  if (status === 'cancelled') return 'danger'
+  return 'neutral'
+}
 
 export default function CoachPaymentsPage() {
   const [payments, setPayments] = useState<any[]>([])
@@ -134,14 +145,12 @@ export default function CoachPaymentsPage() {
   if (loading) return <Loading />
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-start flex-wrap gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-[var(--cp-text-primary)]">Payments</h1>
-          <p className="mt-1 text-sm text-[var(--cp-text-muted)]">All payments and revenue. Filter by status or provider.</p>
-        </div>
-        <Button onClick={() => setShowRecordModal(true)}>Record payment</Button>
-      </div>
+    <div className="space-y-8">
+      <PageHeader
+        title="Payments"
+        subtitle="All payments and revenue. Filter by status or provider."
+        primaryAction={<Button onClick={() => setShowRecordModal(true)}>Record payment</Button>}
+      />
 
       <Modal
         open={showRecordModal}
@@ -204,10 +213,10 @@ export default function CoachPaymentsPage() {
               {recordError && (
                 <p className="text-sm text-[var(--cp-accent-danger)]" role="alert">{recordError}</p>
               )}
-              <div className="flex gap-2 justify-end">
+              <ActionRow>
                 <Button type="button" variant="outline" onClick={() => setShowRecordModal(false)} disabled={recordSubmitting}>Cancel</Button>
-                <Button type="submit" disabled={recordSubmitting}>{recordSubmitting ? 'Saving...' : 'Record'}</Button>
-              </div>
+                <Button type="submit" disabled={recordSubmitting}>{recordSubmitting ? 'Saving…' : 'Record'}</Button>
+              </ActionRow>
             </form>
       </Modal>
 
@@ -243,16 +252,14 @@ export default function CoachPaymentsPage() {
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Payment history</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <Card variant="raised">
+        <CardContent className="p-5 sm:p-6">
+          <SectionHeader title="Payment history" className="mb-4" />
           {filtered.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-200 text-left text-gray-600">
+                  <tr className="border-b border-[var(--cp-border-subtle)] text-left text-[var(--cp-text-muted)]">
                     <th className="py-2 pr-4">Date</th>
                     <th className="py-2 pr-4">Description</th>
                     <th className="py-2 pr-4">Client</th>
@@ -264,13 +271,15 @@ export default function CoachPaymentsPage() {
                 </thead>
                 <tbody>
                   {filtered.map((p) => (
-                    <tr key={p.id} className="border-b border-gray-100">
-                      <td className="py-3 pr-4">{format(new Date(p.created_at), 'MMM d, yyyy')}</td>
-                      <td className="py-3 pr-4">{p.description ?? '—'}</td>
-                      <td className="py-3 pr-4">{p.payer_client_id ? (clientsById[p.payer_client_id]?.full_name ?? '—') : '—'}</td>
-                      <td className="py-3 pr-4 font-medium">${((p.amount_cents ?? 0) / 100).toFixed(2)}</td>
-                      <td className="py-3 pr-4">{statusLabel[p.status] ?? p.status}</td>
-                      <td className="py-3 pr-4">{providerLabel[p.provider] ?? p.provider}</td>
+                    <tr key={p.id} className="border-b border-[var(--cp-border-subtle)]">
+                      <td className="py-3 pr-4 text-[var(--cp-text-primary)]">{format(new Date(p.created_at), 'MMM d, yyyy')}</td>
+                      <td className="py-3 pr-4 text-[var(--cp-text-primary)]">{p.description ?? '—'}</td>
+                      <td className="py-3 pr-4 text-[var(--cp-text-primary)]">{p.payer_client_id ? (clientsById[p.payer_client_id]?.full_name ?? '—') : '—'}</td>
+                      <td className="py-3 pr-4 font-medium text-[var(--cp-text-primary)]">${((p.amount_cents ?? 0) / 100).toFixed(2)}</td>
+                      <td className="py-3 pr-4">
+                        <StatusBadge status={paymentStatusToKind(p.status)} label={statusLabel[p.status] ?? p.status} />
+                      </td>
+                      <td className="py-3 pr-4 text-[var(--cp-text-muted)]">{providerLabel[p.provider] ?? p.provider}</td>
                       <td className="py-3">
                         {p.provider === 'stripe' && p.status === 'succeeded' && (
                           <Button

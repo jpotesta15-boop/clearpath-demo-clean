@@ -61,7 +61,7 @@ export default function ClientSettingsPage() {
   }
 
   return (
-    <div className="max-w-3xl space-y-6">
+    <div className="max-w-3xl space-y-8">
       <div>
         <h1 className="text-3xl font-bold text-[var(--cp-text-primary)]">Settings</h1>
         <p className="mt-1 text-sm text-[var(--cp-text-muted)]">

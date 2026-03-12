@@ -1,4 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
+import Link from 'next/link'
+import { Button } from '@/components/ui/button'
 import { ClientVideosContent } from './ClientVideosContent'
 
 export default async function ClientVideosPage() {
@@ -18,12 +20,9 @@ export default async function ClientVideosPage() {
         <p className="text-[var(--cp-text-muted)]">
           There is no client record for this account. Contact your coach to be added and to receive a portal invite.
         </p>
-        <a
-          href="/login"
-          className="inline-flex items-center justify-center rounded-md font-medium px-4 py-2 bg-[var(--cp-accent-primary)] text-[var(--cp-text-on-accent)] hover:bg-[var(--cp-accent-primary-strong)]"
-        >
-          Back to login
-        </a>
+        <Button asChild>
+        <Link href="/login">Back to login</Link>
+      </Button>
       </div>
     )
   }

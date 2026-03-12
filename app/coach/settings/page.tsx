@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
+import { SectionHeader } from '@/components/ui/SectionHeader'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useThemeVariant, type ThemeVariant, type ThemeMode, VARIANT_SWATCH_COLORS } from '@/components/providers/ThemeVariantProvider'
@@ -152,23 +154,16 @@ export default function CoachSettingsPage() {
   }
 
   return (
-    <div className="max-w-3xl space-y-6">
-      <div className="flex flex-col gap-2">
-        <div>
-          <h1 className="text-3xl font-bold text-[var(--cp-text-primary)]">Settings</h1>
-          <p className="mt-1 text-sm text-[var(--cp-text-muted)]">
-            Personalize your dashboard theme and preferences. Changes only affect your view.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-3">
-          <a
-            href="/coach/settings/client-experience"
-            className="inline-flex items-center rounded-md border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] px-3 py-1.5 text-xs font-medium text-[var(--cp-text-primary)] hover:border-[var(--cp-accent-primary)] hover:bg-[var(--cp-bg-subtle)]"
-          >
-            Client portal appearance
-          </a>
-        </div>
-      </div>
+    <div className="max-w-3xl space-y-8">
+      <PageHeader
+        title="Settings"
+        subtitle="Personalize your dashboard theme and preferences. Changes only affect your view."
+        primaryAction={
+          <Button variant="outline" size="sm" asChild>
+            <a href="/coach/settings/client-experience">Client portal appearance</a>
+          </Button>
+        }
+      />
 
       <div className="rounded-lg border border-[var(--cp-border-subtle)] bg-[var(--cp-accent-primary-subtle)] px-4 py-3">
         <p className="text-sm font-medium text-[var(--cp-text-primary)]">Recommended</p>
@@ -177,14 +172,10 @@ export default function CoachSettingsPage() {
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Theme mode</CardTitle>
-          <p className="text-sm font-normal text-[var(--cp-text-muted)]">
-            Dark or light theme.
-          </p>
-        </CardHeader>
-        <CardContent className="flex flex-wrap gap-3">
+      <Card variant="raised">
+        <CardContent className="p-5 sm:p-6">
+          <SectionHeader title="Theme mode" subtitle="Dark or light theme." className="mb-4" />
+          <div className="flex flex-wrap gap-3">
           {(['dark', 'light'] as const).map((m) => (
             <button
               key={m}
@@ -199,17 +190,14 @@ export default function CoachSettingsPage() {
               {THEME_MODE_LABELS[m]}
             </button>
           ))}
+          </div>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Accent color</CardTitle>
-          <p className="text-sm font-normal text-[var(--cp-text-muted)]">
-            Accent sets buttons, links, cards, and subtle tints across the site.
-          </p>
-        </CardHeader>
-        <CardContent className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <Card variant="raised">
+        <CardContent className="p-5 sm:p-6">
+          <SectionHeader title="Accent color" subtitle="Buttons, links, and card accents." className="mb-4" />
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           {variants.map((v) => {
             const [shade1, shade2, shade3] = VARIANT_SWATCH_COLORS[v]
             return (
@@ -234,17 +222,17 @@ export default function CoachSettingsPage() {
               </button>
             )
           })}
+          </div>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Profile & preferences</CardTitle>
-          <p className="text-sm font-normal text-[var(--cp-text-muted)]">
-            Your name, business details, and branding. Recommended fields help your client portal look complete.
-          </p>
-        </CardHeader>
-        <CardContent>
+      <Card variant="raised">
+        <CardContent className="p-5 sm:p-6">
+          <SectionHeader
+            title="Profile & preferences"
+            subtitle="Your name, business details, and branding. Recommended fields help your client portal look complete."
+            className="mb-4"
+          />
           <form onSubmit={handleSavePreferences} className="space-y-4">
             <div>
               <label className="flex items-center gap-2 text-sm font-medium text-[var(--cp-text-primary)] mb-1">

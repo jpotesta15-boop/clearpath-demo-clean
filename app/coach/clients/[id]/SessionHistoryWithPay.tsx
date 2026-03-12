@@ -4,6 +4,8 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
+import { StatusBadge } from '@/components/ui/StatusBadge'
+import { ListRow } from '@/components/ui/ListRow'
 import { format } from 'date-fns'
 
 type SessionRow = {
@@ -12,6 +14,13 @@ type SessionRow = {
   status: string
   notes: string | null
   paid_at: string | null
+}
+
+function sessionStatusToKind(status: string): 'success' | 'warning' | 'danger' | 'info' | 'neutral' {
+  if (status === 'completed') return 'success'
+  if (status === 'confirmed') return 'info'
+  if (status === 'cancelled') return 'danger'
+  return 'warning'
 }
 
 export function SessionHistoryWithPay({ sessions }: { sessions: SessionRow[] }) {
@@ -37,47 +46,24 @@ export function SessionHistoryWithPay({ sessions }: { sessions: SessionRow[] }) 
   }
 
   return (
-    <div className="space-y-2">
+    <ul className="divide-y divide-[var(--cp-border-subtle)]">
       {sessions.map((session) => (
-        <div key={session.id} className="border-b pb-2 last:border-0">
-          <div className="flex flex-wrap justify-between items-center gap-2">
-            <div>
-              <p className="font-medium">
-                {format(new Date(session.scheduled_time), 'MMM d, yyyy h:mm a')}
-              </p>
-              <p className="text-xs text-gray-500">
-                {session.paid_at
-                  ? `Paid ${format(new Date(session.paid_at), 'MMM d, yyyy')}`
-                  : 'Unpaid'}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <span
-                className={`px-2 py-1 text-xs rounded ${
-                  session.status === 'confirmed' ? 'bg-green-100 text-green-800' :
-                  session.status === 'completed' ? 'bg-blue-100 text-blue-800' :
-                  session.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                  'bg-yellow-100 text-yellow-800'
-                }`}
-              >
-                {session.status}
-              </span>
-              {!session.paid_at && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleMarkAsPaid(session.id)}
-                >
+        <li key={session.id}>
+          <ListRow
+            title={format(new Date(session.scheduled_time), 'MMM d, yyyy h:mm a')}
+            subtitle={session.notes ?? (session.paid_at ? `Paid ${format(new Date(session.paid_at), 'MMM d, yyyy')}` : 'Unpaid')}
+            meta={<StatusBadge status={sessionStatusToKind(session.status)} label={session.status} />}
+            actions={
+              !session.paid_at ? (
+                <Button size="sm" variant="outline" onClick={() => handleMarkAsPaid(session.id)}>
                   Mark as paid
                 </Button>
-              )}
-            </div>
-          </div>
-          {session.notes && (
-            <p className="text-sm text-gray-500 mt-1">{session.notes}</p>
-          )}
-        </div>
+              ) : undefined
+            }
+            className="px-0"
+          />
+        </li>
       ))}
-    </div>
+    </ul>
   )
 }

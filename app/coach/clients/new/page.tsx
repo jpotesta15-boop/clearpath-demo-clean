@@ -100,7 +100,7 @@ export default function NewClientPage() {
   }
 
   return (
-    <div className="max-w-xl mx-auto space-y-6 px-2 sm:px-0">
+    <div className="max-w-xl mx-auto space-y-8 px-2 sm:px-0">
       <div className="flex items-center gap-3">
         <Link
           href="/coach/clients"
