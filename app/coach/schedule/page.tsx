@@ -1109,6 +1109,7 @@ export default function SchedulePage() {
               </CardHeader>
               <CardContent className="overflow-y-auto shrink min-h-0">
                 {(() => {
+                  if (!selectedDay) return null
                   const daySessionsList = getSessionsForDay(sessions, selectedDay).sort(
                     (a, b) =>
                       new Date(a.scheduled_time).getTime() -
