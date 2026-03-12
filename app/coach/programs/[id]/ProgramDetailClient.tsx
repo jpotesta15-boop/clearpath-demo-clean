@@ -149,6 +149,7 @@ export default function ProgramDetailClient() {
   )
 
   useEffect(() => {
+    setAssignError(null)
     loadData()
   }, [programId])
 
@@ -643,7 +644,10 @@ export default function ProgramDetailClient() {
                 </label>
                 <select
                   value={assignClientId}
-                  onChange={(e) => setAssignClientId(e.target.value)}
+                  onChange={(e) => {
+                    setAssignClientId(e.target.value)
+                    setAssignError(null)
+                  }}
                   className="w-full min-h-[2.5rem] rounded-md border border-[var(--cp-border-subtle)] bg-[var(--cp-bg-surface)] px-3 py-2 text-sm text-[var(--cp-text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cp-border-focus)]"
                 >
                   <option value="">Select a client…</option>

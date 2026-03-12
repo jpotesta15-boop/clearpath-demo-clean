@@ -94,6 +94,19 @@ export default function MessagesPage() {
 
     if (clientEmails.length === 0) {
       setUnreadByClient({})
+      const { count } = await supabase
+        .from('messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('recipient_id', userId)
+        .is('read_at', null)
+      const totalUnread = count ?? 0
+      if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+        window.dispatchEvent(
+          new CustomEvent('clearpath:unread-messages-updated', {
+            detail: { totalUnread },
+          })
+        )
+      }
       return
     }
 
