@@ -49,11 +49,18 @@ To ensure the n8n webhook fires **whenever any session is added to the calendar*
 2. In **Supabase Dashboard** → **Integrations** → **Webhooks** ([dashboard link](https://supabase.com/dashboard/project/_/integrations/webhooks/overview)), create a webhook:
    - **Table:** `sessions`
    - **Events:** INSERT
-   - **URL:** `https://YOUR_APP_URL/api/webhooks/session-created`
-   - **Headers:** `Authorization: Bearer YOUR_SUPABASE_SESSION_WEBHOOK_SECRET` (same value as in step 1).
+   - **URL:** Either:
+     - `https://YOUR_APP_URL/api/webhooks/session-created` and add **Header** `Authorization: Bearer YOUR_SUPABASE_SESSION_WEBHOOK_SECRET`, or
+     - `https://YOUR_APP_URL/api/webhooks/session-created?secret=YOUR_SUPABASE_SESSION_WEBHOOK_SECRET` (if the UI cannot add headers).
 3. When a row is inserted into `sessions` with `status = 'confirmed'`, Supabase POSTs to this URL and the app forwards to n8n.
 
 This path runs on the server after the row exists, so it is independent of the schedule page or Stripe webhook.
+
+**Session-created webhook not firing?**  
+- **1) Test the endpoint:** In a browser open `https://YOUR_APP_URL/api/webhooks/session-created?secret=YOUR_SECRET`. You should see `{"ok":true,"message":"session-created webhook endpoint is live..."}`. If you see `Unauthorized`, the secret is wrong or not set in Vercel.  
+- **2) Confirm Supabase is calling:** In Supabase Dashboard → Integrations → Webhooks, open your webhook and check for delivery history / response code. A 401 = secret mismatch; 200 = we received it.  
+- **3) Confirm Vercel env:** In Vercel → Project → Settings → Environment Variables, ensure `SUPABASE_SESSION_WEBHOOK_SECRET` is set for Production (and redeploy after adding).  
+- **4) Check Vercel logs:** After booking a session, open Vercel → Logs and search for `[session-created]`. You should see either Unauthorized, Skipped, or Forwarding to n8n.
 
 ### Troubleshooting
 

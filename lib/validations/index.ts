@@ -17,6 +17,16 @@ export const n8nSessionBookedSchema = z.object({
   scheduled_time: z.string().min(1, 'scheduled_time is required'),
 })
 
+export const createSessionSchema = z.object({
+  client_id: z.string().uuid('client_id is required'),
+  scheduled_time: z.string().min(1, 'scheduled_time is required'),
+  tenant_id: z.string().min(1, 'tenant_id is required'),
+  session_request_id: z.string().uuid().optional(),
+  session_product_id: z.string().uuid().nullable().optional(),
+  amount_cents: z.number().int().nullable().optional(),
+  notes: z.string().max(2000).nullable().optional(),
+})
+
 const urlSchema = z.string().url().refine((s) => s.startsWith('http://') || s.startsWith('https://'), {
   message: 'url must start with http:// or https://',
 })

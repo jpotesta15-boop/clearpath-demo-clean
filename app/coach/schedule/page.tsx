@@ -198,24 +198,6 @@ export default function SchedulePage() {
     loadData()
   }
 
-  const notifySessionBooked = async (sessionId: string, coachId: string, clientId: string, scheduledTime: string) => {
-    try {
-      await fetch('/api/webhooks/n8n-session-booked', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          session_id: sessionId,
-          coach_id: coachId,
-          client_id: clientId,
-          scheduled_time: scheduledTime,
-        }),
-        credentials: 'include',
-      })
-    } catch {
-      // non-blocking
-    }
-  }
-
   const openSchedulingModal = (req: any) => {
     const tomorrow = new Date()
     tomorrow.setDate(tomorrow.getDate() + 1)
@@ -250,43 +232,35 @@ export default function SchedulePage() {
     setSchedulingError(null)
     setSchedulingSubmitting(true)
     const scheduled_time = startDateTime.toISOString()
-    const { data: newSession, error: sessionError } = await supabase.from('sessions').insert({
-      coach_id: schedulingRequest.coach_id,
-      client_id: schedulingRequest.client_id,
-      availability_slot_id: null,
-      scheduled_time,
-      status: 'confirmed',
-      tenant_id: schedulingRequest.tenant_id,
-      session_request_id: schedulingRequest.id,
-      session_product_id: schedulingRequest.session_product_id ?? null,
-      amount_cents: schedulingRequest.amount_cents ?? null,
-      notes: notes.trim() || null,
-    }).select('id').single()
-    if (sessionError) {
-      setSchedulingError(sessionError.message ?? 'Could not create session.')
-      setSchedulingSubmitting(false)
-      return
-    }
-    if (newSession?.id) {
-      const { error: reqUpdateErr } = await supabase
-        .from('session_requests')
-        .update({ status: 'scheduled', updated_at: new Date().toISOString() })
-        .eq('id', schedulingRequest.id)
-      if (reqUpdateErr) {
-        const { error: retryErr } = await supabase
-          .from('session_requests')
-          .update({ status: 'scheduled', updated_at: new Date().toISOString() })
-          .eq('id', schedulingRequest.id)
-        if (retryErr) {
-          setSchedulingError('Session created but could not update request status. Please refresh and check.')
-        }
+    try {
+      const res = await fetch('/api/coach/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          client_id: schedulingRequest.client_id,
+          scheduled_time,
+          tenant_id: schedulingRequest.tenant_id,
+          session_request_id: schedulingRequest.id,
+          session_product_id: schedulingRequest.session_product_id ?? null,
+          amount_cents: schedulingRequest.amount_cents ?? null,
+          notes: notes.trim() || null,
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setSchedulingError(data?.error ?? 'Could not create session.')
+        setSchedulingSubmitting(false)
+        return
       }
-      notifySessionBooked(newSession.id, schedulingRequest.coach_id, schedulingRequest.client_id, scheduled_time)
-      setSchedulingRequest(null)
-      setSchedulingForm({ date: '', startTime: '', endTime: '', notes: '' })
-      loadData()
+      if (data?.id) {
+        setSchedulingRequest(null)
+        setSchedulingForm({ date: '', startTime: '', endTime: '', notes: '' })
+        loadData()
+      }
+    } finally {
+      setSchedulingSubmitting(false)
     }
-    setSchedulingSubmitting(false)
   }
 
   const handleMarkAsPaid = async (session: Session) => {
@@ -601,33 +575,35 @@ export default function SchedulePage() {
     }
 
     setBookError(null)
-    const { data: newSession, error: sessionError } = await supabase
-      .from('sessions')
-      .insert({
-        coach_id: user.id,
-        client_id: bookClient.id,
-        availability_slot_id: null,
-        scheduled_time: start_time,
-        status: 'confirmed',
-        tenant_id: tenantId,
-        session_product_id: product?.id ?? null,
-        amount_cents: product?.price_cents ?? null,
+    try {
+      const res = await fetch('/api/coach/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          client_id: bookClient.id,
+          scheduled_time: start_time,
+          tenant_id: tenantId,
+          session_product_id: product?.id ?? null,
+          amount_cents: product?.price_cents ?? null,
+        }),
       })
-      .select('id')
-      .single()
-
-    setSubmitting(false)
-    if (sessionError) {
+      const data = await res.json().catch(() => ({}))
+      setSubmitting(false)
+      if (!res.ok) {
+        setBookError(data?.error ?? 'Could not create session. Please try again.')
+        return
+      }
+      if (data?.id) {
+        setBookClient(null)
+        setBookForm({ date: '', startTime: '', endTime: '' })
+        setBookSessionProductId('')
+        setBookRequirePayment(false)
+        loadData()
+      }
+    } catch {
+      setSubmitting(false)
       setBookError('Could not create session. Please try again.')
-      return
-    }
-    if (newSession?.id) {
-      notifySessionBooked(newSession.id, user.id, bookClient.id, start_time)
-      setBookClient(null)
-      setBookForm({ date: '', startTime: '', endTime: '' })
-      setBookSessionProductId('')
-      setBookRequirePayment(false)
-      loadData()
     }
   }
 
