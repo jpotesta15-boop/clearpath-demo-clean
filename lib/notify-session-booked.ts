@@ -17,7 +17,10 @@ export async function notifySessionBooked(
   scheduledTime: string,
   type: SessionBookedType = 'booked'
 ): Promise<boolean> {
-  if (!N8N_URL) return false
+  if (!N8N_URL) {
+    console.warn('[notify-session-booked] N8N_SESSION_BOOKED_WEBHOOK_URL not set – skipping n8n call')
+    return false
+  }
 
   try {
     const supabase = createServiceClient()
@@ -51,7 +54,7 @@ export async function notifySessionBooked(
 
     if (!res.ok) {
       const text = await res.text()
-      console.error('[notify-session-booked] Forward failed:', res.status, text)
+      console.error('[notify-session-booked] n8n responded', res.status, text)
     }
     return true
   } catch (err) {
