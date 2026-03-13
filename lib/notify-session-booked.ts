@@ -55,7 +55,9 @@ export async function notifySessionBooked(
     if (!res.ok) {
       const text = await res.text()
       console.error('[notify-session-booked] n8n responded', res.status, text)
+      return false
     }
+    console.log('[notify-session-booked] n8n accepted', res.status)
     return true
   } catch (err) {
     console.error('[notify-session-booked]', err)

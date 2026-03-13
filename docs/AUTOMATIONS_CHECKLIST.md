@@ -32,6 +32,12 @@ When a session is confirmed, the app forwards the event to n8n. This workflow se
 5. **Email fallback:** Configure **Email coach** and **Email client** nodes with SMTP (Gmail, SendGrid, etc.). Used when phone is missing.
 6. Activate the workflow (toggle Active in n8n)
 
+### Test connection (no booking needed)
+
+While logged in as **coach**, open in the same browser:  
+`https://YOUR_APP_URL/api/coach/test-n8n`  
+You get JSON: `ok: true` and "n8n connection OK" if the app can reach n8n; otherwise an error and hint. Use this to confirm the env var and webhook URL work before booking.
+
 ### Verify
 
 1. In ClearPath, coach adds phone in Settings; client has phone in their profile

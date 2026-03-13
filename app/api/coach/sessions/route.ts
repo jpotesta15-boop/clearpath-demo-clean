@@ -80,7 +80,9 @@ export async function POST(request: Request) {
   }
 
   // Always call n8n when a session is added to the calendar
-  await notifySessionBooked(newSession.id, user.id, client_id, scheduled_time, 'booked')
+  console.log('[coach/sessions] session created', newSession.id, 'calling n8n')
+  const n8nTriggered = await notifySessionBooked(newSession.id, user.id, client_id, scheduled_time, 'booked')
+  console.log('[coach/sessions] n8n triggered:', n8nTriggered)
 
-  return NextResponse.json({ id: newSession.id })
+  return NextResponse.json({ id: newSession.id, n8n_triggered: n8nTriggered })
 }
