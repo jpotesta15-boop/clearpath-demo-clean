@@ -17,6 +17,7 @@ Set these in `.env.local` (local) or your host’s environment (e.g. Vercel, Rai
 | `N8N_VIDEO_WEBHOOK_SECRET` | If using n8n video | Shared secret for `/api/webhooks/n8n-video` |
 | `N8N_DEFAULT_COACH_ID` | Optional | Default coach UUID when n8n sends a video without `coach_id` |
 | `N8N_SESSION_BOOKED_WEBHOOK_URL` | Optional | n8n webhook URL for session confirmation emails (e.g. `https://your-n8n.com/webhook/session-booked`) |
+| `SUPABASE_SESSION_WEBHOOK_SECRET` | Optional | Secret for Supabase Database Webhook on `sessions` INSERT; used by `/api/webhooks/session-created` so n8n fires whenever a session is added |
 | `N8N_SESSION_REMINDER_SECRET` | Optional | Bearer secret for `GET /api/sessions/upcoming` (session reminder workflow) |
 | `NEXT_PUBLIC_BRAND_PRIMARY` | Optional (whitelabel) | Primary brand color (hex, e.g. `#0284c7`). Used as a default when `client-config.json` is missing or omits a primary color. |
 | `NEXT_PUBLIC_BRAND_SECONDARY` | Optional (whitelabel) | Secondary brand color (hex, e.g. `#0369a1`). Used as a default when `client-config.json` is missing or omits a secondary color. |

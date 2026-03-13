@@ -41,6 +41,20 @@ When a session is confirmed, the app forwards the event to n8n. This workflow se
 5. **Manual remind:** Schedule → Sessions list: click "Remind" on a confirmed future session. Check n8n Executions; coach and client receive reminder (SMS or email)
 6. **Payment confirmed:** Client pays via Stripe checkout (slot pre-selected). Coach gets "Payment received from [client]"; client gets "Payment successful" + session details. Session reminder (6am) still runs separately for the reminder before the session.
 
+### Optional: Supabase Database Webhook (reliable trigger)
+
+To ensure the n8n webhook fires **whenever any session is added to the calendar** (even if the in-app request fails), use a Supabase Database Webhook:
+
+1. In the app, set env var: `SUPABASE_SESSION_WEBHOOK_SECRET` (e.g. a long random string).
+2. In **Supabase Dashboard** → **Integrations** → **Webhooks** ([dashboard link](https://supabase.com/dashboard/project/_/integrations/webhooks/overview)), create a webhook:
+   - **Table:** `sessions`
+   - **Events:** INSERT
+   - **URL:** `https://YOUR_APP_URL/api/webhooks/session-created`
+   - **Headers:** `Authorization: Bearer YOUR_SUPABASE_SESSION_WEBHOOK_SECRET` (same value as in step 1).
+3. When a row is inserted into `sessions` with `status = 'confirmed'`, Supabase POSTs to this URL and the app forwards to n8n.
+
+This path runs on the server after the row exists, so it is independent of the schedule page or Stripe webhook.
+
 ### Troubleshooting
 
 - **No execution in n8n:** Ensure `N8N_SESSION_BOOKED_WEBHOOK_URL` is set and workflow is Active
